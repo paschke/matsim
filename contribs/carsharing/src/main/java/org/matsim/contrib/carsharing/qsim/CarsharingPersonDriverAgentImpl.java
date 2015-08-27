@@ -19,6 +19,7 @@ import org.matsim.api.core.v01.population.Route;
 import org.matsim.contrib.carsharing.config.OneWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.events.NoParkingSpaceEvent;
 import org.matsim.contrib.carsharing.events.NoVehicleCarSharingEvent;
+import org.matsim.contrib.carsharing.events.CarSharingRequestEvent;
 import org.matsim.contrib.carsharing.facility.DummyFacility;
 import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
 import org.matsim.contrib.carsharing.stations.OneWayCarsharingStation;
@@ -316,6 +317,8 @@ public class CarsharingPersonDriverAgentImpl implements MobsimDriverAgent, Mobsi
 
 		TwoWayCarsharingStation station = findClosestAvailableTWCar(route.getStartLinkId());
 
+		this.basicAgentDelegate.getEvents().processEvent(new CarSharingRequestEvent(now, route.getStartLinkId(), "rt"));
+
 		if (station == null) {
 			this.setStateToAbort(now);
 			EventsManager events = this.basicAgentDelegate.getEvents() ;
@@ -400,6 +403,8 @@ public class CarsharingPersonDriverAgentImpl implements MobsimDriverAgent, Mobsi
 		Route route = leg.getRoute();
 		FreeFloatingStation location = findClosestAvailableCar(route.getStartLinkId());
 
+		this.basicAgentDelegate.getEvents().processEvent(new CarSharingRequestEvent(now, route.getStartLinkId(), "ff"));
+
 		if (location == null) {
 			this.setStateToAbort(now);
 			this.basicAgentDelegate.getEvents().processEvent(new NoVehicleCarSharingEvent(now, route.getStartLinkId(), "ff"));
@@ -433,6 +438,8 @@ public class CarsharingPersonDriverAgentImpl implements MobsimDriverAgent, Mobsi
 		//		this.setState(MobsimAgent.State.LEG);
 		Route route = leg.getRoute();
 		OneWayCarsharingStation station = findClosestAvailableOWCar(route.getStartLinkId());
+
+		this.basicAgentDelegate.getEvents().processEvent(new CarSharingRequestEvent(now, route.getStartLinkId(), "ow"));
 
 		if (station == null) {
 			this.setStateToAbort(now);

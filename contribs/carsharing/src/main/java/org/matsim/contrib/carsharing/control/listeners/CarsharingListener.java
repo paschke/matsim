@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import org.matsim.contrib.carsharing.control.listeners.FFEventsHandler.RentalInfoFF;
 import org.matsim.contrib.carsharing.control.listeners.NoParkingEventHandler.NoParkingInfo;
 import org.matsim.contrib.carsharing.control.listeners.NoVehicleEventHandler.NoVehicleInfo;
+import org.matsim.contrib.carsharing.control.listeners.CarSharingRequestEventHandler.CarSharingRequestInfo;
 import org.matsim.contrib.carsharing.control.listeners.OWEventsHandler.RentalInfoOW;
 import org.matsim.contrib.carsharing.control.listeners.TwoWayEventsHandler.RentalInfo;
 import org.matsim.core.controler.Controler;
@@ -19,12 +20,13 @@ import org.matsim.core.controler.listener.StartupListener;
 import org.matsim.core.utils.io.IOUtils;
 
 
-public class CarsharingListener implements StartupListener, IterationEndsListener, IterationStartsListener{
+public class CarsharingListener implements StartupListener, IterationEndsListener, IterationStartsListener {
 	TwoWayEventsHandler cshandler;
 	FFEventsHandler ffhandler;
 	OWEventsHandler owhandler;
 	NoVehicleEventHandler noVehicleHandler;
 	NoParkingEventHandler noParkingHandler;
+	CarSharingRequestEventHandler carSharingRequestEventHandler;
 	Controler controler;
 	int frequency = 0;
 	
@@ -47,15 +49,15 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 		try {
 			outLink.write("personID   startTime   endTIme   startLink   distance   accessTime   egressTime	vehicleID");
 			outLink.newLine();
-		for(RentalInfo i: info) {
-			
-			
+
+			for (RentalInfo i: info) {
 				outLink.write(i.toString());
 				outLink.newLine();
 			
-		}
-		outLink.flush();
-		outLink.close();
+			}
+
+			outLink.flush();
+			outLink.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -67,15 +69,14 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 		try {
 			outLinkff.write("personID   startTime   endTIme   startLink   endLink   distance   accessTime	vehicleID");
 			outLinkff.newLine();
-		for(RentalInfoFF i: infoff) {
-			
-			
-			outLinkff.write(i.toString());
-			outLinkff.newLine();
-			
-		}
-		outLinkff.flush();
-		outLinkff.close();
+
+			for (RentalInfoFF i: infoff) {
+				outLinkff.write(i.toString());
+				outLinkff.newLine();
+			}
+
+			outLinkff.flush();
+			outLinkff.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -87,54 +88,70 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 		try {
 			outLinkow.write("personID   startTime   endTIme   startLink   endLink   distance   accessTime   egressTime	vehicleID");
 			outLinkow.newLine();
-		for(RentalInfoOW i: infoow) {
-			
-			
-			outLinkow.write(i.toString());
-			outLinkow.newLine();
-			
-		}
-		outLinkow.flush();
-		outLinkow.close();
+
+			for (RentalInfoOW i: infoow) {
+				outLinkow.write(i.toString());
+				outLinkow.newLine();
+			}
+
+			outLinkow.flush();
+			outLinkow.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+
 		ArrayList<NoVehicleInfo> infoNoVehicles = noVehicleHandler.info();
 		
 		final BufferedWriter outNoVehicle = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "No_Vehicle_Stats.txt"));
 		try {
 			outNoVehicle.write("linkID	CSType");
 			outNoVehicle.newLine();
-		for(NoVehicleInfo i: infoNoVehicles) {
-			
-			
-			outNoVehicle.write(i.toString());
-			outNoVehicle.newLine();
-			
-		}
-		outNoVehicle.flush();
-		outNoVehicle.close();
+
+			for (NoVehicleInfo i: infoNoVehicles) {
+				outNoVehicle.write(i.toString());
+				outNoVehicle.newLine();
+			}
+
+			outNoVehicle.flush();
+			outNoVehicle.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
+		ArrayList<CarSharingRequestInfo> infoCarSharingRequest = carSharingRequestEventHandler.info();
+
+		final BufferedWriter outCarSharingRequest = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "CarSharing_Requests_Stats.txt"));
+		try {
+			outCarSharingRequest.write("time linkID	CSType");
+			outCarSharingRequest.newLine();
+
+			for (CarSharingRequestInfo i: infoCarSharingRequest) {
+				outCarSharingRequest.write(i.toString());
+				outCarSharingRequest.newLine();
+			}
+
+			outCarSharingRequest.flush();
+			outCarSharingRequest.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 		ArrayList<NoParkingInfo> infoNoParking = noParkingHandler.info();
 		
 		final BufferedWriter outNoParking = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "No_Parking_Stats.txt"));
 		try {
 			outNoParking.write("linkID	CSType");
 			outNoParking.newLine();
-		for(NoParkingInfo i: infoNoParking) {
-			
-			
-			outNoParking.write(i.toString());
-			outNoParking.newLine();
-			
-		}
-		outNoParking.flush();
-		outNoParking.close();
+
+			for(NoParkingInfo i: infoNoParking) {
+				outNoParking.write(i.toString());
+				outNoParking.newLine();
+			}
+
+			outNoParking.flush();
+			outNoParking.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -145,6 +162,7 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 		event.getControler().getEvents().removeHandler(this.owhandler);
 		event.getControler().getEvents().removeHandler(this.noVehicleHandler);
 		event.getControler().getEvents().removeHandler(this.noParkingHandler);
+		event.getControler().getEvents().removeHandler(this.carSharingRequestEventHandler);
 		}
 		
 	}
@@ -163,6 +181,7 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 		
 		this.noParkingHandler = new NoParkingEventHandler();
 		
+		this.carSharingRequestEventHandler = new CarSharingRequestEventHandler();	
 	}
 
 	@Override
@@ -174,6 +193,7 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 			event.getControler().getEvents().addHandler(this.owhandler);
 			event.getControler().getEvents().addHandler(this.noVehicleHandler);
 			event.getControler().getEvents().addHandler(this.noParkingHandler);
+			event.getControler().getEvents().addHandler(this.carSharingRequestEventHandler);
 		}
 		
 	}
