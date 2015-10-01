@@ -25,20 +25,18 @@ import java.io.IOException;
  */
 
 public class CarsharingQsimFactory implements Provider<Netsim>{
-
-
 	private final Scenario sc;
 	private final Provider<TripRouter> tripRouterProvider;	
 	private final EventsManager eventsManager;
-	
-	private CarSharingVehicles carSharingVehicles;
+	private final CarSharingVehicles carSharingVehicles;
 
 	@Inject	
 	public CarsharingQsimFactory(Scenario sc,
-			Provider<TripRouter> tripRouterProvider, EventsManager eventsManager) {
+			Provider<TripRouter> tripRouterProvider, EventsManager eventsManager, CarSharingVehicles carSharingVehicles) {
 		this.sc = sc;
 		this.tripRouterProvider = tripRouterProvider;
 		this.eventsManager = eventsManager;
+		this.carSharingVehicles = carSharingVehicles;
 	}
 
 
@@ -65,30 +63,26 @@ public class CarsharingQsimFactory implements Provider<Netsim>{
 		AgentFactory agentFactory = null;			
 			
 		try {
-			carSharingVehicles = new CarSharingVehicles(sc);
-		//added part
-		//a simple way to place vehicles at the original location at the start of each simulation
-		this.carSharingVehicles.readVehicleLocations();
-				
-		agentFactory = new CarsharingAgentFactory(qSim, sc, tripRouterProvider, this.carSharingVehicles);
-		
-		
-		
-		if (sc.getConfig().network().isTimeVariantNetwork()) {
-			qSim.addMobsimEngine(new NetworkChangeEventsEngine());		
-		}
-		PopulationAgentSource agentSource = new PopulationAgentSource(sc.getPopulation(), agentFactory, qSim);
-		
-		//we need to park carsharing vehicles on the network
-		ParkCSVehicles parkSource = new ParkCSVehicles(sc.getPopulation(), agentFactory, qSim,
-				this.carSharingVehicles.getFreeFLoatingVehicles(), this.carSharingVehicles.getOneWayVehicles(), this.carSharingVehicles.getTwoWayVehicles());
-		qSim.addAgentSource(agentSource);
-		qSim.addAgentSource(parkSource);
+			this.carSharingVehicles.readVehicleLocations();
+
+			agentFactory = new CarsharingAgentFactory(qSim, sc, tripRouterProvider, this.carSharingVehicles);
+
+			if (sc.getConfig().network().isTimeVariantNetwork()) {
+				qSim.addMobsimEngine(new NetworkChangeEventsEngine());		
+			}
+
+			PopulationAgentSource agentSource = new PopulationAgentSource(sc.getPopulation(), agentFactory, qSim);
+
+			//we need to park carsharing vehicles on the network
+			ParkCSVehicles parkSource = new ParkCSVehicles(sc.getPopulation(), agentFactory, qSim,
+					this.carSharingVehicles.getFreeFLoatingVehicles(), this.carSharingVehicles.getOneWayVehicles(), this.carSharingVehicles.getTwoWayVehicles());
+			qSim.addAgentSource(agentSource);
+			qSim.addAgentSource(parkSource);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return qSim;
 	}
 		

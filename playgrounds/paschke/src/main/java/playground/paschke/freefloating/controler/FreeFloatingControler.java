@@ -19,6 +19,7 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.contrib.carsharing.config.CarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
 import org.matsim.contrib.carsharing.control.listeners.CarsharingListener;
+import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
 import org.matsim.contrib.carsharing.qsim.CarsharingQsimFactory;
 import org.matsim.contrib.carsharing.replanning.CarsharingSubtourModeChoiceStrategy;
 import org.matsim.contrib.carsharing.replanning.RandomTripToCarsharingStrategy;
@@ -36,12 +37,15 @@ import org.matsim.core.router.MainModeIdentifier;
 import org.matsim.core.router.RoutingContext;
 import org.matsim.core.router.TripRouter;
 import org.matsim.core.router.TripRouterFactory;
+import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.vehicles.Vehicle;
 
-import playground.paschke.events.BeforeMobsimEventHandler;
+import playground.paschke.events.MobismBeforeSimStepRelocationAgentsDispatcher;
 import playground.paschke.events.RelocationAgentsDispatchListener;
+import playground.paschke.qsim.CarSharingDemandTracker;
+import playground.paschke.qsim.CarSharingRelocationZones;
 
 
 public class FreeFloatingControler {
@@ -55,26 +59,47 @@ public class FreeFloatingControler {
 
 		final Controler controler = new Controler(sc);
 
-		installCarSharing(controler);
+		CarSharingVehicles carSharingVehicles = null;
+
+		try {
+			carSharingVehicles = new CarSharingVehicles(sc);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		CarSharingRelocationZones relocationZones = null;
+
+		try {
+			relocationZones = new CarSharingRelocationZones(sc);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		CarSharingDemandTracker demandTracker = new CarSharingDemandTracker(controler);
+
+		installCarSharing(controler, carSharingVehicles, relocationZones, demandTracker);
 
 		controler.run();
 	}
 
-	public static void installCarSharing(final Controler controler) {
-		Scenario sc = controler.getScenario() ;
+	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker) {
+		Scenario sc = controler.getScenario();
 
-		controler.addOverridingModule( new AbstractModule() {
+		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
 				this.addPlanStrategyBinding("RandomTripToCarsharingStrategy").to( RandomTripToCarsharingStrategy.class ) ;
 				this.addPlanStrategyBinding("CarsharingSubtourModeChoiceStrategy").to( CarsharingSubtourModeChoiceStrategy.class ) ;
-			}
-		});
-		
-		controler.addOverridingModule(new AbstractModule() {
-			@Override
-			public void install() {
+			     /*
+			      * This tells Guice that whenever it sees a dependency on a CarSharingVehicles instance,
+			      * it should satisfy the dependency using this static CarSharingVehicles.
+			      */
+				bind(CarSharingVehicles.class).toInstance(carSharingVehicles);
+				bind(CarSharingRelocationZones.class).toInstance(relocationZones);
+				bind(CarSharingDemandTracker.class).toInstance(demandTracker);
 				bindMobsim().toProvider( CarsharingQsimFactory.class );
+				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationAgentsDispatcher.class);
 			}
 		});
 
@@ -84,22 +109,11 @@ public class FreeFloatingControler {
 		controler.setScoringFunctionFactory(new CarsharingScoringFunctionFactory( sc.getConfig(), sc.getNetwork()));
 
 		final CarsharingConfigGroup csConfig = (CarsharingConfigGroup) controler.getConfig().getModule(CarsharingConfigGroup.GROUP_NAME);
-		controler.addControlerListener(new CarsharingListener(controler,
-				csConfig.getStatsWriterFrequency() ) );
 
-		controler.addControlerListener(new RelocationAgentsDispatchListener(controler));
+		controler.addControlerListener(new CarsharingListener(controler, csConfig.getStatsWriterFrequency()));
 
-		// adding an EventHandler to which the RelocationAgentsDispatchListener will register (but how??)
-		controler.getEvents().addHandler(new BeforeMobsimEventHandler() {
-			@Override
-			public void handleEvent(BeforeMobsimEvent event) {
-				// some;
-			}
+		controler.addControlerListener(demandTracker);
 
-			@Override
-			public void reset(int iteration) {
-
-			}
-		});
+//		controler.addControlerListener(new RelocationAgentsDispatchListener(controler));
 	}
 }

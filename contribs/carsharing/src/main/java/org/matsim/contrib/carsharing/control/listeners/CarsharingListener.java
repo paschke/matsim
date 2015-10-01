@@ -31,10 +31,8 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 	int frequency = 0;
 	
 	public CarsharingListener(Controler controler, int frequency) {
-				
 		this.controler = controler;
 		this.frequency = frequency;
-		
 	}
 	
 	@Override
@@ -67,7 +65,7 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 		
 		final BufferedWriter outLinkff = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "FF_CS"));
 		try {
-			outLinkff.write("personID   startTime   endTIme   startLink   endLink   distance   accessTime	vehicleID");
+			outLinkff.write("personID	startTime	endTIme	accessLink	startLink	endLink	distance	accessTime	vehicleID");
 			outLinkff.newLine();
 
 			for (RentalInfoFF i: infoff) {
@@ -177,11 +175,11 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 
         this.owhandler = new OWEventsHandler(event.getControler().getScenario().getNetwork());
 		
-		this.noVehicleHandler = new NoVehicleEventHandler();	
+		this.noVehicleHandler = new NoVehicleEventHandler();
 		
 		this.noParkingHandler = new NoParkingEventHandler();
 		
-		this.carSharingRequestEventHandler = new CarSharingRequestEventHandler();	
+		this.carSharingRequestEventHandler = new CarSharingRequestEventHandler();
 	}
 
 	@Override
@@ -195,9 +193,5 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 			event.getControler().getEvents().addHandler(this.noParkingHandler);
 			event.getControler().getEvents().addHandler(this.carSharingRequestEventHandler);
 		}
-		
 	}
-	
-		
-
 }

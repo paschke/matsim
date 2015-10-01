@@ -26,10 +26,9 @@ import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.api.core.v01.Id;
 
-public class RelocationAgentsDispatchListener implements StartupListener, BeforeMobsimListener {
+public class RelocationAgentsDispatchListener implements BeforeMobsimListener {
 	private static final Logger log = Logger.getLogger("dummy");
 
-	BeforeMobsimEventHandler beforeMobsimEventHandler;
 	Controler controler;
 
 	public RelocationAgentsDispatchListener(Controler controler) {		
@@ -85,20 +84,4 @@ public class RelocationAgentsDispatchListener implements StartupListener, Before
 
 		log.info("dispatching Person 1000 to move one ff vehicle from link 0 to link 4, at 10:00");
 	}
-
-	@Override
-	public void notifyStartup(StartupEvent event) {
-		this.beforeMobsimEventHandler = new BeforeMobsimEventHandler() {
-			@Override
-			public void handleEvent(BeforeMobsimEvent event) {
-				// some;
-			}
-
-			@Override
-			public void reset(int iteration) {
-
-			}
-		};
-	}
-
 }

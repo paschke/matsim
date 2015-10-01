@@ -76,6 +76,7 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 			RentalInfoFF info = new RentalInfoFF();
 			info.accessStartTime = event.getTime();
 			info.personId = event.getPersonId();
+			info.accessLinkId = event.getLinkId();
 			ArrayList<RentalInfoFF> temp1 = new ArrayList<RentalInfoFF>();
 			if (ffRentalsStats.get(event.getPersonId()) == null) {
 				
@@ -127,6 +128,7 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 		private Id<Person> personId = null;
 		private double startTime = 0.0;
 		private double endTime = 0.0;
+		private Id<Link> accessLinkId = null;
 		private Id<Link> startLinkId = null;
 		private Id<Link> endLinkId = null;
 		private double distance = 0.0;
@@ -135,13 +137,18 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 		private double egressStartTime = 0.0;
 		private double egressEndTime = 0.0;
 		private Id<Vehicle> vehId = null;
+
 		public String toString() {
-			
-			return personId + " " + Double.toString(startTime) + " " + Double.toString(endTime) + " " +
-			startLinkId.toString() + " " +	endLinkId.toString()+ " " + Double.toString(distance)
-			+ " " +	Double.toString(accessEndTime - accessStartTime)+ 
-			" " + Double.toString(egressEndTime - egressStartTime) +
-			" " + vehId;
+			return personId + "	" +
+					Double.toString(startTime) + "	" +
+					Double.toString(endTime) + "	" +
+					accessLinkId.toString() + "	" +
+					startLinkId.toString() + "	" +
+					endLinkId.toString()+ "	" +
+					Double.toString(distance) + "	" +
+					Double.toString(accessEndTime - accessStartTime) + "	" +
+					Double.toString(egressEndTime - egressStartTime) + "	" +
+					vehId;
 		}
 	}
 
