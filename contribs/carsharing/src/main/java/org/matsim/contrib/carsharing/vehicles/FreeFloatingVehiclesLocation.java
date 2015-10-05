@@ -75,16 +75,12 @@ public class FreeFloatingVehiclesLocation {
 	}
 	
 	public void removeVehicle(Link link, String id) {
-		
 		FreeFloatingStation f = vehicleLocationQuadTree.get(link.getCoord().getX(), link.getCoord().getY());
 		
 		if ( f.getLink().getId().toString().equals(link.getId().toString())) {
-			
-			if (f.getNumberOfVehicles() == 1)
+			if (f.getNumberOfVehicles() == 1) {
 				vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), f);
-			
-			
-			else {
+			} else {
 				ArrayList<String> vehIDs = f.getIDs();
 				ArrayList<String> newvehIDs = new ArrayList<String>();
 				for (String s : vehIDs) {
@@ -96,17 +92,9 @@ public class FreeFloatingVehiclesLocation {
 				vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), f);
 				vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), fNew);
 			}
-			
 		}
 		else {
-			
 			Log.error("trying to take a car from the link with no cars, this should never happen");
-			
 		}
-		
-		
 	}
-	
-	
-	
 }

@@ -39,6 +39,7 @@ import org.matsim.facilities.ActivityFacility;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarSharingDemandTracker.RequestInfo;
 import playground.paschke.qsim.CarSharingRelocationZones;
+import playground.paschke.qsim.CarSharingRelocationZones.RelocationInfo;
 import playground.paschke.qsim.RelocationZone;
 
 import com.google.inject.Inject;
@@ -84,26 +85,30 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 				log.info("logging some request here!");
 				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());
 				RelocationZone relocationZone = relocationZones.getQuadTree().get(link.getCoord().getX(), link.getCoord().getY());
-				relocationZone.increaseNumberOfRequests(1);
+				relocationZone.addRequests(link, 1);
 			}
 
 			// count number of vehicles in car sharing relocation zones
 			for (FreeFloatingStation ffs : carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
 				RelocationZone relocationZone = relocationZones.getQuadTree().get(ffs.getLink().getCoord().getX(), ffs.getLink().getCoord().getY());
-				relocationZone.increaseNumberOfVehicles(ffs.getNumberOfVehicles());
+				relocationZone.addVehicles(ffs.getLink(), ffs.getIDs());
 			}
 
 			// compare available vehicles to demand
 			for (RelocationZone relocationZone : relocationZones.getQuadTree().values()) {
-				log.info("relocation zone " + relocationZone.getCoord().getX() + " " + relocationZone.getCoord().getY() + " logs " + relocationZone.getNumberOfVehicles() + " vehicles and " + relocationZone.getNumberOfRequests() + " requests!");
+				log.info("relocation zone " + relocationZone.getCoord().getX() + " " + relocationZone.getCoord().getY() + " counts " + relocationZone.getNumberOfVehicles() + " vehicles and expects " + relocationZone.getNumberOfRequests() + " requests!");
 			}
 
-			Collection<MobsimDriverAgent> relocationAgents = getRelocationAgents(mobsim); 
+			for (RelocationInfo info : relocationZones.getRelocations()) {
+				log.info("RelocationZones suggests we move one vehicle from zone " + info.getFrom().getCoord().getX() + " " + info.getFrom().getCoord().getY() + " to " + info.getTo().getCoord().getX() + " " + info.getTo().getCoord().getY());
 
-			for (MobsimDriverAgent relocationAgent : relocationAgents) {
-				doDispatch(relocationAgent, mobsim);
+				this.dispatchRelocation(info.getVehicleID(), info.getFrom(), info.getTo());
 			}
 		}
+	}
+
+	private void dispatchRelocation(String vehicleId, Link fromLink, Link toLink) {
+		// 
 	}
 
 	private List<MobsimDriverAgent> getRelocationAgents(Netsim mobsim) {
