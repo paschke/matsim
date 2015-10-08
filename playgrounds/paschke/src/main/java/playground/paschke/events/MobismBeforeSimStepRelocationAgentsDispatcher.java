@@ -22,6 +22,7 @@ import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.framework.MobsimDriverAgent;
 import org.matsim.core.mobsim.framework.events.MobsimBeforeSimStepEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeSimStepListener;
+import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.mobsim.qsim.agents.AgentFactory;
 import org.matsim.core.mobsim.qsim.agents.DefaultAgentFactory;
 import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
@@ -32,17 +33,21 @@ import org.matsim.core.mobsim.qsim.qnetsimengine.NetsimLink;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.PlanImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
+import org.matsim.core.router.TripRouter;
 import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.facilities.ActivityFacility;
 
 import playground.paschke.qsim.CarSharingDemandTracker;
+import playground.paschke.qsim.Guidance;
+import playground.paschke.qsim.RelocationAgent;
 import playground.paschke.qsim.CarSharingDemandTracker.RequestInfo;
 import playground.paschke.qsim.CarSharingRelocationZones;
 import playground.paschke.qsim.CarSharingRelocationZones.RelocationInfo;
 import playground.paschke.qsim.RelocationZone;
 
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBeforeSimStepListener {
 	private static final Logger log = Logger.getLogger("dummy");
@@ -57,31 +62,35 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 	private CarSharingDemandTracker demandTracker;
 
+	private Provider<TripRouter> routerProvider;
+
 	@Inject
-	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker) {
+	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider) {
 		this.carSharingVehicles = carSharingVehicles;
 		this.relocationZones = relocationZones;
 		this.demandTracker = demandTracker;
+		this.routerProvider = routerProvider;
 	}
 
 	@Override
 	public void notifyMobsimBeforeSimStep(MobsimBeforeSimStepEvent event) {
-		Netsim mobsim = (Netsim) event.getQueueSimulation();
-		this.scenario = mobsim.getScenario();
+		QSim qSim = (QSim) event.getQueueSimulation();
+		this.scenario = qSim.getScenario();
 
 		// TODO: relocation times must be configurable
 		// relocation times will only be called if there are activities (usually starting with 32400.0), which makes sense
 		List<Double> relocationTimes = new ArrayList(Arrays.asList(0.0, 10800.0, 21600.0, 32400.0, 43200.0, 54000.0, 64800.0, 75600.0));
 
-		if (relocationTimes.contains(Math.floor(mobsim.getSimTimer().getTimeOfDay()))) {
-			log.info("is it that time again? " + (Math.floor(mobsim.getSimTimer().getTimeOfDay()) / 3600));
-			this.timeOfDay = mobsim.getSimTimer().getTimeOfDay();
+		if (relocationTimes.contains(Math.floor(qSim.getSimTimer().getTimeOfDay()))) {
+			log.info("is it that time again? " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
+			this.timeOfDay = qSim.getSimTimer().getTimeOfDay();
 
 			relocationZones.reset();
 
 			// estimate demand in cells from logged CarSharingRequests
 			// TODO: time interval must be configurable
-			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(mobsim.getSimTimer().getTimeOfDay()), 10800)) {
+			// TODO: adding request info could be wrapped inside RelocationZones
+			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), 10800)) {
 				log.info("logging some request here!");
 				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());
 				RelocationZone relocationZone = relocationZones.getQuadTree().get(link.getCoord().getX(), link.getCoord().getY());
@@ -89,6 +98,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			}
 
 			// count number of vehicles in car sharing relocation zones
+			// TODO: adding vehicles could be wrapped inside RelocationZone
 			for (FreeFloatingStation ffs : carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
 				RelocationZone relocationZone = relocationZones.getQuadTree().get(ffs.getLink().getCoord().getX(), ffs.getLink().getCoord().getY());
 				relocationZone.addVehicles(ffs.getLink(), ffs.getIDs());
@@ -102,13 +112,18 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			for (RelocationInfo info : relocationZones.getRelocations()) {
 				log.info("RelocationZones suggests we move one vehicle from zone " + info.getFrom().getCoord().getX() + " " + info.getFrom().getCoord().getY() + " to " + info.getTo().getCoord().getX() + " " + info.getTo().getCoord().getY());
 
-				this.dispatchRelocation(info.getVehicleID(), info.getFrom(), info.getTo());
+				this.dispatchRelocation(qSim, info.getVehicleID(), info.getFrom(), info.getTo());
 			}
 		}
 	}
 
-	private void dispatchRelocation(String vehicleId, Link fromLink, Link toLink) {
-		// 
+	private void dispatchRelocation(QSim qSim, String vehicleId, Link fromLink, Link toLink) {
+		Guidance guidance = new Guidance(this.routerProvider.get(), qSim.getScenario());
+		Id<Person> id = Id.createPersonId("DemonAgent");
+
+		RelocationAgent agent = new RelocationAgent(id, fromLink.getId(), toLink.getId(), guidance, qSim.getSimTimer(), qSim.getScenario());
+
+		qSim.insertAgentIntoMobsim(agent);
 	}
 
 	private List<MobsimDriverAgent> getRelocationAgents(Netsim mobsim) {
