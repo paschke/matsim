@@ -10,6 +10,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
 import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.framework.MobsimDriverAgent;
 import org.matsim.core.mobsim.framework.MobsimTimer;
@@ -20,6 +21,14 @@ import org.matsim.core.mobsim.qsim.interfaces.MobsimVehicle;
 import org.matsim.core.mobsim.qsim.interfaces.Netsim;
 import org.matsim.vehicles.Vehicle;
 
+/**
+ * Mostly copied from tutorial.programming.ownMobsimAgentUsingRouter.MyMobsimAgent
+ * 
+ * MobsimDriverAgent that
+ * - gets a person Id, start and destination link Id
+ * - computes best path to it at every turn, using a Guidance instance
+ */
+
 public class RelocationAgent implements MobsimDriverAgent {
 	private Id<Person> id;
 	private Guidance guidance;
@@ -29,14 +38,24 @@ public class RelocationAgent implements MobsimDriverAgent {
 	private Id<Link> destinationLinkId;
 	private Scenario scenario;
 	private Random rnd = new Random(4711) ;
+	private CarSharingVehicles carSharingVehicles;
+	private String vehicleId;
+	private State state;
 
-	public RelocationAgent(Id<Person> id, Id<Link> startLinkId, Id<Link> destinationLinkId, Guidance guidance, MobsimTimer mobsimTimer, Scenario scenario) {
+	public RelocationAgent(Id<Person> id, Guidance guidance, MobsimTimer mobsimTimer, Scenario scenario, CarSharingVehicles carSharingVehicles) {
 		this.id = id;
-		this.currentLinkId = startLinkId ;
-		this.destinationLinkId = destinationLinkId ;
-		this.guidance = guidance ;
-		this.mobsimTimer = mobsimTimer ;
-		this.scenario = scenario ;
+		this.guidance = guidance;
+		this.mobsimTimer = mobsimTimer;
+		this.scenario = scenario;
+		this.carSharingVehicles = carSharingVehicles;
+	}
+
+	public void dispatch(String vehicleId, Id<Link> startLinkId, Id<Link> destinationLinkId) {
+		this.vehicleId = vehicleId;
+		this.currentLinkId = startLinkId;
+		this.destinationLinkId = destinationLinkId;
+
+		this.state = State.LEG;
 	}
 
 	@Override
@@ -56,7 +75,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public State getState() {
-		return MobsimAgent.State.LEG ;
+		return this.state;
 	}
 
 	@Override
@@ -76,7 +95,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public void setStateToAbort(double now) {
-		throw new UnsupportedOperationException() ;
+		this.state = State.ABORT;
 	}
 
 	@Override
@@ -113,22 +132,15 @@ public class RelocationAgent implements MobsimDriverAgent {
 	@Override
 	public boolean isWantingToArriveOnCurrentLink() {
 		if ( this.currentLinkId.equals( this.destinationLinkId ) ) {
-			getRandomLink();
+			deliverCarSharingVehicle();
+			setStateToAbort(this.mobsimTimer.getTimeOfDay());
 		}
+
 		return false ;
 	}
 
-	private Id<Link> getRandomLink() {
-		// if we are at the final destination, select a random new destination:
-		Map<Id<Link>, ? extends Link> links = this.scenario.getNetwork().getLinks() ;
-		int idx = rnd.nextInt(links.size()) ;
-		int cnt = 0 ;
-		for ( Link link : links.values() ) {
-			if ( cnt== idx ) {
-				return link.getId() ;
-			}
-		}
-		throw new RuntimeException("should not happen");
+	private void deliverCarSharingVehicle() {
+		this.carSharingVehicles.getFreeFLoatingVehicles().addVehicle(this.scenario.getNetwork().getLinks().get(this.getCurrentLinkId()), this.vehicleId);
 	}
 
 	@Override

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,6 +20,7 @@ import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
 import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.mobsim.framework.MobsimAgent;
+import org.matsim.core.mobsim.framework.MobsimAgent.State;
 import org.matsim.core.mobsim.framework.MobsimDriverAgent;
 import org.matsim.core.mobsim.framework.events.MobsimBeforeSimStepEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeSimStepListener;
@@ -64,12 +66,16 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 	private Provider<TripRouter> routerProvider;
 
+	private Map<Id<Person>, RelocationAgent> relocationAgents;
+
 	@Inject
 	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider) {
 		this.carSharingVehicles = carSharingVehicles;
 		this.relocationZones = relocationZones;
 		this.demandTracker = demandTracker;
 		this.routerProvider = routerProvider;
+
+		this.relocationAgents = new HashMap<Id<Person>, RelocationAgent>();
 	}
 
 	@Override
@@ -118,81 +124,34 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	}
 
 	private void dispatchRelocation(QSim qSim, String vehicleId, Link fromLink, Link toLink) {
-		Guidance guidance = new Guidance(this.routerProvider.get(), qSim.getScenario());
-		Id<Person> id = Id.createPersonId("DemonAgent");
+		RelocationAgent agent = this.getRelocationAgent(qSim);
 
-		RelocationAgent agent = new RelocationAgent(id, fromLink.getId(), toLink.getId(), guidance, qSim.getSimTimer(), qSim.getScenario());
+		agent.dispatch(vehicleId, fromLink.getId(), toLink.getId());
 
 		qSim.insertAgentIntoMobsim(agent);
 	}
 
-	private List<MobsimDriverAgent> getRelocationAgents(Netsim mobsim) {
-		List<MobsimDriverAgent> set = new ArrayList<MobsimDriverAgent>();
-		Map<Id<Person>, ? extends Person> persons = scenario.getPopulation().getPersons();
-
-		MobsimDriverAgent relocationAgent = null;
-
-		// find agents in network
-		for (ActivityFacility activityFacility : scenario.getActivityFacilities().getFacilities().values()) {
-			
-		}
-
-		for (NetsimLink link : mobsim.getNetsimNetwork().getNetsimLinks().values()){
-			for (MobsimVehicle vehicle : link.getAllVehicles()) {
-				MobsimDriverAgent agent = vehicle.getDriver();
-
-				if ((agent != null) && (agent.getId() == Id.createPersonId(1000))) {
-					log.info("found agent 1000!");
-					relocationAgent = agent;
-				}
+	private RelocationAgent getRelocationAgent(QSim qSim) {
+		for (RelocationAgent agent : this.relocationAgents.values()) {
+			if (agent.getState() == State.ABORT) {
+				log.info("RelocationAgent " + agent.getId() + " reused from the agent pool");
+				return agent;
 			}
 		}
 
-		// FIXME: ignoring the above loop here. Of course, there should not be one but several relocationAgents
-		if (relocationAgent == null) {
+		Guidance guidance = new Guidance(this.routerProvider.get(), qSim.getScenario());
 
-			Person agentPerson = persons.get(Id.createPersonId(1000));
-
-			Plan plan = scenario.getPopulation().getFactory().createPlan();
-			// FIXME this is nonsense, because agent cannot be fully initialized here
-			relocationAgent = new PersonDriverAgentImpl(plan, mobsim);
+		int counter = 0;
+		Id<Person> id = Id.createPersonId("DemonAgent" + counter);
+		while (this.relocationAgents.containsKey(id)) {
+			counter++;
+			id = Id.createPersonId("DemonAgent" + counter);
 		}
 
-		set.add(relocationAgent);
+		RelocationAgent agent = new RelocationAgent(id, guidance, qSim.getSimTimer(), qSim.getScenario(), carSharingVehicles);
+		log.info("RelocationAgent " + id + " created and added to agent pool");
+		this.relocationAgents.put(id, agent);
 
-		return set;
-	}
-
-	private boolean doDispatch(MobsimDriverAgent relocationAgent, Netsim mobsim) {
-		Plan plan = WithinDayAgentUtils.getModifiablePlan( relocationAgent ) ; 
-
-		if (plan == null) {
-			log.info( " we don't have a modifiable plan to dispatch; returning ... ") ;
-			return false;
-		} else {
-			// create access leg
-			Leg accessLeg = scenario.getPopulation().getFactory().createLeg("walk_ff");
-			accessLeg.setDepartureTime(timeOfDay + 1);
-			accessLeg.setTravelTime(600);
-			accessLeg.setRoute(new LinkNetworkRouteImpl(Id.createLinkId(2), Id.createLinkId(5)));
-			plan.addLeg(accessLeg);
-
-			Leg relocationLeg = scenario.getPopulation().getFactory().createLeg("freefloating");
-			relocationLeg.setRoute(new LinkNetworkRouteImpl(Id.createLinkId(5), Id.createLinkId(1)));
-			plan.addLeg(relocationLeg);
-
-			Activity dropVehicle = new ActivityImpl("w", new CoordImpl(1000, -250), Id.createLinkId(1));
-			dropVehicle.setMaximumDuration(60);
-			plan.addActivity(dropVehicle);
-
-			Leg returnLeg = scenario.getPopulation().getFactory().createLeg("walk");
-			returnLeg.setTravelTime(600);
-			returnLeg.setRoute(new LinkNetworkRouteImpl(Id.createLinkId(1), Id.createLinkId(2)));
-			plan.addLeg(returnLeg);
-
-			log.info("sending agent 1000 to move a car from link 5 to 1");
-
-			return true;
-		}
+		return agent;
 	}
 }

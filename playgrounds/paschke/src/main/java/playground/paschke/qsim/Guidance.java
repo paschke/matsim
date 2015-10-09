@@ -15,6 +15,12 @@ import org.matsim.core.router.TripRouter;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.Facility;
 
+/**
+ * Mostly copied from tutorial.programming.ownMobsimAgentUsingRouter.MyGuidance
+ * 
+ * Guidance. applied TripRouter.
+ */
+
 public class Guidance {
     private final TripRouter router;
     private final Scenario scenario;
