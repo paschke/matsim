@@ -39,6 +39,8 @@ import org.matsim.core.router.TripRouter;
 import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.vehicles.Vehicle;
+import org.matsim.vehicles.VehicleUtils;
 
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.Guidance;
@@ -128,6 +130,13 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 		agent.dispatch(vehicleId, fromLink.getId(), toLink.getId());
 
+		// insert vehicle:
+		// there is no relation between this vehicle and the agent (other than its ID, which is only a sting)
+		// there appears to be nothing happening to the agent after he is inserted into the queue (?)
+		final Vehicle vehicle = VehicleUtils.getFactory().createVehicle(Id.create(vehicleId, Vehicle.class), VehicleUtils.getDefaultVehicleType());
+		qSim.createAndParkVehicleOnLink(vehicle, fromLink.getId());
+
+		// insert agent
 		qSim.insertAgentIntoMobsim(agent);
 	}
 

@@ -3,6 +3,7 @@ package playground.paschke.qsim;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -16,6 +17,7 @@ import org.matsim.core.mobsim.framework.MobsimDriverAgent;
 import org.matsim.core.mobsim.framework.MobsimTimer;
 import org.matsim.core.mobsim.framework.MobsimAgent.State;
 import org.matsim.core.mobsim.qsim.agents.BasicPlanAgentImpl;
+import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
 import org.matsim.core.mobsim.qsim.agents.PlanBasedDriverAgentImpl;
 import org.matsim.core.mobsim.qsim.interfaces.MobsimVehicle;
 import org.matsim.core.mobsim.qsim.interfaces.Netsim;
@@ -30,16 +32,18 @@ import org.matsim.vehicles.Vehicle;
  */
 
 public class RelocationAgent implements MobsimDriverAgent {
+	private static final Logger log = Logger.getLogger(PersonDriverAgentImpl.class);
+
 	private Id<Person> id;
 	private Guidance guidance;
-	private Id<Link> currentLinkId;
-	private MobsimVehicle vehicle;
 	private MobsimTimer mobsimTimer;
-	private Id<Link> destinationLinkId;
 	private Scenario scenario;
-	private Random rnd = new Random(4711) ;
 	private CarSharingVehicles carSharingVehicles;
+
 	private String vehicleId;
+	private Id<Link> currentLinkId;
+	private Id<Link> destinationLinkId;
+	private MobsimVehicle vehicle;
 	private State state;
 
 	public RelocationAgent(Id<Person> id, Guidance guidance, MobsimTimer mobsimTimer, Scenario scenario, CarSharingVehicles carSharingVehicles) {
@@ -55,6 +59,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 		this.currentLinkId = startLinkId;
 		this.destinationLinkId = destinationLinkId;
 
+		this.carSharingVehicles.getFreeFLoatingVehicles().removeVehicle(this.scenario.getNetwork().getLinks().get(startLinkId), vehicleId);
 		this.state = State.LEG;
 	}
 
@@ -126,6 +131,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public void notifyMoveOverNode(Id<Link> newLinkId) {
+		log.info("agent " + this.id + " moving over link " + newLinkId);
 		this.currentLinkId = newLinkId ;
 	}
 
