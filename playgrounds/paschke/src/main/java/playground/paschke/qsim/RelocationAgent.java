@@ -161,6 +161,6 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public Id<Vehicle> getPlannedVehicleId() {
-		return null ;
+		return Id.create(this.vehicleId, Vehicle.class);
 	}
 }
