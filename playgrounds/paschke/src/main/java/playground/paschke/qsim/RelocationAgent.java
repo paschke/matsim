@@ -1,5 +1,6 @@
 package playground.paschke.qsim;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
 
@@ -40,27 +41,59 @@ public class RelocationAgent implements MobsimDriverAgent {
 	private Scenario scenario;
 	private CarSharingVehicles carSharingVehicles;
 
-	private String vehicleId;
+	private Id<Link> homeLinkId;
 	private Id<Link> currentLinkId;
 	private Id<Link> destinationLinkId;
+	private String transportMode;
 	private MobsimVehicle vehicle;
 	private State state;
 
-	public RelocationAgent(Id<Person> id, Guidance guidance, MobsimTimer mobsimTimer, Scenario scenario, CarSharingVehicles carSharingVehicles) {
+	private ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
+	// TODO: is this needed or could we just use the first position of relocations?
+	private RelocationInfo currentRelocation;
+
+	public RelocationAgent(Id<Person> id, Id<Link> homeLinkId, Scenario scenario, CarSharingVehicles carSharingVehicles) {
 		this.id = id;
-		this.guidance = guidance;
-		this.mobsimTimer = mobsimTimer;
+		this.currentLinkId = this.homeLinkId = homeLinkId;
 		this.scenario = scenario;
 		this.carSharingVehicles = carSharingVehicles;
+
+		this.state = State.ACTIVITY;
 	}
 
-	public void dispatch(String vehicleId, Id<Link> startLinkId, Id<Link> destinationLinkId) {
-		this.vehicleId = vehicleId;
-		this.currentLinkId = startLinkId;
-		this.destinationLinkId = destinationLinkId;
+	public void setGuidance(Guidance guidance) {
+		this.guidance = guidance;
+	}
 
-		this.carSharingVehicles.getFreeFLoatingVehicles().removeVehicle(this.scenario.getNetwork().getLinks().get(startLinkId), vehicleId);
-		this.state = State.LEG;
+    /**
+     * - add RelocationInfo to relocations
+     * - reserve car sharing vehicle, aka remove it from storage structure
+     */
+	public void dispatchRelocation(RelocationInfo info) {
+		this.relocations.add(info);
+		this.carSharingVehicles.getFreeFLoatingVehicles().removeVehicle(this.scenario.getNetwork().getLinks().get(info.getStartLinkId()), info.getVehicleId());
+	}
+
+	public void setMobsimTimer(MobsimTimer mobsimTimer) {
+		this.mobsimTimer = mobsimTimer;
+	}
+
+	public MobsimTimer getMobsimTimer() {
+		return this.mobsimTimer;
+	}
+
+	public double getTimeOfDay() {
+		if (this.getMobsimTimer() != null) {
+			return this.getMobsimTimer().getTimeOfDay();
+		}
+
+		return 0;
+	}
+
+	public void reset() {
+		this.currentLinkId = this.homeLinkId;
+		this.currentRelocation = null;
+		this.state = State.ACTIVITY;
 	}
 
 	@Override
@@ -85,17 +118,57 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public double getActivityEndTime() {
+		if (this.relocations.isEmpty() == false) {
+			return this.getTimeOfDay();
+		}
+
 		return Double.POSITIVE_INFINITY ;
 	}
 
 	@Override
 	public void endActivityAndComputeNextState(double now) {
-		throw new UnsupportedOperationException() ;
+		try {
+			RelocationInfo relocationInfo = this.relocations.remove(0);
+			this.currentRelocation = relocationInfo;
+			this.prepareRelocation(relocationInfo);
+		} catch (IndexOutOfBoundsException e) {
+			// do nothing
+		}
+	}
+
+	private void prepareRelocation(RelocationInfo relocationInfo) {
+		this.destinationLinkId = relocationInfo.getDestinationLinkId();
+		this.transportMode = TransportMode.bike;
+		this.state = State.LEG;
+	}
+
+	private void executeRelocation(RelocationInfo relocationInfo) {
+		this.destinationLinkId = relocationInfo.getDestinationLinkId();
+		this.transportMode = TransportMode.car;
+		// TODO: set vehicle
 	}
 
 	@Override
 	public void endLegAndComputeNextState(double now) {
-		throw new UnsupportedOperationException() ;
+		if (this.currentRelocation == null) {
+			this.state = State.ACTIVITY;
+		} else {
+			if (this.getCurrentLinkId().equals(this.currentRelocation.getStartLinkId())) {
+				this.executeRelocation(this.currentRelocation);
+			} else if (this.getCurrentLinkId().equals(this.currentRelocation.getDestinationLinkId())) {
+				this.deliverCarSharingVehicle();
+
+				try {
+					RelocationInfo relocationInfo = this.relocations.remove(0); 
+					this.currentRelocation = relocationInfo;
+					this.prepareRelocation(relocationInfo);
+				} catch (IndexOutOfBoundsException e) {
+					this.currentRelocation = null;
+					this.destinationLinkId = this.homeLinkId;
+					this.transportMode = TransportMode.bike;
+				}
+			}
+		}
 	}
 
 	@Override
@@ -126,7 +199,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public Id<Link> chooseNextLinkId() {
-		return this.guidance.getBestOutgoingLink( this.currentLinkId, this.destinationLinkId, this.mobsimTimer.getTimeOfDay()  ) ;
+		return this.guidance.getBestOutgoingLink(this.scenario.getNetwork().getLinks().get(this.getCurrentLinkId()), this.scenario.getNetwork().getLinks().get(this.getDestinationLinkId()), this.getTimeOfDay()  ) ;
 	}
 
 	@Override
@@ -137,16 +210,15 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public boolean isWantingToArriveOnCurrentLink() {
-		if ( this.currentLinkId.equals( this.destinationLinkId ) ) {
-			deliverCarSharingVehicle();
-			setStateToAbort(this.mobsimTimer.getTimeOfDay());
+		if ( this.getCurrentLinkId().equals( this.getDestinationLinkId() ) ) {
+			return true;
 		}
 
 		return false ;
 	}
 
 	private void deliverCarSharingVehicle() {
-		this.carSharingVehicles.getFreeFLoatingVehicles().addVehicle(this.scenario.getNetwork().getLinks().get(this.getCurrentLinkId()), this.vehicleId);
+		this.carSharingVehicles.getFreeFLoatingVehicles().addVehicle(this.scenario.getNetwork().getLinks().get(this.getCurrentLinkId()), this.currentRelocation.getVehicleId());
 	}
 
 	@Override
@@ -161,6 +233,6 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public Id<Vehicle> getPlannedVehicleId() {
-		return Id.create(this.vehicleId, Vehicle.class);
+		return (this.currentRelocation != null) ? Id.create("FF_" + this.currentRelocation.getVehicleId(), Vehicle.class) : null;
 	}
 }

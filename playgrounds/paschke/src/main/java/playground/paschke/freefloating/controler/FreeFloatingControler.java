@@ -3,18 +3,22 @@ package playground.paschke.freefloating.controler;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.google.inject.Provider;
+import com.google.inject.TypeLiteral;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.contrib.carsharing.config.CarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
@@ -45,8 +49,11 @@ import org.matsim.vehicles.Vehicle;
 
 import playground.paschke.events.MobismBeforeSimStepRelocationAgentsDispatcher;
 import playground.paschke.events.RelocationAgentsDispatchListener;
+import playground.paschke.events.RelocationAgentsInsertListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarSharingRelocationZones;
+import playground.paschke.qsim.Guidance;
+import playground.paschke.qsim.RelocationAgent;
 
 
 public class FreeFloatingControler {
@@ -79,12 +86,25 @@ public class FreeFloatingControler {
 
 		CarSharingDemandTracker demandTracker = new CarSharingDemandTracker(controler);
 
-		installCarSharing(controler, carSharingVehicles, relocationZones, demandTracker);
+		Map<Id<Person>, RelocationAgent> relocationAgents = new HashMap<Id<Person>, RelocationAgent>();
+
+		// TODO: number of relocation agents should be configurable
+		Id<Link> relocationAgentBaseLinkId = Id.createLinkId(1); 
+		int counter = 0;
+		while (counter < 5) {
+			Id<Person> id = Id.createPersonId("DemonAgent" + counter);
+			RelocationAgent agent = new RelocationAgent(id, relocationAgentBaseLinkId, sc, carSharingVehicles);
+			relocationAgents.put(id, agent);
+
+			counter++;
+		}
+
+		installCarSharing(controler, carSharingVehicles, relocationZones, demandTracker, relocationAgents);
 		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.run();
 	}
 
-	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker) {
+	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker, final Map<Id<Person>, RelocationAgent> relocationAgents) {
 		Scenario sc = controler.getScenario();
 
 		controler.addOverridingModule(new AbstractModule() {
@@ -99,8 +119,10 @@ public class FreeFloatingControler {
 				bind(CarSharingVehicles.class).toInstance(carSharingVehicles);
 				bind(CarSharingRelocationZones.class).toInstance(relocationZones);
 				bind(CarSharingDemandTracker.class).toInstance(demandTracker);
+				bind(new TypeLiteral<Map<Id<Person>, RelocationAgent>>() {}).toInstance(relocationAgents);
 				bindMobsim().toProvider( CarsharingQsimFactory.class );
 				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationAgentsDispatcher.class);
+				this.addMobsimListenerBinding().to(RelocationAgentsInsertListener.class);
 			}
 		});
 
@@ -114,7 +136,5 @@ public class FreeFloatingControler {
 		controler.addControlerListener(new CarsharingListener(controler, csConfig.getStatsWriterFrequency()));
 
 		controler.addControlerListener(demandTracker);
-
-//		controler.addControlerListener(new RelocationAgentsDispatchListener(controler));
 	}
 }

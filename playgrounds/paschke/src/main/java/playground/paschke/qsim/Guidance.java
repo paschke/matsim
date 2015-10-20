@@ -23,24 +23,26 @@ import org.matsim.facilities.Facility;
 
 public class Guidance {
     private final TripRouter router;
-    private final Scenario scenario;
 
-    public Guidance(TripRouter router, Scenario scenario) {
+    public Guidance(TripRouter router) {
         this.router = router;
-        this.scenario = scenario;
     }
 
-    public Id<Link> getBestOutgoingLink(Id<Link> linkId, Id<Link> destinationLinkId, double now) {
+    public Id<Link> getBestOutgoingLink(Link startLink, Link destinationLink, double now) {
         Person person = null; // does this work?
         double departureTime = now;
         String mainMode = TransportMode.car;
-        Facility<ActivityFacility> fromFacility = new LinkWrapperFacility(this.scenario.getNetwork().getLinks().get(linkId));
-        Facility<ActivityFacility> toFacility = new LinkWrapperFacility(this.scenario.getNetwork().getLinks().get(destinationLinkId));
-        List<? extends PlanElement> trip = router.calcRoute(mainMode, fromFacility, toFacility, departureTime, person);
+        Facility<ActivityFacility> startFacility = new LinkWrapperFacility(startLink);
+        Facility<ActivityFacility> destinationFacility = new LinkWrapperFacility(destinationLink);
+        List<? extends PlanElement> trip = router.calcRoute(mainMode, startFacility, destinationFacility, departureTime, person);
 
         Leg leg = (Leg) trip.get(0);  // test: either plan element 0 or 1 will be a car leg
 
         NetworkRoute route = (NetworkRoute) leg.getRoute();
+
+        if (route.getLinkIds().isEmpty()) {
+        	return route.getEndLinkId();
+        }
 
         return route.getLinkIds().get(0); // entry number 0 should be link connected to next intersection (?)
     }

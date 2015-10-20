@@ -47,7 +47,7 @@ import playground.paschke.qsim.Guidance;
 import playground.paschke.qsim.RelocationAgent;
 import playground.paschke.qsim.CarSharingDemandTracker.RequestInfo;
 import playground.paschke.qsim.CarSharingRelocationZones;
-import playground.paschke.qsim.CarSharingRelocationZones.RelocationInfo;
+import playground.paschke.qsim.RelocationInfo;
 import playground.paschke.qsim.RelocationZone;
 
 import com.google.inject.Inject;
@@ -71,13 +71,12 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	private Map<Id<Person>, RelocationAgent> relocationAgents;
 
 	@Inject
-	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider) {
+	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider, final Map<Id<Person>, RelocationAgent> relocationAgents) {
 		this.carSharingVehicles = carSharingVehicles;
 		this.relocationZones = relocationZones;
 		this.demandTracker = demandTracker;
 		this.routerProvider = routerProvider;
-
-		this.relocationAgents = new HashMap<Id<Person>, RelocationAgent>();
+		this.relocationAgents = relocationAgents;
 	}
 
 	@Override
@@ -114,53 +113,33 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 			// compare available vehicles to demand
 			for (RelocationZone relocationZone : relocationZones.getQuadTree().values()) {
-				log.info("relocation zone " + relocationZone.getCoord().getX() + " " + relocationZone.getCoord().getY() + " counts " + relocationZone.getNumberOfVehicles() + " vehicles and expects " + relocationZone.getNumberOfRequests() + " requests!");
+				log.info("relocation zone " + relocationZone.getCoord().getX() + " " + relocationZone.getCoord().getY() + " counts " + relocationZone.getNumberOfVehicles() + " vehicles " + relocationZone.getVehicleIds().toString() + " and expects " + relocationZone.getNumberOfRequests() + " requests!");
 			}
 
 			for (RelocationInfo info : relocationZones.getRelocations()) {
-				log.info("RelocationZones suggests we move one vehicle from zone " + info.getFrom().getCoord().getX() + " " + info.getFrom().getCoord().getY() + " to " + info.getTo().getCoord().getX() + " " + info.getTo().getCoord().getY());
+				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from zone " + info.getStartLinkId() + " to " + info.getDestinationLinkId());
 
-				this.dispatchRelocation(qSim, info.getVehicleID(), info.getFrom(), info.getTo());
+				this.dispatchRelocation(qSim, info);
 			}
 		}
 	}
 
-	private void dispatchRelocation(QSim qSim, String vehicleId, Link fromLink, Link toLink) {
+	private void dispatchRelocation(QSim qSim, RelocationInfo info) {
 		RelocationAgent agent = this.getRelocationAgent(qSim);
 
-		agent.dispatch(vehicleId, fromLink.getId(), toLink.getId());
-
-		// insert vehicle:
-		// there is no relation between this vehicle and the agent (other than its ID, which is only a sting)
-		// there appears to be nothing happening to the agent after he is inserted into the queue (?)
-		final Vehicle vehicle = VehicleUtils.getFactory().createVehicle(Id.create(vehicleId, Vehicle.class), VehicleUtils.getDefaultVehicleType());
-		qSim.createAndParkVehicleOnLink(vehicle, fromLink.getId());
-
-		// insert agent
-		qSim.insertAgentIntoMobsim(agent);
+		if (agent != null) {
+			agent.dispatchRelocation(info);
+		}
 	}
 
 	private RelocationAgent getRelocationAgent(QSim qSim) {
 		for (RelocationAgent agent : this.relocationAgents.values()) {
-			if (agent.getState() == State.ABORT) {
+			if ((agent.getState() == State.ACTIVITY) || (agent.getState() == State.ABORT)) {
 				log.info("RelocationAgent " + agent.getId() + " reused from the agent pool");
 				return agent;
 			}
 		}
 
-		Guidance guidance = new Guidance(this.routerProvider.get(), qSim.getScenario());
-
-		int counter = 0;
-		Id<Person> id = Id.createPersonId("DemonAgent" + counter);
-		while (this.relocationAgents.containsKey(id)) {
-			counter++;
-			id = Id.createPersonId("DemonAgent" + counter);
-		}
-
-		RelocationAgent agent = new RelocationAgent(id, guidance, qSim.getSimTimer(), qSim.getScenario(), carSharingVehicles);
-		log.info("RelocationAgent " + id + " created and added to agent pool");
-		this.relocationAgents.put(id, agent);
-
-		return agent;
+		return null;
 	}
 }

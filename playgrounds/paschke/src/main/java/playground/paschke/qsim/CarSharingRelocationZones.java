@@ -103,33 +103,9 @@ public class CarSharingRelocationZones {
 			// this will result in a null pointer exception if last has no vehicles - use request Map instead
 			Link toLink = (Link) ((Set<Link>) last.getRequests().keySet()).iterator().next();
 
-			relocations.add(new RelocationInfo(vehicleID, fromLink, toLink));
+			relocations.add(new RelocationInfo(vehicleID, fromLink.getId(), toLink.getId()));
 		}
 
 		return relocations;
-	}
-
-	public class RelocationInfo {
-		private String vehicleID;
-		private Link from;
-		private Link to;
-
-		public RelocationInfo(String vehicleID, Link from, Link to) {
-			this.vehicleID = vehicleID;
-			this.from = from;
-			this.to = to;
-		}
-
-		public String getVehicleID() {
-			return this.vehicleID;
-		}
-
-		public Link getFrom() {
-			return this.from;
-		}
-
-		public Link getTo() {
-			return this.to;
-		}
 	}
 }

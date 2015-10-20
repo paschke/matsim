@@ -26,6 +26,8 @@ import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.api.core.v01.Id;
 
+// UNUSED EVER SINCE THE RELOCATION AGENTS ARE NOT PART OF THE POPULATION ANY MORE
+// ALSO, RELOCATION AGENTS DO NOT HAVE PLANS NO MORE
 public class RelocationAgentsDispatchListener implements BeforeMobsimListener {
 	private static final Logger log = Logger.getLogger("dummy");
 

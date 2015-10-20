@@ -2,6 +2,7 @@ package playground.paschke.qsim;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Coord;
@@ -32,6 +33,16 @@ public class RelocationZone {
 
 	public Map<Link, ArrayList<String>> getVehicles() {
 		return this.vehicles;
+	}
+
+	public List<String> getVehicleIds() {
+		ArrayList<String> Ids = new ArrayList<String>();
+
+		for (List<String> linkIds : this.getVehicles().values()) {
+			Ids.addAll(linkIds);
+		}
+
+		return Ids;
 	}
 
 	public int getNumberOfRequests() {
