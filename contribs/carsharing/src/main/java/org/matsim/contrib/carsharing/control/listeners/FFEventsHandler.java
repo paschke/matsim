@@ -3,6 +3,8 @@ package org.matsim.contrib.carsharing.control.listeners;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.apache.log4j.Logger;
+import org.jfree.util.Log;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.LinkLeaveEvent;
 import org.matsim.api.core.v01.events.PersonArrivalEvent;
@@ -17,9 +19,11 @@ import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
 import org.matsim.vehicles.Vehicle;
 
 public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler, PersonArrivalEventHandler, PersonDepartureEventHandler, LinkLeaveEventHandler{
+	private static final Logger log = Logger.getLogger(PersonDriverAgentImpl.class);
 	private HashMap<Id<Person>, ArrayList<RentalInfoFF>> ffRentalsStats = new HashMap<Id<Person>, ArrayList<RentalInfoFF>>();
 	private ArrayList<RentalInfoFF> arr = new ArrayList<RentalInfoFF>();
 	private HashMap<Id<Person>, Boolean> inVehicle = new HashMap<Id<Person>, Boolean>();
@@ -44,79 +48,103 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 	@Override
 	public void handleEvent(PersonLeavesVehicleEvent event) {
 		// TODO Auto-generated method stub
+		if (event.getPersonId().toString().startsWith("DemonAgent")) {
+			Id<Person> personId = event.getPersonId();
+			Id<Vehicle> vehicleId = event.getVehicleId();
+			log.info("agent " + personId + " leaves vehicle " + vehicleId);
+		}
+
 		personVehicles.remove(event.getVehicleId());
 	}
 
 	@Override
 	public void handleEvent(PersonEntersVehicleEvent event) {
 		// TODO Auto-generated method stub
-		if (event.getVehicleId().toString().startsWith("FF"))
-			personVehicles.put(event.getVehicleId(), event.getPersonId());
+		if (event.getPersonId().toString().startsWith("DemonAgent")) {
+			Id<Person> personId = event.getPersonId();
+			Id<Vehicle> vehicleId = event.getVehicleId();
+			log.info("agent " + personId + " enters vehicle " + vehicleId);
+		}
+
+		if (event.getVehicleId().toString().startsWith("FF")) {
+			Id<Vehicle> vehicleId = event.getVehicleId();
+			Id<Person> personId = event.getPersonId();
+			personVehicles.put(vehicleId, personId);
+		}
 	}
 
 	@Override
 	public void handleEvent(LinkLeaveEvent event) {
 		if (event.getVehicleId().toString().startsWith("FF")) {
 			Id<Person> perid = personVehicles.get(event.getVehicleId());
-			
-			RentalInfoFF info = ffRentalsStats.get(perid).get(ffRentalsStats.get(perid).size() - 1);
-			info.vehId = event.getVehicleId();
-			info.distance += network.getLinks().get(event.getLinkId()).getLength();
-			
+
+			if (perid.toString().startsWith("DemonAgent")) {
+				Id<Vehicle> vehicleId = event.getVehicleId();
+				log.info("agent " + perid + " with vehicle " + vehicleId + " leaves link " + event.getLinkId());
+			}
+
+			if (ffRentalsStats.get(perid) != null) {
+				RentalInfoFF info = ffRentalsStats.get(perid).get(ffRentalsStats.get(perid).size() - 1);
+				info.vehId = event.getVehicleId();
+				info.distance += network.getLinks().get(event.getLinkId()).getLength();
+			}
 		}
-		
 	}
 
 	@Override
 	public void handleEvent(PersonDepartureEvent event) {
+		if (event.getPersonId().toString().startsWith("DemonAgent")) {
+			Id<Person> personId = event.getPersonId();
+			log.info("agent " + personId + " departs");
+		}
+
 		// TODO Auto-generated method stub
 		inVehicle.put(event.getPersonId(), false);
 		if (event.getLegMode().equals("walk_ff")) {
-			
 			RentalInfoFF info = new RentalInfoFF();
 			info.accessStartTime = event.getTime();
 			info.personId = event.getPersonId();
 			info.accessLinkId = event.getLinkId();
 			ArrayList<RentalInfoFF> temp1 = new ArrayList<RentalInfoFF>();
+
 			if (ffRentalsStats.get(event.getPersonId()) == null) {
-				
 				temp1.add(info);
 				ffRentalsStats.put(event.getPersonId(), temp1);
-
-			}
-			else {
+			} else {
 				ffRentalsStats.get(event.getPersonId()).add(info);
-				
 			}
-			
-		}
-		else if (event.getLegMode().equals("freefloating")) {
+		} else if (event.getLegMode().equals("freefloating")) {
 			inVehicle.put(event.getPersonId(), true);
+			Id<Person> personId = event.getPersonId();
 
-			RentalInfoFF info = ffRentalsStats.get(event.getPersonId()).get(ffRentalsStats.get(event.getPersonId()).size() - 1);
+			if (ffRentalsStats.get(personId) != null) {
+				RentalInfoFF info = ffRentalsStats.get(personId).get(ffRentalsStats.get(event.getPersonId()).size() - 1);
 			
-			info.startTime = event.getTime();
-			info.startLinkId = event.getLinkId();
-			info.accessEndTime = event.getTime();
+				info.startTime = event.getTime();
+				info.startLinkId = event.getLinkId();
+				info.accessEndTime = event.getTime();
+			}
 		}
-		
 	}
 
 	@Override
 	public void handleEvent(PersonArrivalEvent event) {
-		// TODO Auto-generated method stub
-		
-		if (event.getLegMode().equals("freefloating")) {
-			RentalInfoFF info = ffRentalsStats.get(event.getPersonId()).get(ffRentalsStats.get(event.getPersonId()).size() - 1);
-			info.endTime = event.getTime();
-			info.endLinkId = event.getLinkId();
-			
-			arr.add(info);
-
-			
-			
+		if (event.getPersonId().toString().startsWith("DemonAgent")) {
+			Id<Person> personId = event.getPersonId();
+			log.info("agent " + personId + " arrives");
 		}
 		
+		if (event.getLegMode().equals("freefloating")) {
+			Id<Person> personId = event.getPersonId();
+
+			if (ffRentalsStats.get(personId) != null) {
+				RentalInfoFF info = ffRentalsStats.get(personId).get(ffRentalsStats.get(event.getPersonId()).size() - 1);
+				info.endTime = event.getTime();
+				info.endLinkId = event.getLinkId();
+
+				arr.add(info);
+			}
+		}
 	}
 	
 	public ArrayList<RentalInfoFF> rentals() {

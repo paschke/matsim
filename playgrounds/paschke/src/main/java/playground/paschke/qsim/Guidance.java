@@ -9,9 +9,11 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.router.LinkWrapperFacility;
 import org.matsim.core.router.TripRouter;
+import org.matsim.core.utils.misc.Time;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.Facility;
 
@@ -45,5 +47,27 @@ public class Guidance {
         }
 
         return route.getLinkIds().get(0); // entry number 0 should be link connected to next intersection (?)
+    }
+
+    public double getExpectedTravelTime(Link startLink, Link destinationLink, double departureTime, String mode, Person person) {
+        Facility<ActivityFacility> startFacility = new LinkWrapperFacility(startLink);
+        Facility<ActivityFacility> destinationFacility = new LinkWrapperFacility(destinationLink);
+        List<? extends PlanElement> trip = router.calcRoute(mode, startFacility, destinationFacility, departureTime, person);
+		Route route = ((Leg) trip.get(0)).getRoute();
+
+		double travelTime = route != null ? route.getTravelTime() : Time.UNDEFINED_TIME;
+
+		return travelTime;
+    }
+
+    public double getExpectedTravelDistance(Link startLink, Link destinationLink, double departureTime, String mode, Person person) {
+        Facility<ActivityFacility> startFacility = new LinkWrapperFacility(startLink);
+        Facility<ActivityFacility> destinationFacility = new LinkWrapperFacility(destinationLink);
+        List<? extends PlanElement> trip = router.calcRoute(mode, startFacility, destinationFacility, departureTime, person);
+		Route route = ((Leg) trip.get(0)).getRoute();
+
+		double distance = route != null ? route.getDistance() : null;
+
+		return distance;
     }
 }

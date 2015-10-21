@@ -98,7 +98,6 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			// TODO: time interval must be configurable
 			// TODO: adding request info could be wrapped inside RelocationZones
 			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), 10800)) {
-				log.info("logging some request here!");
 				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());
 				RelocationZone relocationZone = relocationZones.getQuadTree().get(link.getCoord().getX(), link.getCoord().getY());
 				relocationZone.addRequests(link, 1);
@@ -117,7 +116,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			}
 
 			for (RelocationInfo info : relocationZones.getRelocations()) {
-				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from zone " + info.getStartLinkId() + " to " + info.getDestinationLinkId());
+				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getDestinationLinkId());
 
 				this.dispatchRelocation(qSim, info);
 			}
