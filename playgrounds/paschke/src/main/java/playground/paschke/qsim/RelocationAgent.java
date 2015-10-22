@@ -118,11 +118,19 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public double getActivityEndTime() {
-		if (this.relocations.isEmpty() == false) {
-			return this.getTimeOfDay();
-		}
+		double now = this.getTimeOfDay();
 
-		return Double.POSITIVE_INFINITY ;
+		if (this.relocations.isEmpty() == false) {
+			return now;
+		} else if (now < 21600) {
+			return 21600;
+		} else if (now < 64800) {
+			// TODO: "before 6pm, check back in 3 hours", hard coded. Make this configurable.
+			double endTime = (now + 10800 - (now % 10800));
+			return endTime;
+		} else {
+			return Double.POSITIVE_INFINITY;
+		}
 	}
 
 	@Override
