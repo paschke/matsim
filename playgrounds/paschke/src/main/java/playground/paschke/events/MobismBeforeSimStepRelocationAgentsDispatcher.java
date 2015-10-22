@@ -86,7 +86,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 		// TODO: relocation times must be configurable
 		// relocation times will only be called if there are activities (usually starting with 32400.0), which makes sense
-		List<Double> relocationTimes = new ArrayList(Arrays.asList(0.0, 10800.0, 21600.0, 32400.0, 43200.0, 54000.0, 64800.0, 75600.0));
+		List<Double> relocationTimes = new ArrayList<Double>(Arrays.asList(0.0, 10800.0, 21600.0, 32400.0, 43200.0, 54000.0, 64800.0, 75600.0));
 
 		if (relocationTimes.contains(Math.floor(qSim.getSimTimer().getTimeOfDay()))) {
 			log.info("is it that time again? " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
@@ -106,13 +106,18 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			// count number of vehicles in car sharing relocation zones
 			// TODO: adding vehicles could be wrapped inside RelocationZone
 			for (FreeFloatingStation ffs : carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
+				log.info("found " + ffs.getNumberOfVehicles() + " FF vehicles " + ffs.getIDs().toString() + " at this FF station " + ffs.getLink().getId());
 				RelocationZone relocationZone = relocationZones.getQuadTree().get(ffs.getLink().getCoord().getX(), ffs.getLink().getCoord().getY());
 				relocationZone.addVehicles(ffs.getLink(), ffs.getIDs());
 			}
 
 			// compare available vehicles to demand
 			for (RelocationZone relocationZone : relocationZones.getQuadTree().values()) {
-				log.info("relocation zone " + relocationZone.getCoord().getX() + " " + relocationZone.getCoord().getY() + " counts " + relocationZone.getNumberOfVehicles() + " vehicles " + relocationZone.getVehicleIds().toString() + " and expects " + relocationZone.getNumberOfRequests() + " requests!");
+				log.info(
+						"relocation zone " + relocationZone.getCoord().getX() + " " + relocationZone.getCoord().getY() +
+						" counts " + relocationZone.getNumberOfVehicles() + " vehicles " + relocationZone.getVehicleIds().toString() +
+						" and expects " + relocationZone.getNumberOfRequests() + " requests!"
+				);
 			}
 
 			for (RelocationInfo info : relocationZones.getRelocations()) {
