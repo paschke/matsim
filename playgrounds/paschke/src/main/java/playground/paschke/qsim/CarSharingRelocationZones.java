@@ -2,14 +2,17 @@ package playground.paschke.qsim;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -21,6 +24,7 @@ import org.matsim.core.utils.geometry.CoordImpl;
 import playground.paschke.qsim.CarSharingDemandTracker.RequestInfo;
 
 public class CarSharingRelocationZones {
+	private static final Logger log = Logger.getLogger("dummy");
 	private Scenario scenario;
 	private QuadTree<RelocationZone> relocationZoneQuadTree;	
 
@@ -68,7 +72,7 @@ public class CarSharingRelocationZones {
 	}
 
 	public void reset() {
-		for (RelocationZone r : this.relocationZoneQuadTree.values()) {
+		for (RelocationZone r : this.getQuadTree().values()) {
 			r.reset();
 		}
 	}
@@ -82,30 +86,68 @@ public class CarSharingRelocationZones {
 			@Override
 			public int compare(RelocationZone o1, RelocationZone o2) {
 				if (o1.getNumberOfSurplusVehicles() < o2.getNumberOfSurplusVehicles()) {
-					return 1;
-				} else if (o1.getNumberOfSurplusVehicles() > o2.getNumberOfSurplusVehicles()) {
 					return -1;
+				} else if (o1.getNumberOfSurplusVehicles() > o2.getNumberOfSurplusVehicles()) {
+					return 1;
 				} else {
 					return 0;
 				}
 			}
 		});
 
-		// TODO: add the actual relocation logic here
-		// for now, just pick the first and last of the relocation zones.
-		RelocationZone first = relocationZones.get(0);
-		RelocationZone last = relocationZones.get(relocationZones.size() - 1);
+		Iterator iterator = relocationZones.iterator();
+		while (iterator.hasNext()) {
+			RelocationZone nextZone = (RelocationZone) iterator.next();
+			log.info("relocationZone with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
-		if ((first.getNumberOfSurplusVehicles() > 0) && (last.getNumberOfSurplusVehicles() < 0)) {
-			Link fromLink = (Link) ((Set<Link>) first.getVehicles().keySet()).iterator().next();
-			String vehicleID = first.getVehicles().get(fromLink).get(0);
+			if (nextZone.getNumberOfSurplusVehicles() < 0) {
+				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
+					log.info("counting down surplus vehicles: " + i);
+					Link fromLink = null;
+					Link toLink = (Link) ((Set<Link>) nextZone.getRequests().keySet()).iterator().next();
+					String vehicleId = null;
+					Collection<RelocationZone> adjacentZones = this.getAdjacentZones(nextZone);
 
-			// this will result in a null pointer exception if last has no vehicles - use request Map instead
-			Link toLink = (Link) ((Set<Link>) last.getRequests().keySet()).iterator().next();
+					Iterator adjacentIterator = adjacentZones.iterator();
+					while (adjacentIterator.hasNext()) {
+						RelocationZone adjacentZone = (RelocationZone) adjacentIterator.next();
+						log.info("adjacentZone has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
-			relocations.add(new RelocationInfo(vehicleID, fromLink.getId(), toLink.getId()));
+						if (adjacentZone.getNumberOfSurplusVehicles() > 0) {
+							fromLink = adjacentZone.getVehicles().keySet().iterator().next();
+							ArrayList<String> vehicleIds = adjacentZone.getVehicles().get(fromLink);
+
+							if (vehicleIds.size() == 1) {
+								log.info("found one vehicle at link " + fromLink.getId());
+								vehicleId = vehicleIds.get(0);
+								adjacentZone.getVehicles().remove(fromLink);
+							} else {
+								log.info("found multiple vehicles at link " + fromLink.getId());
+								vehicleId = vehicleIds.remove(0);
+								adjacentZone.getVehicles().put(fromLink, vehicleIds);
+							}
+
+							break;
+						}
+					}
+
+					if ((fromLink != null) && (vehicleId != null)) {
+						relocations.add(new RelocationInfo(vehicleId, fromLink.getId(), toLink.getId()));
+					}
+				}
+			} else {
+				break;
+			}
 		}
 
 		return relocations;
+	}
+
+	protected Collection<RelocationZone> getAdjacentZones(RelocationZone currentZone) {
+		// FIXME: hard-coded zone distance here
+		Collection<RelocationZone> zones = this.getQuadTree().get(currentZone.getCoord().getX(), currentZone.getCoord().getY(), 1001);
+		zones.remove(currentZone);
+
+		return zones;
 	}
 }

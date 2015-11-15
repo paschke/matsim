@@ -40,6 +40,6 @@ public class RelocationAgentsInsertListener implements MobsimInitializedListener
 			qSim.insertAgentIntoMobsim(agent);
 		}
 
-		log.info("inserted relocation agents into qSim");
+		log.info("inserted " + this.relocationAgents.size() + " relocation agents into qSim");
 	}
 }

@@ -91,7 +91,7 @@ public class FreeFloatingControler {
 		// TODO: number of relocation agents should be configurable
 		Id<Link> relocationAgentBaseLinkId = Id.createLinkId(1); 
 		int counter = 0;
-		while (counter < 1) {
+		while (counter < 5) {
 			Id<Person> id = Id.createPersonId("DemonAgent" + counter);
 			RelocationAgent agent = new RelocationAgent(id, relocationAgentBaseLinkId, sc, carSharingVehicles);
 			relocationAgents.put(id, agent);

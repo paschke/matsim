@@ -63,6 +63,10 @@ public class RelocationAgent implements MobsimDriverAgent {
 		this.guidance = guidance;
 	}
 
+	public ArrayList<RelocationInfo> getRelocations() {
+		return this.relocations;
+	}
+
     /**
      * - add RelocationInfo to relocations
      * - reserve car sharing vehicle, aka remove it from storage structure
