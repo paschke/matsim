@@ -139,6 +139,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	private RelocationAgent getRelocationAgent(QSim qSim) {
 		for (RelocationAgent agent : this.relocationAgents.values()) {
 			if ((agent.getState() == State.ACTIVITY) && (agent.getRelocations().size() == 0)) {
+				log.info("RelocationAgent " + agent.getId() + " reused from the agent pool");
 				return agent;
 			}
 		}
