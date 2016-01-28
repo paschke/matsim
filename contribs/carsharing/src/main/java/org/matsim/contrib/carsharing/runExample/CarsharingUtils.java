@@ -8,6 +8,7 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.contrib.carsharing.config.CarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
 import org.matsim.contrib.carsharing.config.OneWayCarsharingConfigGroup;
+import org.matsim.contrib.carsharing.config.CarsharingVehicleRelocationConfigGroup;
 import org.matsim.contrib.carsharing.config.TwoWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.router.FreeFloatingRoutingModule;
 import org.matsim.contrib.carsharing.router.OneWayCarsharingRoutingModule;
@@ -21,19 +22,22 @@ import org.matsim.core.router.TripRouterFactory;
 
 public class CarsharingUtils {
 	public static Config addConfigModules(Config config) {
-		
+
 		OneWayCarsharingConfigGroup configGroup = new OneWayCarsharingConfigGroup();
     	config.addModule(configGroup);
-    	
+
     	FreeFloatingConfigGroup configGroupff = new FreeFloatingConfigGroup();
     	config.addModule(configGroupff);
-    	
+
     	TwoWayCarsharingConfigGroup configGrouptw = new TwoWayCarsharingConfigGroup();
     	config.addModule(configGrouptw);
-    	
+
     	CarsharingConfigGroup configGroupAll = new CarsharingConfigGroup();
     	config.addModule(configGroupAll);
-    	
+
+    	CarsharingVehicleRelocationConfigGroup carsharingVehicleRelocationConfigGroup = new CarsharingVehicleRelocationConfigGroup();
+    	config.addModule(carsharingVehicleRelocationConfigGroup);
+
     	return config;
 		
 	}

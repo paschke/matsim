@@ -25,38 +25,21 @@ import playground.paschke.qsim.CarSharingDemandTracker.RequestInfo;
 
 public class CarSharingRelocationZones {
 	private static final Logger log = Logger.getLogger("dummy");
-	private Scenario scenario;
+	public static final String ELEMENT_NAME = "carSharingRelocationZones";
 	private QuadTree<RelocationZone> relocationZoneQuadTree;	
 
-	public CarSharingRelocationZones(Scenario scenario) throws IOException {
-		this.scenario = scenario;
-
-		readRelocationZoneLocations();
-	}
-
-	public void readRelocationZoneLocations() {
-		// TODO read relocation zone coords from config file here
-		ArrayList<RelocationZone> relocationZones = new ArrayList<RelocationZone>();
-
-		CoordImpl coord1 = new CoordImpl(0, 0);
-		RelocationZone relocationZone1 = new RelocationZone(coord1);
-    	relocationZones.add(relocationZone1);
-
-		CoordImpl coord2 = new CoordImpl(1000, 0);
-		RelocationZone relocationZone2 = new RelocationZone(coord2);
-    	relocationZones.add(relocationZone2);
-
-		// TODO read QuadTree dimensions from config (the following is just copied from FreeFloatingVehiclesLocation)
+	public void setRelocationZoneLocations(List<RelocationZone> relocationZones) {
+    	// TODO read QuadTree dimensions from config (the following is just copied from FreeFloatingVehiclesLocation)
     	double minx = (1.0D / 0.0D);
 	    double miny = (1.0D / 0.0D);
 	    double maxx = (-1.0D / 0.0D);
 	    double maxy = (-1.0D / 0.0D);
 
-	    for (Link l : scenario.getNetwork().getLinks().values()) {
-	    	if (l.getCoord().getX() < minx) minx = l.getCoord().getX();
-	    	if (l.getCoord().getY() < miny) miny = l.getCoord().getY();
-	    	if (l.getCoord().getX() > maxx) maxx = l.getCoord().getX();
-	    	if (l.getCoord().getY() <= maxy) continue; maxy = l.getCoord().getY();
+	    for (RelocationZone r: relocationZones) {
+	    	if (r.getCoord().getX() < minx) minx = r.getCoord().getX();
+	    	if (r.getCoord().getY() < miny) miny = r.getCoord().getY();
+	    	if (r.getCoord().getX() > maxx) maxx = r.getCoord().getX();
+	    	if (r.getCoord().getY() <= maxy) continue; maxy = r.getCoord().getY();
 	    }
 	    minx -= 1.0D; miny -= 1.0D; maxx += 1.0D; maxy += 1.0D;
 
