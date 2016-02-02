@@ -58,11 +58,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 	private Scenario scenario;
 
-	private double timeOfDay;
-
 	private CarSharingVehicles carSharingVehicles;
-
-	private CarSharingRelocationZones relocationZones;
 
 	private CarSharingDemandTracker demandTracker;
 
@@ -71,9 +67,8 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	private Map<Id<Person>, RelocationAgent> relocationAgents;
 
 	@Inject
-	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider, final Map<Id<Person>, RelocationAgent> relocationAgents) {
+	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider, final Map<Id<Person>, RelocationAgent> relocationAgents) {
 		this.carSharingVehicles = carSharingVehicles;
-		this.relocationZones = relocationZones;
 		this.demandTracker = demandTracker;
 		this.routerProvider = routerProvider;
 		this.relocationAgents = relocationAgents;
@@ -84,18 +79,17 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 		QSim qSim = (QSim) event.getQueueSimulation();
 		this.scenario = qSim.getScenario();
 
-		// TODO: relocation times must be configurable
 		// relocation times will only be called if there are activities (usually starting with 32400.0), which makes sense
-		List<Double> relocationTimes = new ArrayList<Double>(Arrays.asList(0.0, 10800.0, 21600.0, 32400.0, 43200.0, 54000.0, 64800.0, 75600.0));
+		@SuppressWarnings("unchecked")
+		List<Double> relocationTimes = (List<Double>) this.scenario.getScenarioElement("CarSharingRelocationTimes");
+		final CarSharingRelocationZones relocationZones = (CarSharingRelocationZones) this.scenario.getScenarioElement(CarSharingRelocationZones.ELEMENT_NAME);
 
 		if (relocationTimes.contains(Math.floor(qSim.getSimTimer().getTimeOfDay()))) {
 			log.info("is it that time again? " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
-			this.timeOfDay = qSim.getSimTimer().getTimeOfDay();
 
 			relocationZones.reset();
 
 			// estimate demand in cells from logged CarSharingRequests
-			// TODO: time interval must be configurable
 			// TODO: adding request info could be wrapped inside RelocationZones
 			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), 10800)) {
 				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());

@@ -28,9 +28,11 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
+
 import playground.paschke.events.MobismBeforeSimStepRelocationAgentsDispatcher;
 import playground.paschke.events.RelocationAgentsInsertListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
+import playground.paschke.qsim.CarSharingRelocationTimesReader;
 import playground.paschke.qsim.CarSharingRelocationZones;
 import playground.paschke.qsim.CarSharingRelocationZonesReader;
 import playground.paschke.qsim.RelocationAgent;
@@ -50,9 +52,8 @@ public class FreeFloatingControler {
 			config.getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
 		new CarSharingRelocationZonesReader(sc).parse(confGroup.getRelocationZones());
 
-		// should the relocationZones be referenced locally here? Might be easier to access it via scenario.
-		final CarSharingRelocationZones relocationZones = (CarSharingRelocationZones)
-				sc.getScenarioElement( CarSharingRelocationZones.ELEMENT_NAME );
+		// load relocation times
+		new CarSharingRelocationTimesReader(sc).parse(confGroup.getRelocationTimes());
 
 		final Controler controler = new Controler(sc);
 
@@ -79,12 +80,12 @@ public class FreeFloatingControler {
 			counter++;
 		}
 
-		installCarSharing(controler, carSharingVehicles, relocationZones, demandTracker, relocationAgents);
+		installCarSharing(controler, carSharingVehicles, demandTracker, relocationAgents);
 		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.run();
 	}
 
-	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingRelocationZones relocationZones, final CarSharingDemandTracker demandTracker, final Map<Id<Person>, RelocationAgent> relocationAgents) {
+	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Map<Id<Person>, RelocationAgent> relocationAgents) {
 		Scenario sc = controler.getScenario();
 
 		controler.addOverridingModule(new AbstractModule() {
@@ -97,7 +98,6 @@ public class FreeFloatingControler {
 			      * it should satisfy the dependency using this static CarSharingVehicles.
 			      */
 				bind(CarSharingVehicles.class).toInstance(carSharingVehicles);
-				bind(CarSharingRelocationZones.class).toInstance(relocationZones);
 				bind(CarSharingDemandTracker.class).toInstance(demandTracker);
 				bind(new TypeLiteral<Map<Id<Person>, RelocationAgent>>() {}).toInstance(relocationAgents);
 				bindMobsim().toProvider( CarsharingQsimFactory.class );
