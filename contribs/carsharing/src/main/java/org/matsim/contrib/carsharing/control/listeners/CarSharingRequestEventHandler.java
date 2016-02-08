@@ -10,7 +10,7 @@ import org.matsim.contrib.carsharing.events.handlers.CarSharingRequestEventHandl
 public class CarSharingRequestEventHandler implements CarSharingRequestEventHandlerInterface{
 
 	ArrayList<CarSharingRequestInfo> carSharingRequest = new ArrayList<CarSharingRequestInfo>();
-	
+
 	@Override
 	public void reset(int iteration) {
 		// TODO Auto-generated method stub
@@ -29,7 +29,7 @@ public class CarSharingRequestEventHandler implements CarSharingRequestEventHand
 	public ArrayList<CarSharingRequestInfo> info() {
 		return this.carSharingRequest;
 	}
-	
+
 	public class CarSharingRequestInfo {
 		double time;
 		Id<Link> linkId = null;
