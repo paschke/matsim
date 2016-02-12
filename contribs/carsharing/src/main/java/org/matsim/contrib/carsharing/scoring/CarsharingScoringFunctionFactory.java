@@ -30,9 +30,9 @@ public class CarsharingScoringFunctionFactory extends org.matsim.core.scoring.fu
 		scoringFunctionSum.addScoringFunction(
 				new CarsharingLegScoringFunction(
 						CharyparNagelScoringParameters.getBuilder(config.planCalcScore()).create(),
-	    				 this.config, 
-	    				 this.network
-	    		));
+						this.config,
+						this.network
+				));
 
 		scoringFunctionSum.addScoringFunction(
 				new CharyparNagelLegScoring(

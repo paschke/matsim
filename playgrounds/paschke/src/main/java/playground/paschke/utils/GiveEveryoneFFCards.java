@@ -1,10 +1,15 @@
 package playground.paschke.utils;
 
+import java.util.Map;
+
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PopulationImpl;
 import org.matsim.core.population.PopulationReader;
 import org.matsim.core.scenario.ScenarioImpl;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -23,8 +28,14 @@ public class GiveEveryoneFFCards {
 		final ObjectAttributes atts = new ObjectAttributes();
 		new ObjectAttributesXmlReader( atts ).parse( args[2] );
 
-		for (Person p : sc.getPopulation().getPersons().values()) {
-			atts.putAttribute(p.getId().toString(), "FF_CARD", "true");
+		PopulationImpl population = (PopulationImpl) sc.getPopulation();
+		@SuppressWarnings("unchecked")
+		Map<Id<Person>, PersonImpl> persons = (Map<Id<Person>, PersonImpl>) population.getPersons();
+
+		for (PersonImpl person : persons.values()) {
+			if (person.hasLicense()) {
+				atts.putAttribute(person.getId().toString(), "FF_CARD", "true");
+			}
 		}
 
 		ObjectAttributesXmlWriter betaWriter = new ObjectAttributesXmlWriter(atts);
