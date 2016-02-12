@@ -97,26 +97,27 @@ public class FreeFloatingVehiclesLocation {
 	}
 	
 	public void removeVehicle(Link link, String id) {
-		FreeFloatingStation f = vehicleLocationQuadTree.get(link.getCoord().getX(), link.getCoord().getY());
-		
-		if ( f.getLink().getId().toString().equals(link.getId().toString())) {
-			if (f.getNumberOfVehicles() == 1) {
-				vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), f);
-			} else {
-				ArrayList<String> vehIDs = f.getIDs();
-				ArrayList<String> newvehIDs = new ArrayList<String>();
-				for (String s : vehIDs) {
-					newvehIDs.add(s);
+		Collection<FreeFloatingStation> stations = vehicleLocationQuadTree.get(link.getCoord().getX(), link.getCoord().getY(), 0);
+
+		for (FreeFloatingStation station : stations) {
+			if (station.getIDs().contains(id)) {
+				if (station.getNumberOfVehicles() == 1) {
+					vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), station);
+
+					return;
+				} else {
+					ArrayList<String> vehicleIDs = new ArrayList<String>(station.getIDs());
+					vehicleIDs.remove(id);
+					FreeFloatingStation newStation = new FreeFloatingStation(link, vehicleIDs.size(), vehicleIDs);
+
+					vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), station);
+					vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), newStation);
+
+					return;
 				}
-				newvehIDs.remove(id);
-				FreeFloatingStation fNew = new FreeFloatingStation(link, f.getNumberOfVehicles() - 1, newvehIDs);	
-				
-				vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), f);
-				vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), fNew);
 			}
 		}
-		else {
-			Log.error("trying to take a car from the link with no cars, this should never happen");
-		}
+
+		throw new RuntimeException("could not remove ff vehicle " + id + " from link " + link.getId() + " because it could not be found!");
 	}
 }

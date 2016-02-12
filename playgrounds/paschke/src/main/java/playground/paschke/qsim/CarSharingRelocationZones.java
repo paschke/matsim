@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -97,8 +98,9 @@ public class CarSharingRelocationZones {
 						log.info("adjacentZone has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
 						if (adjacentZone.getNumberOfSurplusVehicles() > 0) {
-							fromLink = adjacentZone.getVehicles().keySet().iterator().next();
-							ArrayList<String> vehicleIds = adjacentZone.getVehicles().get(fromLink);
+							Iterator<Link> links = adjacentZone.getVehicles().keySet().iterator();
+							fromLink = links.next();
+							CopyOnWriteArrayList<String> vehicleIds = adjacentZone.getVehicles().get(fromLink);
 
 							if (vehicleIds.size() == 1) {
 								log.info("found one vehicle at link " + fromLink.getId());
@@ -128,7 +130,7 @@ public class CarSharingRelocationZones {
 
 	protected Collection<RelocationZone> getAdjacentZones(RelocationZone currentZone) {
 		// FIXME: hard-coded zone distance here
-		Collection<RelocationZone> zones = this.getQuadTree().get(currentZone.getCoord().getX(), currentZone.getCoord().getY(), 1001);
+		Collection<RelocationZone> zones = this.getQuadTree().get(currentZone.getCoord().getX(), currentZone.getCoord().getY(), 5001);
 		zones.remove(currentZone);
 
 		return zones;

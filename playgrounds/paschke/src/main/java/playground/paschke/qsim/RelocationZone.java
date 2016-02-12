@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -15,12 +17,12 @@ import org.matsim.core.utils.geometry.CoordImpl;
 public class RelocationZone {
 	private Coord coord;
 	private Map<Link, Integer> requests;
-	private Map<Link, ArrayList<String>> vehicles;
+	private Map<Link, CopyOnWriteArrayList<String>> vehicles;
 
 	public RelocationZone(Coord coord) {
 		this.coord = coord;
 		this.requests = new HashMap<Link, Integer>();
-		this.vehicles = new HashMap<Link, ArrayList<String>>();
+		this.vehicles = new ConcurrentHashMap<Link, CopyOnWriteArrayList<String>>();
 	}
 
 	public Coord getCoord() {
@@ -31,7 +33,7 @@ public class RelocationZone {
 		return this.requests;
 	}
 
-	public Map<Link, ArrayList<String>> getVehicles() {
+	public Map<Link, CopyOnWriteArrayList<String>> getVehicles() {
 		return this.vehicles;
 	}
 
@@ -58,7 +60,7 @@ public class RelocationZone {
 	public int getNumberOfVehicles() {
 		int number = 0;
 
-		for (ArrayList<String> IDs : vehicles.values()) {
+		for (CopyOnWriteArrayList<String> IDs : vehicles.values()) {
 			number += IDs.size();
 		}
 
@@ -79,12 +81,12 @@ public class RelocationZone {
 	}
 
 	public void addVehicles(Link link, ArrayList<String> IDs) {
-		if (this.vehicles.containsKey(link)) {
+		if (this.getVehicles().containsKey(link)) {
 			for (String ID : IDs) {
-				this.vehicles.get(link).add(ID);
+				this.getVehicles().get(link).add(ID);
 			}
 		} else {
-			vehicles.put(link, IDs);
+			this.getVehicles().put(link, new CopyOnWriteArrayList<String>(IDs));
 		}
 	}
 

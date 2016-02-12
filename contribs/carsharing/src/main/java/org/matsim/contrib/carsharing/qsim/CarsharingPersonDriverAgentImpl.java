@@ -410,7 +410,9 @@ public class CarsharingPersonDriverAgentImpl implements MobsimDriverAgent, Mobsi
 			this.basicAgentDelegate.getEvents().processEvent(new NoVehicleCarSharingEvent(now, route.getStartLinkId(), "ff"));
 			return;
 		}
+
 		ffVehId = location.getIDs().get(0);
+
 		this.carSharingVehicles.getFreeFLoatingVehicles().removeVehicle(location.getLink(), ffVehId);
 		startLinkFF = location.getLink();
 		initializeCSWalkLeg(this.basicAgentDelegate.getScenario().getNetwork().getLinks().get(route.getStartLinkId()), startLinkFF);
@@ -423,12 +425,16 @@ public class CarsharingPersonDriverAgentImpl implements MobsimDriverAgent, Mobsi
 		initializeCSVehicleLeg("freefloating", now, l, this.basicAgentDelegate.getScenario().getNetwork().getLinks().get(leg.getRoute().getEndLinkId()));
 	}
 
-
 	private FreeFloatingStation findClosestAvailableCar(Id<Link> linkId) {		
 		//find the closest available car in the quad tree(?) reserve it (make it unavailable)
 		Link link = this.basicAgentDelegate.getScenario().getNetwork().getLinks().get(linkId);
 
 		FreeFloatingStation location = this.carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().get(link.getCoord().getX(), link.getCoord().getY());
+
+		while (location.getIDs().isEmpty()) {
+			this.carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().remove(location.getLink().getCoord().getX(), location.getLink().getCoord().getY(), location);
+			location = this.carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().get(link.getCoord().getX(), link.getCoord().getY());
+		}
 
 		return location;
 	}
