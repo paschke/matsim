@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -79,19 +80,29 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 		QSim qSim = (QSim) event.getQueueSimulation();
 		this.scenario = qSim.getScenario();
 
+		double now = Math.floor(qSim.getSimTimer().getTimeOfDay());
+		double end;
+
 		// relocation times will only be called if there are activities (usually starting with 32400.0), which makes sense
 		@SuppressWarnings("unchecked")
 		List<Double> relocationTimes = (List<Double>) this.scenario.getScenarioElement("CarSharingRelocationTimes");
 		final CarSharingRelocationZones relocationZones = (CarSharingRelocationZones) this.scenario.getScenarioElement(CarSharingRelocationZones.ELEMENT_NAME);
 
-		if (relocationTimes.contains(Math.floor(qSim.getSimTimer().getTimeOfDay()))) {
+		if (relocationTimes.contains(now)) {
+			int index = relocationTimes.indexOf(now);
+			try {
+				end = relocationTimes.get(index + 1);
+			} catch (IndexOutOfBoundsException e) {
+				end = 86400.0;
+			}
+
 			log.info("is it that time again? " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
 
 			relocationZones.reset();
 
 			// estimate demand in cells from logged CarSharingRequests
 			// TODO: adding request info could be wrapped inside RelocationZones
-			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), 10800)) {
+			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), end)) {
 				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());
 				RelocationZone relocationZone = relocationZones.getQuadTree().get(link.getCoord().getX(), link.getCoord().getY());
 				relocationZone.addRequests(link, 1);
@@ -100,19 +111,16 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			// count number of vehicles in car sharing relocation zones
 			// TODO: adding vehicles could be wrapped inside RelocationZone
 			for (FreeFloatingStation ffs : carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
-				log.info("found " + ffs.getNumberOfVehicles() + " FF vehicles " + ffs.getIDs().toString() + " at this FF station " + ffs.getLink().getId());
 				RelocationZone relocationZone = relocationZones.getQuadTree().get(ffs.getLink().getCoord().getX(), ffs.getLink().getCoord().getY());
 				relocationZone.addVehicles(ffs.getLink(), ffs.getIDs());
 			}
 
-			// compare available vehicles to demand
+			// compare available vehicles to demand for each zone, store result in demandTracker
+			Map<Coord, List<Integer>> relocationZonesState = new HashMap<Coord, List<Integer>>();
 			for (RelocationZone relocationZone : relocationZones.getQuadTree().values()) {
-				log.info(
-						"relocation zone " + relocationZone.getCoord().getX() + " " + relocationZone.getCoord().getY() +
-						" counts " + relocationZone.getNumberOfVehicles() + " vehicles " + relocationZone.getVehicleIds().toString() +
-						" and expects " + relocationZone.getNumberOfRequests() + " requests!"
-				);
+				relocationZonesState.put(relocationZone.getCoord(), Arrays.asList(relocationZone.getNumberOfVehicles(), relocationZone.getNumberOfRequests()));
 			}
+			demandTracker.getStates().put(now, relocationZonesState);
 
 			for (RelocationInfo info : relocationZones.getRelocations()) {
 				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getDestinationLinkId());

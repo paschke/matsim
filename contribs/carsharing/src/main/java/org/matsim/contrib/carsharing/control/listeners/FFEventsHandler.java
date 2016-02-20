@@ -37,7 +37,6 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 	
 	@Override
 	public void reset(int iteration) {
-		// TODO Auto-generated method stub
 		ffRentalsStats = new HashMap<Id<Person>, ArrayList<RentalInfoFF>>();
 		arr = new ArrayList<RentalInfoFF>();
 		inVehicle = new HashMap<Id<Person>, Boolean>();
@@ -47,7 +46,6 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 	
 	@Override
 	public void handleEvent(PersonLeavesVehicleEvent event) {
-		// TODO Auto-generated method stub
 		if (event.getPersonId().toString().startsWith("DemonAgent")) {
 			Id<Person> personId = event.getPersonId();
 			Id<Vehicle> vehicleId = event.getVehicleId();
@@ -59,7 +57,6 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 
 	@Override
 	public void handleEvent(PersonEntersVehicleEvent event) {
-		// TODO Auto-generated method stub
 		if (event.getPersonId().toString().startsWith("DemonAgent")) {
 			Id<Person> personId = event.getPersonId();
 			Id<Vehicle> vehicleId = event.getVehicleId();
@@ -98,7 +95,6 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 			log.info("agent " + personId + " departs");
 		}
 
-		// TODO Auto-generated method stub
 		inVehicle.put(event.getPersonId(), false);
 		if (event.getLegMode().equals("walk_ff")) {
 			RentalInfoFF info = new RentalInfoFF();
