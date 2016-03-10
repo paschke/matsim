@@ -20,9 +20,10 @@
 package playground.thibautd.hitchiking.qsim;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.groups.QSimConfigGroup;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.mobsim.framework.MobsimFactory;
 import org.matsim.core.mobsim.qsim.ActivityEngine;
 import org.matsim.core.mobsim.qsim.QSim;
@@ -45,9 +46,9 @@ import java.util.List;
  */
 public class HitchHikingQsimFactory implements MobsimFactory {
 
-    private final Controler controler;
+    private final MatsimServices controler;
 
-	public HitchHikingQsimFactory(final Controler controler) {
+	public HitchHikingQsimFactory(final MatsimServices controler) {
 		this.controler = controler;
 	}
 
@@ -85,14 +86,14 @@ public class HitchHikingQsimFactory implements MobsimFactory {
 		PassengerQueuesManager queuesManager = new PassengerQueuesManager( eventsManager );
 		qSim.addMobsimEngine( queuesManager );
 		qSim.addDepartureHandler( queuesManager );
-        AgentFactory agentFactory =
+		AgentFactory agentFactory =
 			new HitchHikerAgentFactory(
 					new TransitAgentFactory(qSim),
                     controler.getScenario().getNetwork(),
 					controler.getTripRouterProvider().get(),
 					queuesManager,
 					eventsManager,
-					controler.getConfig().planCalcScore().getMonetaryDistanceCostRateCar());
+					controler.getConfig().planCalcScore().getModes().get(TransportMode.car).getMonetaryDistanceRate());
 
         if (sc.getConfig().transit().isUseTransit()) {
             TransitQSimEngine transitEngine = new TransitQSimEngine(qSim);

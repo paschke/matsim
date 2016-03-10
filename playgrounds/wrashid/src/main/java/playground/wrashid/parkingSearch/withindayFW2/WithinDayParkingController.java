@@ -20,29 +20,17 @@
 
 package playground.wrashid.parkingSearch.withindayFW2;
 
-import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.contrib.multimodal.router.util.BikeTravelTime;
-import org.matsim.contrib.multimodal.router.util.UnknownTravelTime;
-import org.matsim.contrib.multimodal.router.util.WalkTravelTime;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.ReplanningEvent;
 import org.matsim.core.controler.listener.ReplanningListener;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.mobsim.qsim.QSim;
-import org.matsim.core.router.RoutingContext;
-import org.matsim.core.router.RoutingContextImpl;
-import org.matsim.core.router.costcalculators.OnlyTimeDependentTravelDisutilityFactory;
-import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.util.TravelTime;
 
 import playground.wrashid.parkingSearch.withinday.LegModeChecker;
 import playground.wrashid.parkingSearch.withinday.WithinDayController;
 import playground.wrashid.parkingSearch.withindayFW.core.InsertParkingActivities;
 import playground.wrashid.parkingSearch.withindayFW.core.ParkingInfrastructure;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class WithinDayParkingController extends WithinDayController implements ReplanningListener {
 
@@ -63,7 +51,7 @@ public class WithinDayParkingController extends WithinDayController implements R
 		super(args);
 		
 		// register this as a Controller Listener
-		super.addControlerListener(this);
+		controler.addControlerListener(this);
 		
 		throw new RuntimeException(Gbl.SET_UP_IS_NOW_FINAL ) ;
 	}
@@ -80,25 +68,24 @@ public class WithinDayParkingController extends WithinDayController implements R
 	 */
 	@Override
 	protected void initReplanners(QSim sim) {
-
-		initIdentifiers();
+		throw new RuntimeException();
+//		initIdentifiers();
 		
 		// create a copy of the MultiModalTravelTimeWrapperFactory and set the TravelTimeCollector for car mode
-		Map<String, TravelTime> travelTimes = new HashMap<String, TravelTime>();
-		travelTimes.put(TransportMode.walk, new WalkTravelTime(this.getConfig().plansCalcRoute()));
-		travelTimes.put(TransportMode.bike, new BikeTravelTime(this.getConfig().plansCalcRoute()));
-		travelTimes.put(TransportMode.ride, new UnknownTravelTime(TransportMode.ride, this.getConfig().plansCalcRoute()));
-		travelTimes.put(TransportMode.pt, new UnknownTravelTime(TransportMode.pt, this.getConfig().plansCalcRoute()));
-		travelTimes.put(TransportMode.car, super.getTravelTimeCollector());
-		
-		TravelDisutilityFactory costFactory = new OnlyTimeDependentTravelDisutilityFactory();
-		
-		RoutingContext routingContext = new RoutingContextImpl(costFactory, super.getTravelTimeCollector(), this.getConfig().planCalcScore());
-		
-		this.randomSearchReplannerFactory = new ParkingSearchReplannerFactory(this.getWithinDayEngine(), this.getScenario(), parkingAgentsTracker,
-				this.getWithinDayTripRouterFactory(), routingContext);
-		this.randomSearchReplannerFactory.addIdentifier(this.randomSearchIdentifier);		
-		this.getWithinDayEngine().addDuringLegReplannerFactory(this.randomSearchReplannerFactory);
+//		Map<String, TravelTime> travelTimes = new HashMap<String, TravelTime>();
+//		travelTimes.put(TransportMode.walk, new WalkTravelTime(this.getConfig().plansCalcRoute()));
+//		travelTimes.put(TransportMode.bike, new BikeTravelTime(this.getConfig().plansCalcRoute()));
+//		travelTimes.put(TransportMode.ride, new UnknownTravelTime(TransportMode.ride, this.getConfig().plansCalcRoute()));
+//		travelTimes.put(TransportMode.pt, new UnknownTravelTime(TransportMode.pt, this.getConfig().plansCalcRoute()));
+//		travelTimes.put(TransportMode.car, super.getTravelTimeCollector());
+//
+//		TravelDisutilityFactory costFactory = new OnlyTimeDependentTravelDisutilityFactory();
+//
+//
+//		this.randomSearchReplannerFactory = new ParkingSearchReplannerFactory(this.getWithinDayEngine(), this.getScenario(), parkingAgentsTracker,
+//				this.getWithinDayTripRouterFactory());
+//		this.randomSearchReplannerFactory.addIdentifier(this.randomSearchIdentifier);
+//		this.getWithinDayEngine().addDuringLegReplannerFactory(this.randomSearchReplannerFactory);
 	}
 	
 //	protected void setUp() {
@@ -140,7 +127,7 @@ public class WithinDayParkingController extends WithinDayController implements R
 //
 //		RoutingContext routingContext = new RoutingContextImpl(this.getTravelDisutilityFactory(), super.getTravelTimeCollector(), this.getConfig().planCalcScore());
 //
-//		insertParkingActivities = new InsertParkingActivities(getScenario(), this.getWithinDayTripRouterFactory().instantiateAndConfigureTripRouter(routingContext), parkingInfrastructure);
+//		insertParkingActivities = new InsertParkingActivities(getScenario(), this.getWithinDayTripRouterFactory().get(routingContext), parkingInfrastructure);
 //
 //		final MobsimFactory mobsimFactory = new ParkingQSimFactory(insertParkingActivities, parkingInfrastructure, this.getWithinDayEngine());
 //		this.addOverridingModule(new AbstractModule() {
@@ -163,7 +150,7 @@ public class WithinDayParkingController extends WithinDayController implements R
 		 * might have been changed. Therefore, we have to ensure that the 
 		 * chains are still valid.
 		 */
-		for (Person person : this.getScenario().getPopulation().getPersons().values()) {
+		for (Person person : controler.getScenario().getPopulation().getPersons().values()) {
 			legModeChecker.run(person.getSelectedPlan());			
 		}
 	}
@@ -182,13 +169,13 @@ public class WithinDayParkingController extends WithinDayController implements R
 //			args=new String[]{"test/input/playground/wrashid/parkingSearch/withinday/chessboard/config.xml"};
 		}
 		final WithinDayParkingController controller = new WithinDayParkingController(args);
-		controller.getConfig().controler().setOverwriteFileSetting(
+		controller.controler.getConfig().controler().setOverwriteFileSetting(
 				true ?
 						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
 						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
 
 
-		controller.run();
+		controller.controler.run();
 		
 		System.exit(0);
 	}

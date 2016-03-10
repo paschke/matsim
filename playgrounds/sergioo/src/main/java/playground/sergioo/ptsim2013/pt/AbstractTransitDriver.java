@@ -28,6 +28,7 @@ import org.matsim.api.core.v01.events.TransitDriverStartsEvent;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.api.experimental.events.VehicleArrivesAtFacilityEvent;
 import org.matsim.core.api.experimental.events.VehicleDepartsAtFacilityEvent;
@@ -44,6 +45,7 @@ import org.matsim.core.mobsim.qsim.pt.TransitStopAgentTracker;
 import org.matsim.core.mobsim.qsim.pt.TransitVehicle;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.utils.misc.Time;
+import org.matsim.facilities.Facility;
 import org.matsim.pt.transitSchedule.api.Departure;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
@@ -186,7 +188,7 @@ public abstract class AbstractTransitDriver implements TransitDriverAgent, PlanA
 	}
 
 	final Netsim getSimulation(){
-		return ((QSim) this.internalInterface.getMobsim());
+		return (this.internalInterface.getMobsim());
 	}
 
 	/**Design comments:<ul>
@@ -415,6 +417,21 @@ public abstract class AbstractTransitDriver implements TransitDriverAgent, PlanA
 		}
 
 		@Override
+		public String getRouteDescription() {
+			return this.delegate.getRouteDescription();
+		}
+		
+		@Override
+		public void setRouteDescription(String routeDescription) {
+			this.delegate.setRouteDescription(routeDescription);
+		}
+		
+		@Override
+		public String getRouteType() {
+			return this.delegate.getRouteType();
+		}
+
+		@Override
 		public void setDistance(final double distance) {
 			throw new UnsupportedOperationException("read only route.");
 		}
@@ -434,6 +451,26 @@ public abstract class AbstractTransitDriver implements TransitDriverAgent, PlanA
 		}
 
 	}
+	
+	@Override
+	public Facility<? extends Facility<?>> getCurrentFacility() {
+		// TODO Auto-generated method stub
+		throw new RuntimeException("not implemented") ;
+	}
+
+	@Override
+	public Facility<? extends Facility<?>> getDestinationFacility() {
+		// TODO Auto-generated method stub
+		throw new RuntimeException("not implemented") ;
+	}
+
+	@Override
+	public PlanElement getPreviousPlanElement() {
+		// TODO Auto-generated method stub
+		throw new RuntimeException("not implemented") ;
+	}
+
+
 
 
 }

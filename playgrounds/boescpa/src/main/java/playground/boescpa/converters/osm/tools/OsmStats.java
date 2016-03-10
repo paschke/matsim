@@ -22,13 +22,12 @@
 package playground.boescpa.converters.osm.tools;
 
 import org.matsim.api.core.v01.Coord;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.xml.sax.Attributes;
-import playground.boescpa.lib.tools.scenarioAnalyzer.spatialEventCutters.SHPFileCutter;
+import playground.boescpa.analysis.spatialCutters.SHPFileCutter;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -191,7 +190,7 @@ public class OsmStats {
 				Long id = Long.valueOf(atts.getValue("id"));
 				double lat = Double.parseDouble(atts.getValue("lat"));
 				double lon = Double.parseDouble(atts.getValue("lon"));
-				this.nodes.put(id, new OsmNode(id, this.transform.transform(new CoordImpl(lon, lat))));
+				this.nodes.put(id, new OsmNode(id, this.transform.transform(new Coord(lon, lat))));
 			} else if ("way".equals(name)) {
 				this.currentWay = new OsmWay(Long.parseLong(atts.getValue("id")));
 			} else if ("nd".equals(name)) {
@@ -248,9 +247,9 @@ public class OsmStats {
 					for (int i = 1; i < nodesOfWay.size(); i++) {
 						OsmNode nextNode = nodes.get(nodesOfWay.get(i));
 						if (nextNode.isInSHPArea) {
-							lengthIn += lengthFactor * (Math.round(CoordUtils.calcDistance(currentNode.coord, nextNode.coord)));
+							lengthIn += lengthFactor * (Math.round(CoordUtils.calcEuclideanDistance(currentNode.coord, nextNode.coord)));
 						} else {
-							lengthOut += lengthFactor * (Math.round(CoordUtils.calcDistance(currentNode.coord, nextNode.coord)));
+							lengthOut += lengthFactor * (Math.round(CoordUtils.calcEuclideanDistance(currentNode.coord, nextNode.coord)));
 						}
 						currentNode = nextNode;
 					}

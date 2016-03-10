@@ -25,6 +25,8 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.contrib.common.gis.CRSUtils;
+import org.matsim.contrib.common.util.ProgressLogger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -33,17 +35,15 @@ import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.MatsimFacilitiesReader;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.operation.MathTransform;
+import playground.johannes.gsv.synPop.sim3.RestoreActTypes;
 import playground.johannes.synpop.data.*;
 import playground.johannes.synpop.data.io.XMLHandler;
+import playground.johannes.synpop.gis.Zone;
+import playground.johannes.synpop.gis.ZoneCollection;
+import playground.johannes.synpop.gis.ZoneGeoJsonIO;
+import playground.johannes.synpop.matrix.NumericMatrix;
+import playground.johannes.synpop.matrix.NumericMatrixXMLWriter;
 import playground.johannes.synpop.processing.TaskRunner;
-import playground.johannes.gsv.synPop.sim3.RestoreActTypes;
-import playground.johannes.gsv.zones.KeyMatrix;
-import playground.johannes.gsv.zones.Zone;
-import playground.johannes.gsv.zones.ZoneCollection;
-import playground.johannes.gsv.zones.io.KeyMatrixXMLWriter;
-import playground.johannes.gsv.zones.io.Zone2GeoJSON;
-import playground.johannes.sna.gis.CRSUtils;
-import playground.johannes.sna.util.ProgressLogger;
 import playground.johannes.synpop.source.mid2008.MiDValues;
 
 import java.io.IOException;
@@ -78,9 +78,9 @@ public class ProxyPlans2Matrix {
 		this.predicate = predicate;
 	}
 
-	public KeyMatrix run(Collection<PlainPerson> persons, ZoneCollection zones, ActivityFacilities facilities, String key) {
+	public NumericMatrix run(Collection<PlainPerson> persons, ZoneCollection zones, ActivityFacilities facilities, String key) {
 
-		KeyMatrix m = new KeyMatrix();
+		NumericMatrix m = new NumericMatrix();
 
 		int noZones = 0;
 
@@ -172,7 +172,7 @@ public class ProxyPlans2Matrix {
 		logger.info("Loading zones...");
 		ZoneCollection zones = new ZoneCollection();
 		String data = new String(Files.readAllBytes(Paths.get(args[2])));
-		zones.addAll(Zone2GeoJSON.parseFeatureCollection(data));
+		zones.addAll(ZoneGeoJsonIO.parseFeatureCollection(data));
 
 		logger.info("Loading persons...");
 		XMLHandler parser = new XMLHandler(new PlainFactory());
@@ -196,8 +196,8 @@ public class ProxyPlans2Matrix {
 		 * all car
 		 */
 		logger.info("Extracting total matrix...");
-		KeyMatrix m = p2m.run(persons, zones, scenario.getActivityFacilities(), key);
-		KeyMatrixXMLWriter writer = new KeyMatrixXMLWriter();
+		NumericMatrix m = p2m.run(persons, zones, scenario.getActivityFacilities(), key);
+		NumericMatrixXMLWriter writer = new NumericMatrixXMLWriter();
 		writer.write(m, String.format("%s/miv.xml", outdir));
 		/*
 		 * types

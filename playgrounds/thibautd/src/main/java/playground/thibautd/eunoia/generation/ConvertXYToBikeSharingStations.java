@@ -19,15 +19,9 @@
  * *********************************************************************** */
 package playground.thibautd.eunoia.generation;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-
+import eu.eunoiaproject.bikesharing.framework.scenario.BikeSharingFacilities;
+import eu.eunoiaproject.bikesharing.framework.scenario.BikeSharingFacilitiesWriter;
+import eu.eunoiaproject.bikesharing.framework.scenario.BikeSharingFacility;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -37,16 +31,20 @@ import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlWriter;
-
 import playground.ivt.utils.ArgParser;
 import playground.ivt.utils.ArgParser.Args;
-import eu.eunoiaproject.bikesharing.framework.scenario.BikeSharingFacilities;
-import eu.eunoiaproject.bikesharing.framework.scenario.BikeSharingFacilitiesWriter;
-import eu.eunoiaproject.bikesharing.framework.scenario.BikeSharingFacility;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 /**
  * @author thibautd
@@ -107,9 +105,7 @@ public class ConvertXYToBikeSharingStations {
 				final String[] fields = line.split( "," );
 
 				final Coord coord =
-					new CoordImpl(
-							Double.parseDouble( fields[ 0 ] ),
-							Double.parseDouble( fields[ 1 ] ) );
+						new Coord(Double.parseDouble(fields[0]), Double.parseDouble(fields[1]));
 				final Id<Link> link =
 					NetworkUtils.getNearestLink(network, coord).getId();
 
@@ -143,7 +139,7 @@ public class ConvertXYToBikeSharingStations {
 
 	private static NetworkImpl readNetwork(final String netFile) {
 		final Scenario sc = ScenarioUtils.createScenario( ConfigUtils.createConfig() );
-		new MatsimNetworkReader( sc ).readFile( netFile );
+		new MatsimNetworkReader(sc.getNetwork()).readFile( netFile );
 		return (NetworkImpl) sc.getNetwork();
 	}
 

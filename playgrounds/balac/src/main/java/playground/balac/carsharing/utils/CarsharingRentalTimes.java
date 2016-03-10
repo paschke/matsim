@@ -7,18 +7,18 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.FacilitiesReaderMatsimV1;
 
 public class CarsharingRentalTimes {
 	public void run(String plansFilePath, String networkFilePath, String facilitiesfilePath, String outputFilePath) {
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		PopulationReader populationReader = new MatsimPopulationReader(scenario);
-		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 		networkReader.readFile(networkFilePath);
 		new FacilitiesReaderMatsimV1(scenario).readFile(facilitiesfilePath);
 		populationReader.readFile(plansFilePath);
@@ -30,8 +30,8 @@ public class CarsharingRentalTimes {
 		double time = 0.0;
 		int members = 0;
 		for (Person p: scenario.getPopulation().getPersons().values()) {
-			PersonImpl per = (PersonImpl)p;
-			if (per.getTravelcards() !=null && per.getTravelcards().contains("ch-HT-mobility"))
+			Person per = p;
+			if (PersonUtils.getTravelcards(per) !=null && PersonUtils.getTravelcards(per).contains("ch-HT-mobility"))
 				members++;
 			if (per.getId().toString().equals("6551679"))
 				System.out.println();

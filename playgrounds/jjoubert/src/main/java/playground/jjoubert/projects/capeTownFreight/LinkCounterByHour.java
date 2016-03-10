@@ -40,7 +40,6 @@ import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.feature.DefaultFeatureCollection;
-import org.geotools.feature.FeatureCollections;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
@@ -48,9 +47,9 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
-import org.matsim.api.core.v01.events.Wait2LinkEvent;
+import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
-import org.matsim.api.core.v01.events.handler.Wait2LinkEventHandler;
+import org.matsim.api.core.v01.events.handler.VehicleEntersTrafficEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.ConfigUtils;
@@ -75,7 +74,7 @@ import com.vividsolutions.jts.geom.LineString;
  * @author jwjoubert
  *
  */
-public class LinkCounterByHour implements LinkEnterEventHandler, Wait2LinkEventHandler{
+public class LinkCounterByHour implements LinkEnterEventHandler, VehicleEntersTrafficEventHandler{
 	final private static Logger LOG = Logger.getLogger(LinkCounterByHour.class);
 	Map<Id<Link>, Map<String,Integer>> map = new HashMap<Id<Link>, Map<String,Integer>>();
 
@@ -115,7 +114,7 @@ public class LinkCounterByHour implements LinkEnterEventHandler, Wait2LinkEventH
 	public SimpleFeatureCollection createFeatureCollection(String network){
 		LOG.info("Parsing network from " + network);
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new MatsimNetworkReader(scenario ).parse(network);
+		new MatsimNetworkReader(scenario.getNetwork()).parse(network);
 		CoordinateTransformation ct = TransformationFactory.getCoordinateTransformation("WGS84_SA_Albers", "WGS84");
 		GeometryFactory gf = new GeometryFactory();
 
@@ -151,7 +150,7 @@ public class LinkCounterByHour implements LinkEnterEventHandler, Wait2LinkEventH
 			builder.add(linkTotal);
 
 			/* Build and add the feature. */
-			SimpleFeature feature = builder.buildFeature(null);
+			SimpleFeature feature = builder.buildFeature(linkId.toString());
 			collection.add(feature);
 			counter.incCounter();
 		}
@@ -167,7 +166,8 @@ public class LinkCounterByHour implements LinkEnterEventHandler, Wait2LinkEventH
 		builder.setCRS(DefaultGeographicCRS.WGS84);
 		
 		/* Add the attributes in order. */
-		builder.add("Link", LineString.class);
+//		builder.add("Link", LineString.class);
+		builder.add("the_geom", LineString.class);
 		builder.length(6).add("Id", String.class);
 		builder.length(6).add("h00", Integer.class);
 		builder.length(6).add("h01", Integer.class);
@@ -234,7 +234,7 @@ public class LinkCounterByHour implements LinkEnterEventHandler, Wait2LinkEventH
 	public void writeHourlyLinkCounts(String network, String output){
 		LOG.info("Parsing network from " + network);
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new MatsimNetworkReader(scenario ).parse(network);
+		new MatsimNetworkReader(scenario.getNetwork()).parse(network);
 		CoordinateTransformation ct = TransformationFactory.getCoordinateTransformation("WGS84_SA_Albers", "WGS84");
 		LOG.info("Writing link counts to " + output);
 		
@@ -294,7 +294,7 @@ public class LinkCounterByHour implements LinkEnterEventHandler, Wait2LinkEventH
 	}
 	
 	@Override
-	public void handleEvent(Wait2LinkEvent event) {
+	public void handleEvent(VehicleEntersTrafficEvent event) {
 		this.handleLinkAndTime(event.getLinkId(), event.getTime());
 	}
 	

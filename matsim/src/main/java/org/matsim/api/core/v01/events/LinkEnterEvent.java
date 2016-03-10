@@ -27,29 +27,23 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.vehicles.Vehicle;
 
-/**
- * Design considerations: <ul>
- * <li> This class deliberately does <i>not</i> implement HasPersonId. One reason is that it does not really
- * belong at this level (since it is the vehicle that enters/leaves links); another reason is that this would
- * make an "instanceof HasPersonId" considerably more expensive. kai/dg, dec'12
- * </ul> 
- *
- */
 public class LinkEnterEvent extends Event {
 
 	public static final String EVENT_TYPE = "entered link";
 	public static final String ATTRIBUTE_VEHICLE = "vehicle";
 	public static final String ATTRIBUTE_LINK = "link";
-	public static final String ATTRIBUTE_PERSON = "person";
 	
-	private final Id<Person> personId;
 	private final Id<Link> linkId;
 	private final Id<Vehicle> vehicleId;
 
-	public LinkEnterEvent(final double time, final Id<Person> agentId, final Id<Link> linkId, Id<Vehicle> vehicleId) {
+	final static String missingVehicleIdMessage = "vehicleId=null in LinkEnter/LeaveEvent; this would cause problems downstream thus we are not accepting it";
+
+	public LinkEnterEvent(final double time, final Id<Vehicle> vehicleId, final Id<Link> linkId) {
 		super(time);
-		this.personId = agentId;
 		this.linkId = linkId;
+		if ( vehicleId==null ) {
+			throw new RuntimeException( missingVehicleIdMessage ) ;
+		}
 		this.vehicleId = vehicleId;
 	}
 
@@ -59,19 +53,12 @@ public class LinkEnterEvent extends Event {
 	}
 	
 	/**
-	 * Comments:<ul>
-	 * <li> This is currently set as deprecated.  However, there are situations where one needs the driver.  I know that one can get the driver
-	 * by other means ... but since this method is already here, and we will really save a lot of work by not removing it, we may consider leaving
-	 * it in place. kai, jan'14
-	 * <li> Should then, obviously, be called "getDriver()".  But even that would probably mean retrofitting, especially for events.xml.  Is that worth it?
-	 * kai, jan'14
-	 * </ul>
-	 * 
-	 * @deprecated will be removed soon.
+	 * Please use getVehicleId() instead. 
+	 * Vehicle-driver relations can be made by Wait2Link and VehicleLeavesTraffic Events.
 	 */
 	@Deprecated
-	public Id<Person> getPersonId() {
-		return this.personId;
+	public Id<Person> getDriverId() {
+		throw new RuntimeException( LinkLeaveEvent.missingDriverIdMessage ) ;
 	}	
 
 	public Id<Link> getLinkId() {
@@ -85,11 +72,8 @@ public class LinkEnterEvent extends Event {
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
-		attr.put(ATTRIBUTE_PERSON, this.personId.toString());
+		attr.put(ATTRIBUTE_VEHICLE, this.vehicleId.toString());
 		attr.put(ATTRIBUTE_LINK, this.linkId.toString());
-		if (this.vehicleId != null) {
-			attr.put(ATTRIBUTE_VEHICLE, this.vehicleId.toString());
-		}
 		return attr;
 	}
 }

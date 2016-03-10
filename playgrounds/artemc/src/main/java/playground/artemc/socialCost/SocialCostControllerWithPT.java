@@ -7,8 +7,8 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
-import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.IterationStartsEvent;
 import org.matsim.core.controler.listener.IterationStartsListener;
@@ -36,7 +36,7 @@ public class SocialCostControllerWithPT {
 		 * This cannot be moved to the initializer since the scoring functions
 		 * are created even before the startup event is created.
 		 */
-		//controler.setScoringFunctionFactory(new TimeAndMoneyDependentScoringFunctionFactory());
+		//services.setScoringFunctionFactory(new TimeAndMoneyDependentScoringFunctionFactory());
 
 		InitializerPT initializer = new InitializerPT();
 		controler.addControlerListener(initializer);
@@ -79,7 +79,7 @@ public class SocialCostControllerWithPT {
 		@Override
 		public void notifyIterationStarts(IterationStartsEvent event) {
 			if(event.getIteration()==0){
-				Controler controler = event.getControler();
+				MatsimServices controler = event.getServices();
 
 				VehicleOccupancyObserver vehicleObserver = new VehicleOccupancyObserver();
 				
@@ -92,13 +92,13 @@ public class SocialCostControllerWithPT {
 				controler.getEvents().addHandler(vehicleObserver);
 
 				// initialize the social costs disutility calculator
-				final SocialCostTravelDisutilityFactory factory = new SocialCostTravelDisutilityFactory(scc);
-				controler.addOverridingModule(new AbstractModule() {
-					@Override
-					public void install() {
-						bindTravelDisutilityFactory().toInstance(factory);
-					}
-				});
+				final SocialCostTravelDisutilityFactory factory = new SocialCostTravelDisutilityFactory(scc, controler.getConfig().planCalcScore());
+//				services.addOverridingModule(new AbstractModule() {
+//					@Override
+//					public void install() {
+//						bindCarTravelDisutilityFactory().toInstance(factory);
+//					}
+//				});
 
 				// create a plot containing the mean travel times
 				Set<String> transportModes = new HashSet<String>();
@@ -108,6 +108,7 @@ public class SocialCostControllerWithPT {
 				MeanTravelTimeCalculator mttc = new MeanTravelTimeCalculator(controler.getScenario(), transportModes);
 				controler.addControlerListener(mttc);
 				controler.getEvents().addHandler(mttc);
+				throw new RuntimeException();
 			}
 		}
 	}
@@ -123,8 +124,8 @@ public class SocialCostControllerWithPT {
 		public SocialCostTravelDisutility(TravelTime travelTime, SocialCostCalculatorWithPT scc, PlanCalcScoreConfigGroup cnScoringGroup) {
 			this.travelTime = travelTime;
 			this.scc = scc;
-			this.marginalCostOfTime = (- cnScoringGroup.getTraveling_utils_hr() / 3600.0) + (cnScoringGroup.getPerforming_utils_hr() / 3600.0);
-			this.marginalCostOfDistance = - cnScoringGroup.getMonetaryDistanceCostRateCar() * cnScoringGroup.getMarginalUtilityOfMoney();
+			this.marginalCostOfTime = (-cnScoringGroup.getModes().get(TransportMode.car).getMarginalUtilityOfTraveling() / 3600.0) + (cnScoringGroup.getPerforming_utils_hr() / 3600.0);
+			this.marginalCostOfDistance = -cnScoringGroup.getModes().get(TransportMode.car).getMonetaryDistanceRate() * cnScoringGroup.getMarginalUtilityOfMoney();
 		}
 
 		@Override
@@ -146,13 +147,15 @@ public class SocialCostControllerWithPT {
 	private static class SocialCostTravelDisutilityFactory implements TravelDisutilityFactory {
 
 		private final SocialCostCalculatorWithPT scc;
+		private final PlanCalcScoreConfigGroup cnScoringGroup;
 
-		public SocialCostTravelDisutilityFactory(SocialCostCalculatorWithPT scc) {
+		public SocialCostTravelDisutilityFactory(SocialCostCalculatorWithPT scc, PlanCalcScoreConfigGroup cnScoringGroup) {
 			this.scc = scc;
+			this.cnScoringGroup = cnScoringGroup;
 		}
 
 		@Override
-		public TravelDisutility createTravelDisutility(TravelTime travelTime, PlanCalcScoreConfigGroup cnScoringGroup) {
+		public TravelDisutility createTravelDisutility(TravelTime travelTime) {
 			return new SocialCostTravelDisutility(travelTime, scc, cnScoringGroup);
 		}
 	}

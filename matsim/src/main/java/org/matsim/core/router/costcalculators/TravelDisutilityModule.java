@@ -22,19 +22,19 @@
 
 package org.matsim.core.router.costcalculators;
 
-import org.matsim.core.config.Config;
+import org.matsim.api.core.v01.TransportMode;
+import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.router.util.TravelDisutility;
-import org.matsim.core.router.util.TravelTime;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
+import com.google.inject.Inject;
 
 public class TravelDisutilityModule extends AbstractModule {
 
+	@Inject PlanCalcScoreConfigGroup cnScoringGroup;
+	
     @Override
     public void install() {
-        bind(TravelDisutilityFactory.class).to(TravelTimeAndDistanceBasedTravelDisutilityFactory.class);
+        addTravelDisutilityFactoryBinding(TransportMode.car).toInstance(new RandomizingTimeDistanceTravelDisutility.Builder(TransportMode.car, cnScoringGroup));
     }
 
 }

@@ -4,7 +4,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
 import org.matsim.api.core.v01.events.LinkLeaveEvent;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import playground.vbmh.controler.VMConfig;
 import playground.vbmh.vmParking.ParkHistoryWriter;
 import playground.vbmh.vmParking.VMScoreKeeper;
@@ -24,11 +24,11 @@ import java.util.Map;
 
 
 public class EVControl {
-	private Controler controler;
+	private MatsimServices controler;
 	private EVList evList;
 	ParkHistoryWriter phwriter = new ParkHistoryWriter();
 	
-	public void startUp(String evFilename, Controler controler){
+	public void startUp(String evFilename, MatsimServices controler){
 		this.controler=controler;
 		
 		//EVs Laden
@@ -40,7 +40,7 @@ public class EVControl {
 	//------------------------------------------------------------------------------------
 	
 	public void linkLeave(LinkLeaveEvent event){ //!! Sicherstellen dass nicht von fussgaenger ausgeloest wird
-		Id personID = event.getPersonId();
+		Id personID = event.getDriverId();
 		if (this.evList.hasEV(personID)){
 			//System.out.println("EV am umme cruise");
 		} else{
@@ -84,7 +84,7 @@ public class EVControl {
 //------------------------------------------------------------------------------------
 	
 	public void linkEnter(LinkEnterEvent event){
-		Id personID = event.getPersonId();
+		Id personID = event.getDriverId();
 		if (!this.evList.hasEV(personID)){
 			return;
 		}

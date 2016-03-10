@@ -28,12 +28,11 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.PlanImpl;
 import org.matsim.core.utils.collections.QuadTree;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.ActivityFacilityImpl;
@@ -60,7 +59,7 @@ public abstract class Utils
     vector[0] = (link.getToNode().getCoord().getY() - link.getFromNode().getCoord().getY());
     vector[1] = (-(link.getToNode().getCoord().getX() - link.getFromNode().getCoord().getX()));
 
-    Coord coord = new CoordImpl(link.getCoord().getX() + vector[0] * EPSILON, link.getCoord().getY() + vector[1] * 0.0001D);
+    Coord coord = new Coord(link.getCoord().getX() + vector[0] * EPSILON, link.getCoord().getY() + vector[1] * 0.0001D);
     f.setCoord(coord);
     f.setLinkId(link.getId());
   }
@@ -123,7 +122,7 @@ public abstract class Utils
     return facilityQuadTree;
   }
 
-  public static final QuadTree<ActivityFacility> createFacilityQuadTree(Controler controler) {
+  public static final QuadTree<ActivityFacility> createFacilityQuadTree(MatsimServices controler) {
     double minx = (1.0D / 0.0D);
     double miny = (1.0D / 0.0D);
     double maxx = (-1.0D / 0.0D);
@@ -146,7 +145,7 @@ public abstract class Utils
     return facilityQuadTree;
   }
 
-  public static final QuadTree<Person> createPersonQuadTree(Controler controler) {
+  public static final QuadTree<Person> createPersonQuadTree(MatsimServices controler) {
     double minx = (1.0D / 0.0D);
     double miny = (1.0D / 0.0D);
     double maxx = (-1.0D / 0.0D);
@@ -167,7 +166,7 @@ public abstract class Utils
     log.info("PersonQuadTree has been created");
     return personQuadTree; }
 
-  public static final QuadTree<ActivityFacility> createShopsQuadTree(Controler controler) {
+  public static final QuadTree<ActivityFacility> createShopsQuadTree(MatsimServices controler) {
     double minx = (1.0D / 0.0D);
     double miny = (1.0D / 0.0D);
     double maxx = (-1.0D / 0.0D);
@@ -192,7 +191,7 @@ public abstract class Utils
 
     return shopsQuadTree;
   }
-  public static final QuadTree<ActivityFacility> createShopsQuadTreeWithoutRetailers(Controler controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities) {
+  public static final QuadTree<ActivityFacility> createShopsQuadTreeWithoutRetailers(MatsimServices controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities) {
 	    double minx = (1.0D / 0.0D);
 	    double miny = (1.0D / 0.0D);
 	    double maxx = (-1.0D / 0.0D);
@@ -232,12 +231,12 @@ public abstract class Utils
 	  
   }
   
-  public static final QuadTree<ActivityFacility> createInsideShopsQuadTreeWIthoutRetailers(Controler controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities) {
+  public static final QuadTree<ActivityFacility> createInsideShopsQuadTreeWIthoutRetailers(MatsimServices controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities) {
 	    double minx = (1.0D / 0.0D);
 	    double miny = (1.0D / 0.0D);
 	    double maxx = (-1.0D / 0.0D);
 	    double maxy = (-1.0D / 0.0D);
-	    Coord center = new CoordImpl(centerX, centerY);
+    Coord center = new Coord(centerX, centerY);
       for (ActivityFacility f : controler.getScenario().getActivityFacilities().getFacilities().values()) {
 	      if (f.getCoord().getX() < minx) minx = f.getCoord().getX();
 	      if (f.getCoord().getY() < miny) miny = f.getCoord().getY();
@@ -252,7 +251,7 @@ public abstract class Utils
 	      if (f.getActivityOptions().containsKey("shopgrocery")) {
 	        Coord c = f.getCoord();
 	        if (!retailerFacilities.containsKey(f.getId())) {
-	        	if (CoordUtils.calcDistance(c, center) < 5000)
+	        	if (CoordUtils.calcEuclideanDistance(c, center) < 5000)
 	        		shopsInsideQuadTree.put(c.getX(), c.getY(), f);
 	        }
 	      }
@@ -275,12 +274,12 @@ public static final boolean removeInsideShopFromShopsQuadTree(double x, double y
 }
 
 
-public static final QuadTree<ActivityFacility> createOutsideShopsQuadTreeWIthoutRetailers(Controler controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities) {
+public static final QuadTree<ActivityFacility> createOutsideShopsQuadTreeWIthoutRetailers(MatsimServices controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities) {
     double minx = (1.0D / 0.0D);
     double miny = (1.0D / 0.0D);
     double maxx = (-1.0D / 0.0D);
     double maxy = (-1.0D / 0.0D);
-    Coord center = new CoordImpl(centerX, centerY);
+  Coord center = new Coord(centerX, centerY);
     for (ActivityFacility f : controler.getScenario().getActivityFacilities().getFacilities().values()) {
       if (f.getCoord().getX() < minx) minx = f.getCoord().getX();
       if (f.getCoord().getY() < miny) miny = f.getCoord().getY();
@@ -295,7 +294,7 @@ public static final QuadTree<ActivityFacility> createOutsideShopsQuadTreeWIthout
       if (f.getActivityOptions().containsKey("shopgrocery")) {
         Coord c = f.getCoord();
         if (!retailerFacilities.containsKey(f.getId())) {
-        	if (CoordUtils.calcDistance(c, center) >= 5000)
+        	if (CoordUtils.calcEuclideanDistance(c, center) >= 5000)
         		shopsOutsideQuadTree.put(c.getX(), c.getY(), f);
         	
         }
@@ -321,7 +320,7 @@ public static final boolean removeOutsideShopFromShopsQuadTree(double x, double 
   
   
 //changed check for activity types to reflect different education and work activities
-  public static final QuadTree<PersonPrimaryActivity> createPersonPrimaryActivityQuadTree(Controler controler)
+  public static final QuadTree<PersonPrimaryActivity> createPersonPrimaryActivityQuadTree(MatsimServices controler)
   {
     int i;
     double minx = (1.0D / 0.0D);
@@ -407,7 +406,7 @@ public static final boolean removeOutsideShopFromShopsQuadTree(double x, double 
    * Getting all the activities that are fixed in the simulation 
    * and that are not included in the location choice.
    */  
-  public static final QuadTree<PersonPrimaryActivity> createPersonFixedActivityQuadTree(Controler controler) {
+  public static final QuadTree<PersonPrimaryActivity> createPersonFixedActivityQuadTree(MatsimServices controler) {
 	  
    
 	  //controler.getConfig().getModule("locationchoice").getParams().get("flexible_types")

@@ -19,12 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.initialdemandgeneration.transformation;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -33,12 +27,17 @@ import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
+import org.matsim.contrib.socnetsim.framework.population.SocialNetwork;
+import org.matsim.contrib.socnetsim.framework.population.SocialNetworkImpl;
 import org.matsim.core.router.EmptyStageActivityTypes;
 import org.matsim.core.router.TripStructureUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 
-import org.matsim.contrib.socnetsim.framework.population.SocialNetwork;
-import org.matsim.contrib.socnetsim.framework.population.SocialNetworkImpl;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 /**
  * @author thibautd
@@ -278,7 +277,7 @@ public class SocialNetworkedPopulationDilutionUtils {
 		for ( Activity activity : TripStructureUtils.getActivities( p.getSelectedPlan() , EmptyStageActivityTypes.INSTANCE ) ) {
 			if ( activity.getCoord() == null ) throw new NullPointerException( "no coord for activity "+activity+" for person "+p );
 
-			if ( CoordUtils.calcDistance( center , activity.getCoord() ) < radius ) return true;
+			if ( CoordUtils.calcEuclideanDistance( center , activity.getCoord() ) < radius ) return true;
 
 			if ( lastCoord != null &&
 					CoordUtils.distancePointLinesegment(

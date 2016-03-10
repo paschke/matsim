@@ -34,12 +34,9 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Route;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.core.network.LinkImpl;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.routes.GenericRoute;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.router.AStarLandmarks;
@@ -159,7 +156,7 @@ public class PlanVktCalculatorRunnable implements Runnable {
 			if(route != null){
 				/* Use actual leg route. */
 				listOfLegLinks = RouteUtils.getLinksFromNodes(RouteUtils.getNodes((NetworkRoute) route, network));
-				vkt += RouteUtils.calcDistance((NetworkRoute) route, network);
+				vkt += RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) route, network);
 			} else{
 				/* Estimate leg route. */
 				double startTime = Math.max(((Activity) a1).getEndTime(), ((Activity) a2).getStartTime());

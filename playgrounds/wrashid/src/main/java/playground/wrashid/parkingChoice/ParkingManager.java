@@ -7,11 +7,10 @@ import org.matsim.api.core.v01.population.Plan;
 import org.matsim.contrib.parking.lib.DebugLib;
 import org.matsim.contrib.parking.lib.obj.network.EnclosingRectangle;
 import org.matsim.contrib.parking.lib.obj.network.QuadTreeInitializer;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.events.StartupEvent;
 import org.matsim.core.controler.listener.StartupListener;
 import org.matsim.core.utils.collections.QuadTree;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.facilities.ActivityFacility;
 
 import playground.wrashid.lib.tools.network.obj.RectangularArea;
@@ -63,7 +62,7 @@ public class ParkingManager implements StartupListener {
 		this.parkingSelectionManager = parkingSelectionManager;
 	}
 
-	private final Controler controler;
+	private final MatsimServices controler;
 
 	
 	private Collection<PParking> parkingCollection;
@@ -74,7 +73,7 @@ public class ParkingManager implements StartupListener {
 		return parkingSelectionManager;
 	}
 	
-	public Controler getControler() {
+	public MatsimServices getControler() {
 		return controler;
 	}
 
@@ -96,7 +95,7 @@ public class ParkingManager implements StartupListener {
 	}
 
 	public void addParkings(Collection<PParking> parkingCollection) {
-		RectangularArea rectangularArea=new RectangularArea(new CoordImpl(parkings.getMinEasting(),parkings.getMinNorthing()), new CoordImpl(parkings.getMaxEasting(),parkings.getMaxNorthing()));
+		RectangularArea rectangularArea=new RectangularArea(new Coord(parkings.getMinEasting(), parkings.getMinNorthing()), new Coord(parkings.getMaxEasting(), parkings.getMaxNorthing()));
 		
 		for (PParking parking : parkingCollection) {
 			
@@ -122,7 +121,7 @@ public class ParkingManager implements StartupListener {
 		parkingsHashMap.put(parking.getId(), parking);
 	}
 
-	public ParkingManager(Controler controler, Collection<PParking> parkingCollection) {
+	public ParkingManager(MatsimServices controler, Collection<PParking> parkingCollection) {
 		this.controler = controler;
 		this.parkingCollection = parkingCollection;
 		currentParkingLocation = new HashMap<Id, PParking>();

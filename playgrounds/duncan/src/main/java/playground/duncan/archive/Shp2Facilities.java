@@ -29,9 +29,8 @@ import org.geotools.data.simple.SimpleFeatureSource;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.ActivityFacilitiesImpl;
@@ -47,7 +46,7 @@ import com.vividsolutions.jts.geom.Polygon;
 public class Shp2Facilities {
 	private static final Logger log = Logger.getLogger(Shp2Facilities.class);
 	
-	private static Collection<SimpleFeature> getPolygons(final SimpleFeatureSource n, final ScenarioImpl scenario) {
+	private static Collection<SimpleFeature> getPolygons(final SimpleFeatureSource n, final MutableScenario scenario) {
 		final Collection<SimpleFeature> polygons = new ArrayList<SimpleFeature>(); // not needed
 
 		ActivityFacilities facilities = scenario.getActivityFacilities();
@@ -81,15 +80,15 @@ public class Shp2Facilities {
 			}
 			final Polygon polygon = (Polygon) multiPolygon.getGeometryN(0);
 			Point center = polygon.getCentroid();
-			Coord coord = new CoordImpl ( center.getX() , center.getY() ) ;
+			Coord coord = new Coord(center.getX(), center.getY());
 			
 			Id<ActivityFacility> id = Id.create( cnt , ActivityFacility.class) ;
 			cnt++ ;
 			
 			ActivityFacilityImpl facility = ((ActivityFacilitiesImpl) facilities).createAndAddFacility(id, coord ) ;
 			
-			facility.createActivityOption( (String) feature.getAttribute("LU_CODE") ) ;
-			facility.createActivityOption( (String) feature.getAttribute("LU_DESCRIP") ) ;
+			facility.createAndAddActivityOption( (String) feature.getAttribute("LU_CODE") ) ;
+			facility.createAndAddActivityOption( (String) feature.getAttribute("LU_DESCRIP") ) ;
 
 		}
 		it.close();
@@ -102,7 +101,7 @@ public class Shp2Facilities {
 	public static void main(final String [] args) {
 		final String shpFile = "/Users/nagel/shared-svn/studies/north-america/ca/metro-vancouver/facilities/shp/landuse.shp";
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		Collection<SimpleFeature> zones = null;
 		try {
 			zones = getPolygons(ShapeFileReader.readDataFile(shpFile), scenario);

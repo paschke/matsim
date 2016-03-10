@@ -19,12 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.hitchiking.routing;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
@@ -39,11 +33,16 @@ import org.matsim.core.router.StageActivityTypes;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.facilities.Facility;
-
 import playground.thibautd.hitchiking.HitchHikingConfigGroup;
 import playground.thibautd.hitchiking.HitchHikingConstants;
 import playground.thibautd.hitchiking.HitchHikingSpots;
 import playground.thibautd.hitchiking.spotweights.SpotWeighter;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * @author thibautd
@@ -84,7 +83,7 @@ public class HitchHikingPassengerRoutingModule implements RoutingModule {
 				fromFacility,
 				toFacility,
 				doSpot);
-		double distance = CoordUtils.calcDistance( puSpot.getCoord() , doSpot.getCoord() );
+		double distance = CoordUtils.calcEuclideanDistance( puSpot.getCoord() , doSpot.getCoord() );
 
 		List<PlanElement> trip = new ArrayList<PlanElement>();
 
@@ -96,7 +95,7 @@ public class HitchHikingPassengerRoutingModule implements RoutingModule {
 
 		Leg leg = new LegImpl( HitchHikingConstants.PASSENGER_MODE );
 		Route route = routeFactory.createRoute(
-					HitchHikingConstants.PASSENGER_MODE,
+					Route.class, // HitchHikingConstants.PASSENGER_MODE,
 					puSpot.getId(),
 					doSpot.getId());
 		route.setDistance( distance );
@@ -108,7 +107,7 @@ public class HitchHikingPassengerRoutingModule implements RoutingModule {
 		double egressDeparture = lastPtLeg.getDepartureTime() + lastPtLeg.getTravelTime();
 
 		egressDeparture = egressDeparture == Time.UNDEFINED_TIME ?
-			CoordUtils.calcDistance( fromFacility.getCoord() , doSpot.getCoord() ) * BEEFLY_ESTIMATED_SPEED :
+			CoordUtils.calcEuclideanDistance( fromFacility.getCoord() , doSpot.getCoord() ) * BEEFLY_ESTIMATED_SPEED :
 			egressDeparture + distance * BEEFLY_ESTIMATED_SPEED;
 
 		trip.addAll( ptRoutingModule.calcRoute(
@@ -129,16 +128,16 @@ public class HitchHikingPassengerRoutingModule implements RoutingModule {
 
 		double centerX = (o.getX() + d.getX()) / 2d;
 		double centerY = (o.getY() + d.getY()) / 2d;
-		double maxBeeFlyDist = CoordUtils.calcDistance( o , d ) * (1 + config.getMaximumDetourFraction());
+		double maxBeeFlyDist = CoordUtils.calcEuclideanDistance( o , d ) * (1 + config.getMaximumDetourFraction());
 
 		List<Link> disk = new ArrayList<Link>( spots.getSpots( centerX , centerY , maxBeeFlyDist / 2d ) );
 
 		Iterator<Link> it = disk.iterator();
 		while (it.hasNext()) {
 			Link l = it.next();
-			double dist = CoordUtils.calcDistance( o, l.getCoord() )
-				+ CoordUtils.calcDistance( l.getCoord() , doPoint )
-				+ CoordUtils.calcDistance( doPoint , d );
+			double dist = CoordUtils.calcEuclideanDistance( o, l.getCoord() )
+				+ CoordUtils.calcEuclideanDistance( l.getCoord() , doPoint )
+				+ CoordUtils.calcEuclideanDistance( doPoint , d );
 			if (dist > maxBeeFlyDist) it.remove();
 		}
 

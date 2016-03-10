@@ -21,6 +21,7 @@
 package org.matsim.contrib.multimodal;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.contrib.multimodal.config.MultiModalConfigGroup;
 import org.matsim.contrib.multimodal.router.DefaultDelegateFactory;
 import org.matsim.contrib.multimodal.router.MultimodalTripRouterFactory;
 import org.matsim.contrib.multimodal.router.util.MultiModalTravelTimeFactory;
@@ -30,50 +31,31 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.ControlerDefaults;
-import org.matsim.core.router.TripRouterFactory;
+import org.matsim.core.controler.OutputDirectoryHierarchy;
+import org.matsim.core.router.TripRouter;
 import org.matsim.core.router.util.FastDijkstraFactory;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scenario.ScenarioUtils;
 
+import javax.inject.Provider;
 import java.util.Map;
 
 /**
  * 
  * This class shows an example how to set up a controler and with
  * an initialized multi-modal simulation.
- * 
- * As a sample scenario, one can replace the empty config with a 
- * multi-modal config for the berlin scenario:
- * 
- * Config config = ConfigUtils.loadConfig("../../matsim/src/test/resources/test/scenarios/berlin/config_multimodal.xml", new MultiModalConfigGroup()));
- * 
+ **
  * @author cdobler
  */
 public class RunMultimodalExample {
 
 	public static void main(String[] args) {
-
-		Config config = ConfigUtils.createConfig();
-//		Config config = ConfigUtils.loadConfig("../../matsim/src/test/resources/test/scenarios/berlin/config_multimodal.xml", new MultiModalConfigGroup());
+		Config config = ConfigUtils.loadConfig("../../matsim/src/test/resources/test/scenarios/berlin/config_multimodal.xml", new MultiModalConfigGroup());
+		config.controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 		PrepareMultiModalScenario.run(scenario);
 		Controler controler = new Controler(scenario);
-		MultiModalTravelTimeFactory multiModalTravelTimeFactory = new MultiModalTravelTimeFactory(scenario.getConfig());
-		Map<String, TravelTime> multiModalTravelTimes = multiModalTravelTimeFactory.createTravelTimes();	
-	
-		TripRouterFactory defaultDelegateFactory = new DefaultDelegateFactory(controler.getScenario(), new FastDijkstraFactory());
-		TripRouterFactory multiModalTripRouterFactory = new MultimodalTripRouterFactory(controler.getScenario(), multiModalTravelTimes,
-                ControlerDefaults.createDefaultTravelDisutilityFactory(scenario), defaultDelegateFactory, new FastDijkstraFactory());
-
-		final MultimodalQSimFactory qSimFactory = new MultimodalQSimFactory(scenario, controler.getEvents(), multiModalTravelTimes);
-		controler.setTripRouterFactory(multiModalTripRouterFactory);
-		controler.addOverridingModule(new AbstractModule() {
-			@Override
-			public void install() {
-				bindMobsim().toProvider(qSimFactory);
-			}
-		});
-
+		controler.setModules(new ControlerDefaultsWithMultiModalModule());
 		controler.run();
 	}
 

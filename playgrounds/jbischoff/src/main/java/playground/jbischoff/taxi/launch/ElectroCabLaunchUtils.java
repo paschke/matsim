@@ -32,7 +32,6 @@ import org.matsim.contrib.transEnergySim.vehicles.energyConsumption.ricardoFaria
 import org.matsim.contrib.transEnergySim.vehicles.impl.BatteryElectricVehicleImpl;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.mobsim.qsim.QSim;
-import org.matsim.core.mobsim.qsim.changeeventsengine.NetworkChangeEventsEngine;
 
 import playground.jbischoff.energy.charging.taxi.*;
 import playground.jbischoff.taxi.evaluation.*;
@@ -73,7 +72,7 @@ public class ElectroCabLaunchUtils
 
         EnergyConsumptionModel ecm = new EnergyConsumptionModelRicardoFaria2012();
 
-        travelDistanceEvaluator = new TravelDistanceTimeEvaluator(scenario.getNetwork());
+        travelDistanceEvaluator = new TravelDistanceTimeEvaluator(scenario.getNetwork(), Double.MAX_VALUE);
         ecabhandler = new ElectricTaxiChargingHandler(events);
         rankhandler = new TaxiRankHandler();
         HashMap<Id<org.matsim.contrib.transEnergySim.vehicles.api.Vehicle>, org.matsim.contrib.transEnergySim.vehicles.api.Vehicle> bevs = new HashMap<Id<org.matsim.contrib.transEnergySim.vehicles.api.Vehicle>, org.matsim.contrib.transEnergySim.vehicles.api.Vehicle>();
@@ -100,7 +99,7 @@ public class ElectroCabLaunchUtils
 
         energyConsumptionTracker = new EnergyConsumptionTracker(bevs, scenario.getNetwork());
 
-        taxiCustomerWaitTimeAnalyser = new TaxiCustomerWaitTimeAnalyser(scenario);
+        taxiCustomerWaitTimeAnalyser = new TaxiCustomerWaitTimeAnalyser(scenario, Double.MAX_VALUE);
 
         handlerGroup.addHandler(travelDistanceEvaluator);
         handlerGroup.addHandler(energyConsumptionTracker);

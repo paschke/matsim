@@ -13,9 +13,8 @@ import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 
 /**
  * Filter persons, not using a specific TransportMode.
@@ -77,7 +76,7 @@ public class SetPersonCoordsToBoundingBox extends NewPopulation {
 						System.err.print("Coords are null");
 					}
 
-					act.setCoord(new CoordImpl(x, y));
+					act.setCoord(new Coord(x, y));
 				}
 			}
 
@@ -95,17 +94,17 @@ public class SetPersonCoordsToBoundingBox extends NewPopulation {
 	public static void main(final String[] args) {
 		Gbl.startMeasurement();
 
-		ScenarioImpl sc = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario sc = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 
 		String networkFile = "D:/Berlin/BVG/berlin-bvg09/net/miv_small/m44_344_small_ba.xml.gz";
 		String inPlansFile = "D:/Berlin/BVG/berlin-bvg09/pop/baseplan_900s_subset.xml.gz";
 		String outPlansFile = "./baseplan_900s_subset_bb.xml.gz";
 		//xrange(4590999.0,4606021.0); yrange(5805999.0,5822001.0)
-		Coord minXY = new CoordImpl(4590999.0, 5805999.0);
-		Coord maxXY = new CoordImpl(4606021.0, 5822001.0);
+		Coord minXY = new Coord(4590999.0, 5805999.0);
+		Coord maxXY = new Coord(4606021.0, 5822001.0);
 
 		Network net = sc.getNetwork();
-		new MatsimNetworkReader(sc).readFile(networkFile);
+		new MatsimNetworkReader(sc.getNetwork()).readFile(networkFile);
 
 		Population inPop = sc.getPopulation();
 		PopulationReader popReader = new MatsimPopulationReader(sc);

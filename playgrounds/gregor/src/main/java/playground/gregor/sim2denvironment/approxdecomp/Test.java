@@ -20,13 +20,7 @@
 
 package playground.gregor.sim2denvironment.approxdecomp;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-
+import com.vividsolutions.jts.geom.*;
 import org.geotools.referencing.CRS;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -43,23 +37,11 @@ import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
-
-import playground.gregor.sim2d_v4.io.Sim2DConfigWriter01;
-import playground.gregor.sim2d_v4.io.Sim2DEnvironmentReader02;
-import playground.gregor.sim2d_v4.io.Sim2DEnvironmentWriter02;
-import playground.gregor.sim2d_v4.scenario.Section;
-import playground.gregor.sim2d_v4.scenario.Sim2DConfig;
-import playground.gregor.sim2d_v4.scenario.Sim2DConfigUtils;
-import playground.gregor.sim2d_v4.scenario.Sim2DEnvironment;
 import playground.gregor.sim2denvironment.GisDebugger;
 import playground.gregor.sim2denvironment.approxdecomp.ApproxConvexDecomposer.Opening;
 import playground.gregor.sim2denvironment.approxdecomp.ApproxConvexDecomposer.PolygonInfo;
 
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
+import java.util.*;
 
 public class Test {
 
@@ -87,7 +69,7 @@ public class Test {
 		List<LineString> openings = new ArrayList<LineString>();
 		Config c = ConfigUtils.createConfig();
 		Scenario sc = ScenarioUtils.createScenario(c);
-		new MatsimNetworkReader(sc).readFile(network);
+		new MatsimNetworkReader(sc.getNetwork()).readFile(network);
 		
 		for (Link  l : sc.getNetwork().getLinks().values()) {
 //			if (l.getFromNode().getInLinks().size() <= 2 ||l.getToNode().getInLinks().size() <= 2){
@@ -152,11 +134,12 @@ public class Test {
 		GisDebugger.dump(dir + "openings.shp");
 		int nr = 0;
 		CoordinateReferenceSystem crs = CRS.decode("EPSG:3395");
-		Sim2DEnvironment env = new Sim2DEnvironment();
-		env.setCRS(crs);
-		env.setEnvelope(reader.getBounds());
+//		Sim2DEnvironment env = new Sim2DEnvironment();
+//		env.setCRS(crs);
+//		env.setEnvelope(reader.getBounds());
 
-		QuadTree<PolygonInfo> quad = buildQuadTree(decomposed,env.getEnvelope());
+//		QuadTree<PolygonInfo> quad = buildQuadTree(decomposed,env.getEnvelope());
+		QuadTree<PolygonInfo> quad = buildQuadTree(decomposed,new Envelope());
 		
 		for (PolygonInfo dec : decomposed) {
 			GisDebugger.addGeometry(dec.p);
@@ -179,8 +162,8 @@ public class Test {
 				Coordinate c1 = dec.p.getExteriorRing().getCoordinates()[idx1];
 				Set<PolygonInfo> s0 = new HashSet<PolygonInfo>();
 				Set<PolygonInfo> s1 = new HashSet<PolygonInfo>();
-				quad.get(c0.x, c0.y, c0.x, c0.y, s0);
-				quad.get(c1.x, c1.y, c1.x, c1.y, s1);
+				quad.getRectangle(c0.x, c0.y, c0.x, c0.y, s0);
+				quad.getRectangle(c1.x, c1.y, c1.x, c1.y, s1);
 				for (PolygonInfo pi : s0) {
 					if (pi == dec || !s1.contains(pi)) {
 						continue;
@@ -193,27 +176,27 @@ public class Test {
 				}
 			}
 			Id[] n = neighborsIds.toArray(new Id[0]);			
-			env.createAndAddSection(Id.create("sec" + dec.hashCode(), Section.class), dec.p, os , n, 0);
+//			env.createAndAddSection(Id.create("sec" + dec.hashCode(), Section.class), dec.p, os , n, 0);
 		}
 
-		env.setId(Id.create(baseName, Sim2DEnvironment.class));
-		new Sim2DEnvironmentWriter02(env).write(output);
-
-		System.out.println(decomposed.size() + " == 105?");
-		GisDebugger.setCRSString("EPSG:3395");
-		GisDebugger.dump(dir + "resolved.shp");
-
-		Sim2DEnvironment env2 = new Sim2DEnvironment(); 
-
-		new Sim2DEnvironmentReader02(env2, false).readFile(output);
-
-		Sim2DConfig conf = Sim2DConfigUtils.createConfig();
-		conf.setEventsInterval(1);
-		conf.setTimeStepSize(0.1);
-		conf.addSim2DEnvironmentPath(output);
-		conf.addSim2DEnvNetworkMapping(output, network);
-		new Sim2DConfigWriter01(conf).write(dir + "sim2dConfig" +baseName+".xml");
-		
+//		env.setId(Id.create(baseName, Sim2DEnvironment.class));
+//		new Sim2DEnvironmentWriter02(env).write(output);
+//
+//		System.out.println(decomposed.size() + " == 105?");
+//		GisDebugger.setCRSString("EPSG:3395");
+//		GisDebugger.dump(dir + "resolved.shp");
+//
+//		Sim2DEnvironment env2 = new Sim2DEnvironment();
+//
+//		new Sim2DEnvironmentReader02(env2, false).readFile(output);
+//
+//		Sim2DConfig conf = Sim2DConfigUtils.createConfig();
+//		conf.setEventsInterval(1);
+//		conf.setTimeStepSize(0.1);
+//		conf.addSim2DEnvironmentPath(output);
+//		conf.addSim2DEnvNetworkMapping(output, network);
+//		new Sim2DConfigWriter01(conf).write(dir + "sim2dConfig" +baseName+".xml");
+//
 		
 		
 	}

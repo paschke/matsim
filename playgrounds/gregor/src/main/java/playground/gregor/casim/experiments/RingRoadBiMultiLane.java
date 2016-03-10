@@ -20,13 +20,7 @@
 
 package playground.gregor.casim.experiments;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -40,30 +34,18 @@ import org.matsim.core.events.EventsManagerImpl;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
-
 import playground.gregor.casim.events.CASimAgentConstructEvent;
-import playground.gregor.casim.simulation.physics.AbstractCANetwork;
-import playground.gregor.casim.simulation.physics.CAEvent;
+import playground.gregor.casim.simulation.physics.*;
 import playground.gregor.casim.simulation.physics.CAEvent.CAEventType;
-import playground.gregor.casim.simulation.physics.CAMoveableEntity;
-import playground.gregor.casim.simulation.physics.CAMultiLaneDensityEstimatorSPH;
-import playground.gregor.casim.simulation.physics.CAMultiLaneDensityEstimatorSPHFactory;
-import playground.gregor.casim.simulation.physics.CAMultiLaneLink;
-import playground.gregor.casim.simulation.physics.CAMultiLaneNetworkFactory;
-import playground.gregor.casim.simulation.physics.CANetwork;
-import playground.gregor.casim.simulation.physics.CANetworkFactory;
-import playground.gregor.casim.simulation.physics.CASimpleDynamicAgent;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPA;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPAII;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPH;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPHII;
 import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.EventBasedVisDebuggerEngine;
 import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.InfoBox;
-import playground.gregor.sim2d_v4.scenario.Sim2DConfig;
-import playground.gregor.sim2d_v4.scenario.Sim2DConfigUtils;
-import playground.gregor.sim2d_v4.scenario.Sim2DScenario;
-import playground.gregor.sim2d_v4.scenario.Sim2DScenarioUtils;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class RingRoadBiMultiLane {
 
@@ -130,10 +112,10 @@ public class RingRoadBiMultiLane {
 				Scenario sc = ScenarioUtils.createScenario(c);
 
 				// VIS only
-				Sim2DConfig conf2d = Sim2DConfigUtils.createConfig();
-				Sim2DScenario sc2d = Sim2DScenarioUtils
-						.createSim2dScenario(conf2d);
-				sc.addScenarioElement(Sim2DScenario.ELEMENT_NAME, sc2d);
+//				Sim2DConfig conf2d = Sim2DConfigUtils.createConfig();
+//				Sim2DScenario sc2d = Sim2DScenarioUtils
+//						.createSim2dScenario(conf2d);
+//				sc.addScenarioElement(Sim2DScenario.ELEMENT_NAME, sc2d);
 
 				Network net = sc.getNetwork();
 				((NetworkImpl) net).setCapacityPeriod(1);
@@ -141,14 +123,10 @@ public class RingRoadBiMultiLane {
 				
 				NetworkFactory fac = net.getFactory();
 				double l = s.sideLength;
-				Node n0 = fac.createNode(Id.createNodeId("0"), new CoordImpl(
-						0, 0));
-				Node n1 = fac.createNode(Id.createNodeId("1"), new CoordImpl(
-						l, 0));
-				Node n2 = fac.createNode(Id.createNodeId("2"), new CoordImpl(
-						l, l));
-				Node n3 = fac.createNode(Id.createNodeId("3"), new CoordImpl(
-						0, l));
+				Node n0 = fac.createNode(Id.createNodeId("0"), new Coord((double) 0, (double) 0));
+				Node n1 = fac.createNode(Id.createNodeId("1"), new Coord(l, (double) 0));
+				Node n2 = fac.createNode(Id.createNodeId("2"), new Coord(l, l));
+				Node n3 = fac.createNode(Id.createNodeId("3"), new Coord((double) 0, l));
 				net.addNode(n3);
 				net.addNode(n2);
 				net.addNode(n1);

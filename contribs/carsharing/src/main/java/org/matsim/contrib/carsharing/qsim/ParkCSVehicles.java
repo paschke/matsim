@@ -54,12 +54,17 @@ public class ParkCSVehicles implements AgentSource {
 	public void insertAgentsIntoMobsim() {
 		// TODO Auto-generated method stub
 		int counterTW = 0;
+		int counterOW = 0;
+		int counterFF = 0;
+
 		if (ffvehiclesLocationqt != null)
 		for (FreeFloatingStation ffstation: ffvehiclesLocationqt.getQuadTree().values()) {
 			
 			for (String id:ffstation.getIDs()) {
-				qsim.createAndParkVehicleOnLink(VehicleUtils.getFactory().createVehicle(Id.create("FF_"+(id), Vehicle.class), modeVehicleTypes.get("freefloating")), ffstation.getLink().getId());
+				//log.info("Parked freefloating car with id: " + id);
 
+				qsim.createAndParkVehicleOnLink(VehicleUtils.getFactory().createVehicle(Id.create("FF_"+(id), Vehicle.class), modeVehicleTypes.get("freefloating")), ffstation.getLinkId() ) ;
+				counterFF++;
 			}
 			
 		}
@@ -67,8 +72,8 @@ public class ParkCSVehicles implements AgentSource {
 			for (OneWayCarsharingStation owstation: owvehiclesLocationqt.getQuadTree().values()) {
 				
 				for (String id:owstation.getIDs()) {
-					qsim.createAndParkVehicleOnLink(VehicleUtils.getFactory().createVehicle(Id.create("OW_"+(id), Vehicle.class), modeVehicleTypes.get("onewaycarsharing")), owstation.getLink().getId());
-
+					qsim.createAndParkVehicleOnLink(VehicleUtils.getFactory().createVehicle(Id.create("OW_"+(id), Vehicle.class), modeVehicleTypes.get("onewaycarsharing")), owstation.getLinkId());
+					counterOW++;
 				}
 				
 			}
@@ -78,12 +83,15 @@ public class ParkCSVehicles implements AgentSource {
 				
 				for (String id : twstation.getIDs()) {
 					
-					qsim.createAndParkVehicleOnLink(VehicleUtils.getFactory().createVehicle(Id.create("TW_"+id, Vehicle.class), modeVehicleTypes.get("twowaycarsharing")), twstation.getLink().getId());
+					qsim.createAndParkVehicleOnLink(VehicleUtils.getFactory().createVehicle(Id.create("TW_"+id, Vehicle.class), modeVehicleTypes.get("twowaycarsharing")), twstation.getLinkId());
 					counterTW++;
 				}
 				
 			}
 			log.info("Parked " + counterTW + " twowaycarsharing vehicles.");
+			log.info("Parked " + counterOW + " onewaycarsharing vehicles.");
+			log.info("Parked " + counterFF + " freefloatingcarsharing vehicles.");
+
 		}
 		
 	}

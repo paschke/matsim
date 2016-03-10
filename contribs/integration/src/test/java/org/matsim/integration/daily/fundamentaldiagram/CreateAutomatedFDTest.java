@@ -28,7 +28,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -48,6 +47,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
@@ -61,6 +61,7 @@ import org.matsim.core.config.groups.QSimConfigGroup.LinkDynamics;
 import org.matsim.core.config.groups.QSimConfigGroup.TrafficDynamics;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup.VspDefaultsCheckingLevel;
 import org.matsim.core.events.EventsUtils;
+import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.mobsim.framework.AgentSource;
 import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.framework.MobsimDriverAgent;
@@ -71,6 +72,8 @@ import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngine;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
+import org.matsim.core.utils.io.IOUtils;
+import org.matsim.facilities.Facility;
 import org.matsim.testcases.MatsimTestUtils;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleType;
@@ -79,142 +82,12 @@ import org.matsim.vehicles.VehicleUtils;
 /**
  * Generates fundamental diagrams for the all combination of link and traffic dynamics for car/bike and car/truck groups.
  * Also generates car/bike FDs using fast capacity update method.
+ * Results are archived at @see <a href="https://svn.vsp.tu-berlin.de/testresults/">https://svn.vsp.tu-berlin.de/testresults/</a>
  * @author amit
  */
 
 @RunWith(Parameterized.class)
 public class CreateAutomatedFDTest {
-
-	static class MySimplifiedRoundAndRoundAgent implements MobsimAgent, MobsimDriverAgent {
-
-		public MySimplifiedRoundAndRoundAgent(Id<Person> agentId, double actEndTime, String travelMode) {
-			personId = agentId;
-			mode = travelMode;
-			this.actEndTime = actEndTime;
-		}
-
-		private final Id<Person> personId;
-		private final String mode;
-		private final double actEndTime;
-
-		private MobsimVehicle vehicle ;
-		public boolean isArriving= false;
-
-		private Id<Link> currentLinkId = Id.createLinkId("home");
-		private State agentState= MobsimAgent.State.ACTIVITY;;
-
-		@Override
-		public Id<Link> getCurrentLinkId() {
-			return this.currentLinkId;
-		}
-
-		@Override
-		public Id<Link> getDestinationLinkId() {
-			return Id.createLinkId("work");
-		}
-
-		@Override
-		public Id<Person> getId() {
-			return this.personId;
-		}
-
-		@Override
-		public Id<Link> chooseNextLinkId() {
-			if (globalFlowDynamicsUpdator.isPermanent()){ 
-				isArriving = true; 
-			}
-
-			if(this.getCurrentLinkId().equals(Id.createLinkId("home"))){
-				return Id.createLinkId(0);
-			} else if(this.getCurrentLinkId().equals(Id.createLinkId(0))){
-				if ( isArriving) {
-					return Id.createLinkId("work") ;
-				} else {
-					return Id.createLinkId(1) ;
-				}
-			} else if(this.getCurrentLinkId().equals(Id.createLinkId(1))){
-				return Id.createLinkId(2);
-			} else if(this.getCurrentLinkId().equals(Id.createLinkId(2))){
-				return Id.createLinkId(0);
-			} else return null; // returning null so that agent will arrive.
-
-		}
-
-		@Override
-		public void notifyMoveOverNode(Id<Link> newLinkId) {
-			this.currentLinkId = newLinkId;
-		}
-
-		@Override
-		public boolean isWantingToArriveOnCurrentLink() {
-			if ( this.chooseNextLinkId()==null ) {
-				return true ;
-			} else {
-				return false ;
-			}
-		}
-
-		@Override
-		public void setVehicle(MobsimVehicle veh) {
-			this.vehicle = veh ;
-		}
-
-		@Override
-		public MobsimVehicle getVehicle() {
-			return this.vehicle ;
-		}
-
-		@Override
-		public Id<Vehicle> getPlannedVehicleId() {
-			return Id.create(this.getId(), Vehicle.class);
-		}
-
-		@Override
-		public State getState() {
-			return agentState;
-		}
-
-		@Override
-		public double getActivityEndTime() {
-			return this.actEndTime;
-		}
-
-		@Override
-		public void endActivityAndComputeNextState(double now) {
-			agentState= MobsimAgent.State.LEG;
-		}
-
-		@Override
-		public void endLegAndComputeNextState(double now) {
-			agentState=MobsimAgent.State.ACTIVITY;
-		}
-
-		@Override
-		public void setStateToAbort(double now) {
-			throw new RuntimeException("not implemented");
-		}
-
-		@Override
-		public Double getExpectedTravelTime() {
-			throw new RuntimeException("not implemented");
-		}
-
-		@Override
-		public Double getExpectedTravelDistance() {
-			throw new RuntimeException("not implemented");
-		}
-
-		@Override
-		public String getMode() {
-			return mode;
-		}
-
-		@Override
-		public void notifyArrivalOnLinkByNonNetworkMode(Id<Link> linkId) {
-			throw new RuntimeException("not implemented");
-		}
-
-	}
 
 	public CreateAutomatedFDTest(LinkDynamics linkDynamics, TrafficDynamics trafficDynamics) {
 		this.linkDynamics = linkDynamics;
@@ -226,30 +99,32 @@ public class CreateAutomatedFDTest {
 	private TrafficDynamics trafficDynamics;
 	private final Map<Id<Person>,String> person2Mode = new HashMap<Id<Person>, String>();
 
-	@Parameters
+	@Parameters(name = "{index}: LinkDynamics == {0}; Traffic dynamics == {1}")
 	public static Collection<Object[]> createFds() {
 		Object[] [] fdData = new Object [][] { 
 				{LinkDynamics.FIFO, TrafficDynamics.queue},
 				{LinkDynamics.FIFO, TrafficDynamics.withHoles}, 
 				{LinkDynamics.PassingQ,TrafficDynamics.queue},
-				{LinkDynamics.PassingQ,TrafficDynamics.withHoles}
+				{LinkDynamics.PassingQ,TrafficDynamics.withHoles},
+				{LinkDynamics.SeepageQ,TrafficDynamics.queue},
+				{LinkDynamics.SeepageQ,TrafficDynamics.withHoles}
 		};
 		return Arrays.asList(fdData);
 	}
 
 	@Test
-	public void FDs_carTruck(){
+	public void fdsCarTruck(){
 		this.travelModes = new String [] {"car","truck"};
 		run(this.linkDynamics, this.trafficDynamics,false);
 	}
 
 	@Test
-	public void FDs_carBike(){
+	public void fdsCarBike(){
 		run(this.linkDynamics, this.trafficDynamics,false);
 	}
 
 	@Test 
-	public void Fds_carBike_fastCapacityUpdate(){
+	public void fdsCarBikeFastCapacityUpdate(){
 		run(this.linkDynamics,this.trafficDynamics,true);
 	}
 
@@ -262,10 +137,11 @@ public class CreateAutomatedFDTest {
 	private Map<Id<VehicleType>, TravelModesFlowDynamicsUpdator> mode2FlowData;
 	static GlobalFlowDynamicsUpdator globalFlowDynamicsUpdator;
 
-	private final Logger log = Logger.getLogger(CreateAutomatedFDTest.class);
+	private final static Logger LOG = Logger.getLogger(CreateAutomatedFDTest.class);
 
 	private void run(final LinkDynamics linkDynamics, final TrafficDynamics trafficDynamics, final boolean isUsingFastCapacityUpdate) {
 
+		MatsimRandom.reset();
 		scenario = ScenarioUtils.loadScenario(ConfigUtils.createConfig());
 		createNetwork();
 
@@ -274,6 +150,13 @@ public class CreateAutomatedFDTest {
 		scenario.getConfig().qsim().setMainModes(Arrays.asList(travelModes));
 		scenario.getConfig().qsim().setEndTime(14*3600);
 		scenario.getConfig().qsim().setLinkDynamics(linkDynamics.name());
+	
+		if(linkDynamics.equals(LinkDynamics.SeepageQ)){
+			scenario.getConfig().qsim().setSeepMode("bike");
+			scenario.getConfig().qsim().setSeepModeStorageFree(false);
+			scenario.getConfig().qsim().setRestrictingSeepage(true);
+		}
+		
 		scenario.getConfig().vspExperimental().setVspDefaultsCheckingLevel( VspDefaultsCheckingLevel.abort );
 		scenario.getConfig().qsim().setTrafficDynamics(trafficDynamics);
 
@@ -359,7 +242,7 @@ public class CreateAutomatedFDTest {
 				public void insertAgentsIntoMobsim() {
 					for ( Id<Person> personId : person2Mode.keySet()) {
 						String travelMode = person2Mode.get(personId);
-						double actEndTime = (new Random().nextDouble())*900;
+						double actEndTime = (MatsimRandom.getRandom().nextDouble())*900;
 
 						MobsimAgent agent = new MySimplifiedRoundAndRoundAgent(personId, actEndTime, travelMode);
 						qSim.insertAgentIntoMobsim(agent);
@@ -396,8 +279,8 @@ public class CreateAutomatedFDTest {
 
 		String outDir  = "test/output/" + CreateAutomatedFDTest.class.getCanonicalName().replace('.', '/') + "/" + helper.getMethodName() + "/";
 		String fileName = linkDynamics+"_"+trafficDynamics+".png";
-		String outFile ;
-
+		String outFile ; 
+		//ZZ_TODO : what is there exists some different directory => changing method name will keep collecting the old data.
 		if(!new File(outDir).exists() || new File(outDir+fileName).exists()){
 			outFile = helper.getOutputDirectory()+fileName;
 		} else {
@@ -406,6 +289,159 @@ public class CreateAutomatedFDTest {
 
 		//plotting data
 		scatterPlot(outData,outFile);
+	}
+	
+	static class MySimplifiedRoundAndRoundAgent implements MobsimAgent, MobsimDriverAgent {
+
+		private static final Id<Link> ORIGIN_LINK_ID = Id.createLinkId("home");
+		private static final Id<Link> BASE_LINK_ID = Id.createLinkId(0);
+		private static final Id<Link> MIDDEL_LINK_ID_OF_TRACK = Id.createLinkId(1);
+		private static final Id<Link> LAST_LINK_ID_OF_TRACK = Id.createLinkId(2);
+		private static final Id<Link> DESTINATION_LINK_ID = Id.createLinkId("work");
+
+		public MySimplifiedRoundAndRoundAgent(Id<Person> agentId, double actEndTime, String travelMode) {
+			personId = agentId;
+			mode = travelMode;
+			this.actEndTime = actEndTime;
+			this.plannedVehicleId = Id.create(agentId, Vehicle.class);
+		}
+
+		private final Id<Person> personId;
+		private final Id<Vehicle> plannedVehicleId;
+		private final String mode;
+		private final double actEndTime;
+
+		private MobsimVehicle vehicle ;
+		public boolean isArriving= false;
+
+		private Id<Link> currentLinkId = ORIGIN_LINK_ID;
+		private State agentState= MobsimAgent.State.ACTIVITY;;
+
+		@Override
+		public Id<Link> getCurrentLinkId() {
+			return this.currentLinkId;
+		}
+
+		@Override
+		public Id<Link> getDestinationLinkId() {
+			return DESTINATION_LINK_ID;
+		}
+
+		@Override
+		public Id<Person> getId() {
+			return this.personId;
+		}
+
+		@Override
+		public Id<Link> chooseNextLinkId() {
+			if (globalFlowDynamicsUpdator.isPermanent()){ 
+				isArriving = true; 
+			}
+
+			if( ORIGIN_LINK_ID.equals(this.currentLinkId ) ){
+				return BASE_LINK_ID;
+			} else if( BASE_LINK_ID.equals( this.currentLinkId ) ) {
+				if ( isArriving) {
+					return DESTINATION_LINK_ID ;
+				} else {
+					return MIDDEL_LINK_ID_OF_TRACK ;
+				}
+			} else if(MIDDEL_LINK_ID_OF_TRACK.equals(this.currentLinkId )){
+				return LAST_LINK_ID_OF_TRACK;
+			} else if(LAST_LINK_ID_OF_TRACK.equals(this.currentLinkId )){
+				return BASE_LINK_ID;
+			} else return null; // returning null so that agent will arrive.
+
+		}
+
+		@Override
+		public void notifyMoveOverNode(Id<Link> newLinkId) {
+			this.currentLinkId = newLinkId;
+		}
+
+		@Override
+		public boolean isWantingToArriveOnCurrentLink() {
+			if ( this.chooseNextLinkId()==null ) {
+				return true ;
+			} else {
+				return false ;
+			}
+		}
+
+		@Override
+		public void setVehicle(MobsimVehicle veh) {
+			this.vehicle = veh ;
+		}
+
+		@Override
+		public MobsimVehicle getVehicle() {
+			return this.vehicle ;
+		}
+
+		@Override
+		public Id<Vehicle> getPlannedVehicleId() {
+			return this.plannedVehicleId;
+		}
+
+		@Override
+		public State getState() {
+			return agentState;
+		}
+
+		@Override
+		public double getActivityEndTime() {
+			if(isArriving  && agentState.equals(MobsimAgent.State.ACTIVITY)){
+				return Double.POSITIVE_INFINITY;
+			}
+			return this.actEndTime;
+		}
+
+		@Override
+		public void endActivityAndComputeNextState(double now) {
+			agentState= MobsimAgent.State.LEG;
+		}
+
+		@Override
+		public void endLegAndComputeNextState(double now) {
+			agentState=MobsimAgent.State.ACTIVITY;
+		}
+
+		@Override
+		public void setStateToAbort(double now) {
+			throw new RuntimeException("not implemented");
+		}
+
+		@Override
+		public Double getExpectedTravelTime() {
+			throw new RuntimeException("not implemented");
+		}
+
+		@Override
+		public Double getExpectedTravelDistance() {
+			throw new RuntimeException("not implemented");
+		}
+
+		@Override
+		public String getMode() {
+			return mode;
+		}
+
+		@Override
+		public void notifyArrivalOnLinkByNonNetworkMode(Id<Link> linkId) {
+			throw new RuntimeException("not implemented");
+		}
+
+		@Override
+		public Facility<? extends Facility<?>> getCurrentFacility() {
+			// TODO Auto-generated method stub
+			throw new RuntimeException("not implemented") ;
+		}
+
+		@Override
+		public Facility<? extends Facility<?>> getDestinationFacility() {
+			// TODO Auto-generated method stub
+			throw new RuntimeException("not implemented") ;
+		}
 	}
 
 	private void storeVehicleTypeInfo() {
@@ -436,11 +472,12 @@ public class CreateAutomatedFDTest {
 	private void createNetwork(){
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 
-		Node nodeHome = network.createAndAddNode(Id.createNodeId("home"), scenario.createCoord(-50, 0));
-		Node node1 = network.createAndAddNode(Id.createNodeId(0), scenario.createCoord(0, 0));
-		Node node2 = network.createAndAddNode(Id.createNodeId(1), scenario.createCoord(1000, 0));
-		Node node3 = network.createAndAddNode(Id.createNodeId(2), scenario.createCoord(500, 866.0));
-		Node nodeWork = network.createAndAddNode(Id.createNodeId("work"), scenario.createCoord(1050,0));
+		double x = -50;
+		Node nodeHome = network.createAndAddNode(Id.createNodeId("home"), new Coord(x, (double) 0));
+		Node node1 = network.createAndAddNode(Id.createNodeId(0), new Coord((double) 0, (double) 0));
+		Node node2 = network.createAndAddNode(Id.createNodeId(1), new Coord((double) 1000, (double) 0));
+		Node node3 = network.createAndAddNode(Id.createNodeId(2), new Coord((double) 500, 866.0));
+		Node nodeWork = network.createAndAddNode(Id.createNodeId("work"), new Coord((double) 1050, (double) 0));
 
 		network.createAndAddLink(Id.createLinkId("home"), nodeHome, node1, 25, 60, 27000, 1);
 		network.createAndAddLink(Id.createLinkId(0), node1, node2, 1000, 60, 2700, 1);
@@ -527,7 +564,7 @@ public class CreateAutomatedFDTest {
 		private double permanentAverageVelocity;
 		private double permanentFlow;
 
-		private Map<Id<Person>,Double> lastSeenOnStudiedLinkEnter;//records last entry time for every person, but also useful for getting actual number of people in the simulation
+		private Map<Id<Vehicle>,Double> lastSeenOnStudiedLinkEnter;//records last entry time for every person, but also useful for getting actual number of people in the simulation
 		private int speedTableSize;
 		private List<Double> speedTable;
 		private Double flowTime;
@@ -545,11 +582,12 @@ public class CreateAutomatedFDTest {
 
 		public void handle(LinkEnterEvent event){
 			if (event.getLinkId().equals(flowDynamicsMeasurementLinkId)){
-				Id<Person> personId = Id.createPersonId(event.getVehicleId());
+//				Id<Person> personId = Id.createPersonId(event.getDriverId());
 				double nowTime = event.getTime();
 
 				this.updateFlow900(nowTime, this.vehicleType.getPcuEquivalents());
-				this.updateSpeedTable(nowTime, personId);
+//				this.updateSpeedTable(nowTime, personId);
+				this.updateSpeedTable(nowTime, event.getVehicleId() ) ;
 
 				//Checking for stability
 				//Making sure all agents are on the track before testing stability
@@ -566,10 +604,10 @@ public class CreateAutomatedFDTest {
 			}
 		}
 
-		private void updateFlow900(double nowTime, double pcu_person){
+		private void updateFlow900(double nowTime, double pcuVeh){
 			if (nowTime == this.flowTime.doubleValue()){//Still measuring the flow of the same second
 				Double nowFlow = this.flowTable900.get(0);
-				this.flowTable900.set(0, nowFlow.doubleValue()+pcu_person);
+				this.flowTable900.set(0, nowFlow.doubleValue()+pcuVeh);
 			} else {//Need to offset the new flow table from existing flow table.
 				int timeDifference = (int) (nowTime-this.flowTime.doubleValue());
 				if (timeDifference<900){
@@ -581,7 +619,7 @@ public class CreateAutomatedFDTest {
 							this.flowTable900.set(i, 0.);
 						}
 					}
-					this.flowTable900.set(0, pcu_person);
+					this.flowTable900.set(0, pcuVeh);
 				} else {
 					flowTableReset();
 				}
@@ -598,18 +636,18 @@ public class CreateAutomatedFDTest {
 			this.lastXFlows900.set(0, nowFlow);
 		}
 
-		private void updateSpeedTable(double nowTime, Id<Person> personId){
-			if (this.lastSeenOnStudiedLinkEnter.containsKey(personId)){
-				double lastSeenTime = lastSeenOnStudiedLinkEnter.get(personId);
+		private void updateSpeedTable(double nowTime, Id<Vehicle> vehicleId){
+			if (this.lastSeenOnStudiedLinkEnter.containsKey(vehicleId)){
+				double lastSeenTime = lastSeenOnStudiedLinkEnter.get(vehicleId);
 				double speed = 1000 * 3 / (nowTime-lastSeenTime);//in m/s!!
 				for (int i=speedTableSize-2; i>=0; i--){
 					this.speedTable.set(i+1, this.speedTable.get(i).doubleValue());
 				}
 				this.speedTable.set(0, speed);
 
-				this.lastSeenOnStudiedLinkEnter.put(personId,nowTime);
+				this.lastSeenOnStudiedLinkEnter.put(vehicleId,nowTime);
 			} else {
-				this.lastSeenOnStudiedLinkEnter.put(personId, nowTime);
+				this.lastSeenOnStudiedLinkEnter.put(vehicleId, nowTime);
 			}
 			//this.numberOfDrivingAgents = this.lastSeenOnStudiedLinkEnter.size();
 		}
@@ -636,8 +674,8 @@ public class CreateAutomatedFDTest {
 			double absoluteDeviances = this.lastXFlows900.get(this.lastXFlows900.size()-1) - this.lastXFlows900.get(0);
 			if (Math.abs(absoluteDeviances) < 1){
 				this.flowStability = true;
-				if(modeId==null) log.info("========== Reaching a certain flow stability for global flow.");
-				else log.info("========== Reaching a certain flow stability in mode: "+modeId.toString());
+				if(modeId==null) LOG.info("========== Reaching a certain flow stability for global flow.");
+				else LOG.info("========== Reaching a certain flow stability in mode: "+modeId.toString());
 			} else {
 				this.flowStability = false;
 			}
@@ -689,13 +727,6 @@ public class CreateAutomatedFDTest {
 			}
 		}
 
-		@Override
-		public String toString(){
-			VehicleType vT = this.vehicleType;
-			String str = "(id="+this.modeId+", max_v="+vT.getMaximumVelocity()+", pcu="+vT.getPcuEquivalents()+")";
-			return str;
-		}
-
 		private void flowTableReset() {
 			for (int i=0; i<900; i++){
 				this.flowTable900.add(0.);
@@ -706,11 +737,9 @@ public class CreateAutomatedFDTest {
 			//NB: Should not be called upon a modeData without a vehicleType, as this.vehicleType will be null and will throw an exception.
 			this.permanentDensity = this.numberOfAgents / (1000.*3) *1000. * this.vehicleType.getPcuEquivalents();
 			this.permanentAverageVelocity = this.getActualAverageVelocity();
-			log.info("Calculated permanent Speed from "+modeId+"'s lastXSpeeds : "+speedTable+"\nResult is : "+this.permanentAverageVelocity);
-			//this.permanentFlow = this.getActualFlow();
-			this.permanentFlow = /*this.getActualFlow900();*///Done: Sliding average instead of taking just the last value (seen to be sometimes farther from the average than expected)
-					this.getSlidingAverageLastXFlows900();
-			log.info("Calculated permanent Flow from "+modeId+"'s lastXFlows900 : "+lastXFlows900+"\nResult is :"+this.permanentFlow);	
+			LOG.info("Calculated permanent Speed from "+modeId+"'s lastXSpeeds : "+speedTable+"\nResult is : "+this.permanentAverageVelocity);
+			this.permanentFlow = this.getSlidingAverageLastXFlows900();
+			LOG.info("Calculated permanent Flow from "+modeId+"'s lastXFlows900 : "+lastXFlows900+"\nResult is :"+this.permanentFlow);	
 		}
 
 		//Getters/Setters
@@ -792,8 +821,8 @@ public class CreateAutomatedFDTest {
 		 */
 		public GlobalFlowDynamicsUpdator(Map<Id<VehicleType>, TravelModesFlowDynamicsUpdator> travelModeFlowDataContainer){
 			this.travelModesFlowData = travelModeFlowDataContainer;
-			for (int i=0; i<travelModes.length; i++){
-				this.travelModesFlowData.get(Id.create(travelModes[i],VehicleType.class)).initDynamicVariables();
+			for (Id<VehicleType> vehTyp : this.travelModesFlowData .keySet()){
+				this.travelModesFlowData.get(vehTyp).initDynamicVariables();
 			}
 			this.globalFlowData = new TravelModesFlowDynamicsUpdator();
 			this.globalFlowData.setnumberOfAgents(person2Mode.size());
@@ -803,8 +832,8 @@ public class CreateAutomatedFDTest {
 
 		@Override
 		public void reset(int iteration) {	
-			for (int i=0; i<travelModes.length; i++){
-				this.travelModesFlowData.get(Id.create(travelModes[i],VehicleType.class)).reset();
+			for (Id<VehicleType> vehTyp : this.travelModesFlowData .keySet()){
+				this.travelModesFlowData.get(vehTyp).reset();
 			}
 			this.globalFlowData.reset();
 			this.permanentRegime = false;
@@ -812,21 +841,20 @@ public class CreateAutomatedFDTest {
 
 		public void handleEvent(LinkEnterEvent event) {
 			if (!(permanentRegime)){
-				Id<Person> personId = Id.createPersonId(event.getVehicleId());
-				double pcu_person = 0.;
+//				Id<Person> personId = Id.createPersonId(event.getDriverId());
 
 				//Disaggregated data updating methods
-				String travelMode = person2Mode.get(personId);
+				String travelMode = person2Mode.get(event.getVehicleId());
 
 				Id<VehicleType> transportMode = modeVehicleTypes.get(travelMode).getId();
 				this.travelModesFlowData.get(transportMode).handle(event);
-				pcu_person = modeVehicleTypes.get(travelMode).getPcuEquivalents();
+				double pcuVeh = modeVehicleTypes.get(travelMode).getPcuEquivalents();
 
 				//Aggregated data update
 				double nowTime = event.getTime();
 				if (event.getLinkId().equals(flowDynamicsMeasurementLinkId)){				
-					this.globalFlowData.updateFlow900(nowTime, pcu_person);
-					this.globalFlowData.updateSpeedTable(nowTime, personId);
+					this.globalFlowData.updateFlow900(nowTime, pcuVeh);
+					this.globalFlowData.updateSpeedTable(nowTime, event.getVehicleId());
 					//Waiting for all agents to be on the track before studying stability
 					if ((this.globalFlowData.getNumberOfDrivingAgents() == this.globalFlowData.numberOfAgents) && (nowTime>1800)){	//TODO parametrize this correctly
 						/*//Taking speed check out, as it is not reliable on the global speed table
@@ -842,10 +870,9 @@ public class CreateAutomatedFDTest {
 
 						//Checking modes stability
 						boolean modesStable = true;
-						for (int i=0; i<travelModes.length; i++){
-							Id<VehicleType> localVehicleType = Id.create(travelModes[i],VehicleType.class);
-							if (this.travelModesFlowData.get(localVehicleType).numberOfAgents != 0){
-								if (! this.travelModesFlowData.get(localVehicleType).isSpeedStable() || !(this.travelModesFlowData.get(localVehicleType).isFlowStable())) {
+						for (Id<VehicleType> vehTyp : this.travelModesFlowData .keySet()){
+							if (this.travelModesFlowData.get(vehTyp).numberOfAgents != 0){
+								if (! this.travelModesFlowData.get(vehTyp).isSpeedStable() || !(this.travelModesFlowData.get(vehTyp).isFlowStable())) {
 									modesStable = false;
 									break;
 								} 
@@ -854,9 +881,9 @@ public class CreateAutomatedFDTest {
 						if (modesStable){
 							//Checking global stability
 							if ( /*this.globalData.isSpeedStable() &&*/ this.globalFlowData.isFlowStable() ){
-								log.info("========== Global permanent regime is attained");
-								for (int i=0; i<travelModes.length; i++){
-									this.travelModesFlowData.get(Id.create(travelModes[i],VehicleType.class)).saveDynamicVariables();
+								LOG.info("========== Global permanent regime is attained");
+								for (Id<VehicleType> vehTyp : this.travelModesFlowData .keySet()){
+									this.travelModesFlowData.get(vehTyp).saveDynamicVariables();
 								}
 								this.globalFlowData.setPermanentAverageVelocity(this.globalFlowData.getActualAverageVelocity());
 								//this.permanentFlow = this.getActualFlow();
@@ -882,5 +909,4 @@ public class CreateAutomatedFDTest {
 			return this.globalFlowData;
 		}
 	}
-
 }

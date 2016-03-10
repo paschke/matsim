@@ -29,6 +29,7 @@ import junit.framework.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
@@ -55,10 +56,7 @@ public class PtScoringTest {
 		config.planCalcScore().setWriteExperiencedPlans(true);
 
 		Controler controler = new Controler(config);
-		controler.getConfig().controler().setOverwriteFileSetting(
-				true ?
-						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
+		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.getConfig().controler().setCreateGraphs(false);
 
         EventsCollector collector = new EventsCollector();
@@ -80,7 +78,7 @@ public class PtScoringTest {
 		
 //		double zeroUtilityDurationHome_s = CharyparNagelScoringUtils.computeZeroUtilityDuration_s(priority, typicalDuration_s);
 		ActivityUtilityParameters.Builder builder = new ActivityUtilityParameters.Builder( pcs.getActivityParams("home") ) ;
-		ActivityUtilityParameters params = builder.create() ;
+		ActivityUtilityParameters params = builder.build() ;
 		double zeroUtilityDurationHome_s = params.getZeroUtilityDuration_h() * 3600. ;
 
 
@@ -105,7 +103,7 @@ public class PtScoringTest {
 		double ptIA6ActEnd = leaveVeh3 ;
 		double home3Arr = 19866 ;
 
-		double score = pcs.getTravelingWalk_utils_hr() * (stop1Arr-homeAct1End)/3600. ;
+		double score = pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (stop1Arr-homeAct1End)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		// (pt interaction activity) 
@@ -113,16 +111,16 @@ public class PtScoringTest {
 
 		// yyyy wait is not separately scored!!
 		//			score += pcs.getMarginalUtlOfWaitingPt_utils_hr() * timeTransitWait/3600. ;
-		score += pcs.getTravelingPt_utils_hr() * (enterVeh-ptIA1ActEnd)/3600. ; 			
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (enterVeh-ptIA1ActEnd)/3600. ;
 		System.out.println("score after wait: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (leaveVeh-enterVeh)/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (leaveVeh-enterVeh)/3600. ;
 		System.out.println("score after travel pt: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt interact: " + score ) ;
 
-		score += pcs.getTravelingWalk_utils_hr() * (home2Arr-ptIA2ActEnd)/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (home2Arr-ptIA2ActEnd)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		final double duration = homeAct2End-home2Arr;
@@ -138,22 +136,22 @@ public class PtScoringTest {
 
 		// ======
 
-		score += pcs.getTravelingWalk_utils_hr() * (stop2Arr-homeAct2End)/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (stop2Arr-homeAct2End)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt int act: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (enterVeh2-ptIA3ActEnd)/3600. ; 			
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (enterVeh2-ptIA3ActEnd)/3600. ;
 		System.out.println("score after wait: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (leaveVeh2-enterVeh2)/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (leaveVeh2-enterVeh2)/3600. ;
 		System.out.println("score after travel pt: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt int act: " + score ) ;
 
-		score += pcs.getTravelingWalk_utils_hr() * (stop3Arr-ptIA4ActEnd)/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (stop3Arr-ptIA4ActEnd)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		score += pcs.getUtilityOfLineSwitch() ;
@@ -164,16 +162,16 @@ public class PtScoringTest {
 		// (pt interaction activity) 
 		System.out.println("score after pt int act: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (enterVeh3-ptIA5ActEnd)/3600. ; 			
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (enterVeh3-ptIA5ActEnd)/3600. ;
 		System.out.println("score after wait: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (leaveVeh3-enterVeh3)/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (leaveVeh3-enterVeh3)/3600. ;
 		System.out.println("score after travel pt: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt int act: " + score ) ;
 
-		score += pcs.getTravelingWalk_utils_hr() * (home3Arr-ptIA6ActEnd)/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (home3Arr-ptIA6ActEnd)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		score += (pcs.getPerforming_utils_hr()/3600.) * typicalDuration_s 
@@ -195,13 +193,10 @@ public class PtScoringTest {
 		Config config = this.utils.loadConfig("test/scenarios/pt-simple-lineswitch/config.xml");
 
 		config.planCalcScore().setWriteExperiencedPlans(true);
-		config.planCalcScore().setConstantPt(1.) ;
+		config.planCalcScore().getModes().get(TransportMode.pt).setConstant(1.);
 
 		Controler controler = new Controler(config);
-		controler.getConfig().controler().setOverwriteFileSetting(
-				true ?
-						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
+		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.getConfig().controler().setCreateGraphs(false);
 
         EventsCollector collector = new EventsCollector();
@@ -221,7 +216,7 @@ public class PtScoringTest {
 
 //		double zeroUtilityDurationHome_s = CharyparNagelScoringUtils.computeZeroUtilityDuration_s(priority, typicalDuration_s);
 		ActivityUtilityParameters.Builder builder = new ActivityUtilityParameters.Builder( pcs.getActivityParams("home") ) ;
-		ActivityUtilityParameters params = builder.create() ;
+		ActivityUtilityParameters params = builder.build() ;
 		double zeroUtilityDurationHome_s = params.getZeroUtilityDuration_h() * 3600. ;
 
 		double homeAct1End = 18060. ;
@@ -245,27 +240,27 @@ public class PtScoringTest {
 		double ptIA6ActEnd = leaveVeh3 ;
 		double home3Arr = 19866 ;
 
-		double score = pcs.getTravelingWalk_utils_hr() * (stop1Arr-homeAct1End)/3600. ;
+		double score = pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (stop1Arr-homeAct1End)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt interact: " + score ) ;
 
-		score += pcs.getConstantPt() ;
+		score += pcs.getModes().get(TransportMode.pt).getConstant();
 		System.out.println("score after addition of pt constant: " + score ) ;
 
 		// yyyy wait is not separately scored!!
 		//			score += pcs.getMarginalUtlOfWaitingPt_utils_hr() * timeTransitWait/3600. ;
-		score += pcs.getTravelingPt_utils_hr() * (enterVeh-ptIA1ActEnd)/3600. ; 			
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (enterVeh-ptIA1ActEnd)/3600. ;
 		System.out.println("score after wait: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (leaveVeh-enterVeh)/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (leaveVeh-enterVeh)/3600. ;
 		System.out.println("score after travel pt: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt interact: " + score ) ;
 
-		score += pcs.getTravelingWalk_utils_hr() * (home2Arr-ptIA2ActEnd)/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (home2Arr-ptIA2ActEnd)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		double tmpScore = (pcs.getPerforming_utils_hr()/3600.) * typicalDuration_s 
@@ -280,25 +275,25 @@ public class PtScoringTest {
 
 		// ======
 
-		score += pcs.getTravelingWalk_utils_hr() * (stop2Arr-homeAct2End)/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (stop2Arr-homeAct2End)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt int act: " + score ) ;
 
-		score += pcs.getConstantPt() ;
+		score += pcs.getModes().get(TransportMode.pt).getConstant();
 		System.out.println("score after addition of pt constant: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (enterVeh2-ptIA3ActEnd)/3600. ; 			
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (enterVeh2-ptIA3ActEnd)/3600. ;
 		System.out.println("score after wait: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (leaveVeh2-enterVeh2)/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (leaveVeh2-enterVeh2)/3600. ;
 		System.out.println("score after travel pt: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt int act: " + score ) ;
 
-		score += pcs.getTravelingWalk_utils_hr() * (stop3Arr-ptIA4ActEnd)/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (stop3Arr-ptIA4ActEnd)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		score += pcs.getUtilityOfLineSwitch() ;
@@ -309,16 +304,16 @@ public class PtScoringTest {
 		// (pt interaction activity) 
 		System.out.println("score after pt int act: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (enterVeh3-ptIA5ActEnd)/3600. ; 			
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (enterVeh3-ptIA5ActEnd)/3600. ;
 		System.out.println("score after wait: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * (leaveVeh3-enterVeh3)/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * (leaveVeh3-enterVeh3)/3600. ;
 		System.out.println("score after travel pt: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score after pt int act: " + score ) ;
 
-		score += pcs.getTravelingWalk_utils_hr() * (home3Arr-ptIA6ActEnd)/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (home3Arr-ptIA6ActEnd)/3600. ;
 		System.out.println("score after walk: " + score ) ;
 
 		score += (pcs.getPerforming_utils_hr()/3600.) * typicalDuration_s 
@@ -343,10 +338,7 @@ public class PtScoringTest {
 		config.planCalcScore().setMarginalUtlOfWaitingPt_utils_hr(-18.0) ;
 
 		Controler controler = new Controler(config);
-		controler.getConfig().controler().setOverwriteFileSetting(
-				true ?
-						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
+		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.getConfig().controler().setCreateGraphs(false);
 
         EventsCollector collector = new EventsCollector();
@@ -366,7 +358,7 @@ public class PtScoringTest {
 
 //		double zeroUtilityDurationHome_s = CharyparNagelScoringUtils.computeZeroUtilityDuration_s(priority, typicalDuration_s);
 		ActivityUtilityParameters.Builder builder = new ActivityUtilityParameters.Builder( pcs.getActivityParams("home") ) ;
-		ActivityUtilityParameters params = builder.create() ;
+		ActivityUtilityParameters params = builder.build() ;
 		double zeroUtilityDurationHome_s = params.getZeroUtilityDuration_h() * 3600. ;
 
 
@@ -376,7 +368,7 @@ public class PtScoringTest {
 		double timeTransitWalk2 = 18446. - 18423. ;
 		double timeHome = 18060. + 24.*3600 - 18446 ;
 
-		double score = pcs.getTravelingWalk_utils_hr() * (timeTransitWalk/3600.) ;
+		double score = pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (timeTransitWalk/3600.) ;
 		System.out.println("score: " + score ) ;
 
 		// (pt interaction activity) 
@@ -389,13 +381,13 @@ public class PtScoringTest {
 		// yyyy wait is not separately scored!!
 		System.out.println("score: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * timeTransitInVeh/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * timeTransitInVeh/3600. ;
 		System.out.println("score: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score: " + score ) ;
 
-		score += pcs.getTravelingWalk_utils_hr() * timeTransitWalk2/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * timeTransitWalk2/3600. ;
 		System.out.println("score: " + score ) ;
 
 		score += (pcs.getPerforming_utils_hr()/3600.) * typicalDuration_s * Math.log(timeHome/zeroUtilityDurationHome_s) ;
@@ -419,10 +411,7 @@ public class PtScoringTest {
 		config.planCalcScore().setWriteExperiencedPlans(true);
 
 		Controler controler = new Controler(config);
-		controler.getConfig().controler().setOverwriteFileSetting(
-				true ?
-						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
+		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.getConfig().controler().setCreateGraphs(false);
 
         EventsCollector collector = new EventsCollector();
@@ -442,7 +431,7 @@ public class PtScoringTest {
 
 //		double zeroUtilityDurationHome_s = CharyparNagelScoringUtils.computeZeroUtilityDuration_s(priority, typicalDuration_s);
 		ActivityUtilityParameters.Builder builder = new ActivityUtilityParameters.Builder( pcs.getActivityParams("home") ) ;
-		ActivityUtilityParameters params = builder.create() ;
+		ActivityUtilityParameters params = builder.build() ;
 		double zeroUtilityDurationHome_s = params.getZeroUtilityDuration_h() * 3600. ;
 
 
@@ -452,24 +441,24 @@ public class PtScoringTest {
 		double timeTransitWalk2 = 18446. - 18423. ;
 		double timeHome = 18060. + 24.*3600 - 18446 ;
 
-		double score = pcs.getTravelingWalk_utils_hr() * (timeTransitWalk/3600.) ;
+		double score = pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * (timeTransitWalk/3600.) ;
 		System.out.println("score: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score: " + score ) ;
 
 		//			score += pcs.getMarginalUtlOfWaitingPt_utils_hr() * timeTransitWait/3600. ;
-		score += pcs.getTravelingPt_utils_hr() * timeTransitWait/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * timeTransitWait/3600. ;
 		// yyyy wait is not separately scored!!
 		System.out.println("score: " + score ) ;
 
-		score += pcs.getTravelingPt_utils_hr() * timeTransitInVeh/3600. ;
+		score += pcs.getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() * timeTransitInVeh/3600. ;
 		System.out.println("score: " + score ) ;
 
 		// (pt interaction activity) 
 		System.out.println("score: " + score ) ;
 
-		score += pcs.getTravelingWalk_utils_hr() * timeTransitWalk2/3600. ;
+		score += pcs.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() * timeTransitWalk2/3600. ;
 		System.out.println("score: " + score ) ;
 
 		score += (pcs.getPerforming_utils_hr()/3600.) * typicalDuration_s * Math.log(timeHome/zeroUtilityDurationHome_s) ;

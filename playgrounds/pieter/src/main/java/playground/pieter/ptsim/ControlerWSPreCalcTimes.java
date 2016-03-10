@@ -36,6 +36,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.listener.AfterMobsimListener;
 import org.matsim.core.events.EventsUtils;
@@ -93,7 +94,7 @@ public class ControlerWSPreCalcTimes {
 //        controler.addOverridingModule(new AbstractModule() {
 //            @Override
 //            public void install() {
-//                bindTravelDisutilityFactory().toInstance(disutilityFactory);
+//                bindCarTravelDisutilityFactory().toInstance(disutilityFactory);
 //            }
 //        });
 //        disutilityFactory.setSigma(0.3);
@@ -204,12 +205,12 @@ public class ControlerWSPreCalcTimes {
 
 class MyAfterMobsimAnalyses implements AfterMobsimListener, Runnable {
 
-    private Controler controler;
+    private MatsimServices controler;
     private String eventsFileName;
     private int currentIteration;
     private ExcessWaitingTimeCalculator eWTCalculator;
 
-    public MyAfterMobsimAnalyses(Controler controler) {
+    public MyAfterMobsimAnalyses(MatsimServices controler) {
         this.controler = controler;
     }
 

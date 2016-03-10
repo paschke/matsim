@@ -76,7 +76,7 @@ public class MATSimNetworkScheduleMergerMain {
 	
 	public final void mergeSchedule(String networkFilename, String transitScheduleFilename, String netEditsFilename) {
 		log.info("Load network " + networkFilename);
-		new MatsimNetworkReader(scenario).readFile(networkFilename);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFilename);
 		log.info("Load transit schedule " + transitScheduleFilename);
 		new TransitScheduleReader(scenario).readFile(transitScheduleFilename);
 
@@ -98,7 +98,7 @@ public class MATSimNetworkScheduleMergerMain {
 
 		log.info("fix link lengths…");
 		for (Link link : scenario.getNetwork().getLinks().values()) {
-			double dist = CoordUtils.calcDistance(link.getFromNode().getCoord(), link.getToNode().getCoord());
+			double dist = CoordUtils.calcEuclideanDistance(link.getFromNode().getCoord(), link.getToNode().getCoord());
 			if (link.getLength() < dist) {
 				link.setLength(dist);
 			}

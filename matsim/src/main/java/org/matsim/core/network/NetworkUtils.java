@@ -26,7 +26,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.core.utils.geometry.CoordUtils;
 
 import java.util.*;
 
@@ -183,6 +183,10 @@ public class NetworkUtils {
 		return links;
 	}
 
+	/**
+	 * @param list of links
+	 * @return list of link IDs
+	 */
 	public static List<Id<Link>> getLinkIds(final List<Link> links) {
 		List<Id<Link>> linkIds = new ArrayList<>();
 		if (links != null) {
@@ -263,9 +267,8 @@ public class NetworkUtils {
 
     /**
 	 * This method expects the nearest link to a given measure point. 
-	 * It calculates the euclidian distance for both nodes of the link, 
+	 * It calculates the euclidean distance for both nodes of the link, 
 	 * "fromNode" and "toNode" and returns the node with shorter distance
-	 *
 	 */
 	public static Node getCloserNodeOnLink(Coord coord, Link link) {
 		// yyyy I don't think there is a test for this anywhere.  kai, mar'14
@@ -273,8 +276,8 @@ public class NetworkUtils {
 		Node toNode = link.getToNode();
 		Node fromNode= link.getFromNode();
 		
-		double distanceToNode = getEuclidianDistance(coord, toNode.getCoord());
-		double distanceFromNode= getEuclidianDistance(coord, fromNode.getCoord());
+		double distanceToNode = getEuclideanDistance(coord, toNode.getCoord());
+		double distanceFromNode= getEuclideanDistance(coord, fromNode.getCoord());
 		
 		if(distanceToNode < distanceFromNode)
 			return toNode;
@@ -282,26 +285,18 @@ public class NetworkUtils {
 	}
 
 	/**
-		 * returns the euclidean distance between two coordinates
-		 *
-		 */
-		public static double getEuclidianDistance(Coord origin, Coord destination){
-			double xDiff = origin.getX() - destination.getX();
-			double yDiff = origin.getY() - destination.getY();
-			double distance = Math.sqrt( (xDiff*xDiff) + (yDiff*yDiff) );
-			
-			return distance;
-		}
-
-	/** returns the euclidean distance between two points (x1,y1) and (x2,y2)
+	 * returns the euclidean distance between two coordinates
 	 *
 	 */
-	public static double getEuclidianDistance(double x1, double y1, double x2, double y2){
-		
-		double xDiff = x1 - x2;
-		double yDiff = y1 - y2;
-		double distance =  Math.sqrt( (xDiff*xDiff) + (yDiff*yDiff) );
-		return distance ;
+	public static double getEuclideanDistance(Coord origin, Coord destination){
+		return CoordUtils.calcEuclideanDistance(origin, destination);
+	}
+
+	/** 
+	 * returns the euclidean distance between two points (x1,y1) and (x2,y2)
+	 */
+	public static double getEuclideanDistance(double x1, double y1, double x2, double y2){
+		return getEuclideanDistance(new Coord(x1,y1), new Coord(x2, y2));
 	}
 
     /**
@@ -476,10 +471,10 @@ public class NetworkUtils {
 	}
 
 	/**
-	 * Calculates the orientation of the outLinks for a given inLink
-	 * beginning from the right if the inLink goes north to south.
-	 * The most 'left' outLink comes last.
-	 * backLink is ignored
+	 * Calculates the orientation of downstream links (MATSim slang is 'outLinks') for a given 
+	 * upstream link (slang inLink)beginning from the right if the inLink goes 
+	 * north to south. The most 'left' outLink comes last. The link back to the 
+	 * inLinks upstream Node (slang fromNode) is ignored. 
 	 *
 	 * @param inLink The inLink given
 	 * @return Collection of outLinks, or an empty collection, if there is only
@@ -488,35 +483,27 @@ public class NetworkUtils {
 	public static TreeMap<Double, Link> getOutLinksSortedByAngle(Link inLink){
 		Coord coordInLink = getVector(inLink);
 		double thetaInLink = Math.atan2(coordInLink.getY(), coordInLink.getX());
-
-		TreeMap<Double, Link> leftLane = new TreeMap<Double, Link>();
+		TreeMap<Double, Link> outLinksByOrientation = new TreeMap<Double, Link>();
 
 		for (Link outLink : inLink.getToNode().getOutLinks().values()) {
-
 			if (!(outLink.getToNode().equals(inLink.getFromNode()))){
-
 				Coord coordOutLink = getVector(outLink);
 				double thetaOutLink = Math.atan2(coordOutLink.getY(), coordOutLink.getX());
-
 				double thetaDiff = thetaOutLink - thetaInLink;
-
 				if (thetaDiff < -Math.PI){
 					thetaDiff += 2 * Math.PI;
 				} else if (thetaDiff > Math.PI){
 					thetaDiff -= 2 * Math.PI;
 				}
-
-				leftLane.put(Double.valueOf(-thetaDiff), outLink);
-
+				outLinksByOrientation.put(Double.valueOf(-thetaDiff), outLink);
 			}
 		}
-
-		return leftLane;
+		return outLinksByOrientation;
 	}
 
 	private static Coord getVector(Link link){
 		double x = link.getToNode().getCoord().getX() - link.getFromNode().getCoord().getX();
 		double y = link.getToNode().getCoord().getY() - link.getFromNode().getCoord().getY();
-		return new CoordImpl(x, y);
+		return new Coord(x, y);
 	}
 }

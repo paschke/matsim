@@ -19,24 +19,19 @@
 
 package playground.gregor.casim.run;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-
 import com.google.inject.Provider;
-
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.cadyts.car.CadytsCarModule;
 import org.matsim.contrib.cadyts.car.CadytsContext;
-import org.matsim.contrib.cadyts.general.CadytsConfigGroup;
 import org.matsim.contrib.cadyts.general.CadytsScoring;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.ControlerConfigGroup;
-import org.matsim.core.config.groups.StrategyConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.IterationStartsEvent;
 import org.matsim.core.controler.listener.IterationStartsListener;
@@ -51,28 +46,19 @@ import org.matsim.core.scoring.functions.CharyparNagelActivityScoring;
 import org.matsim.core.scoring.functions.CharyparNagelAgentStuckScoring;
 import org.matsim.core.scoring.functions.CharyparNagelLegScoring;
 import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
-import org.matsim.counts.Count;
-import org.matsim.counts.Counts;
-
 import playground.gregor.casim.proto.CALinkInfos.CALinInfos;
 import playground.gregor.casim.simulation.CAMobsimFactory;
 import playground.gregor.casim.simulation.physics.AbstractCANetwork;
 import playground.gregor.casim.simulation.physics.CASingleLaneNetworkFactory;
-import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.Branding;
-import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.EventBasedVisDebuggerEngine;
-import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.InfoBox;
 import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.QSimDensityDrawer;
-import playground.gregor.sim2d_v4.scenario.Sim2DConfig;
-import playground.gregor.sim2d_v4.scenario.Sim2DConfigUtils;
-import playground.gregor.sim2d_v4.scenario.Sim2DScenario;
-import playground.gregor.sim2d_v4.scenario.Sim2DScenarioUtils;
-import playground.gregor.vis.CASimVisRequestHandler;
-import playground.gregor.vis.VisRequestHandler;
-import playground.gregor.vis.VisServer;
+
+import javax.inject.Inject;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 public class CAwCadytsRunner implements IterationStartsListener {
 
-	private Controler controller;
+	private MatsimServices controller;
 	private QSimDensityDrawer qSimDrawer;
 
 	public static void main(String[] args) {
@@ -83,17 +69,17 @@ public class CAwCadytsRunner implements IterationStartsListener {
 		String qsimConf = args[0];
 		final Config c = ConfigUtils.loadConfig(qsimConf);
 
-		c.plans().setInputFile("/Users/laemmel/devel/nyc/gct_vicinity/calibrated_plans.xml.gz");
+//		c.plans().setInputFile("/Users/laemmel/devel/nyc/gct_vicinity/calibrated_plans.xml.gz");
 		
 		c.controler().setWriteEventsInterval(1);
 		c.controler().setMobsim("casim");
-		c.controler().setLastIteration(0);
-		c.controler().setOutputDirectory("/Users/laemmel/devel/nyc/output_measurements/");
+//		c.controler().setLastIteration(0);
+//		c.controler().setOutputDirectory("/Users/laemmel/devel/nyc/output_measurements/");
 		Scenario sc = ScenarioUtils.loadScenario(c);
 		
 		CALinInfos infos = null;
 		try {
-			FileInputStream str = new FileInputStream("/Users/laemmel/devel/nyc/gct_vicinity/ca_link_infos");
+			FileInputStream str = new FileInputStream(args[2]);
 			infos = CALinInfos.parseFrom(str);
 			str.close();
 		} catch (IOException e) {
@@ -108,21 +94,40 @@ public class CAwCadytsRunner implements IterationStartsListener {
 		// c.qsim().setEndTime(41*60);//+30*60);
 
 		final Controler controller = new Controler(sc);
-		
-		
-		// create the cadyts context and add it to the control(l)er:
-		final CadytsContext cContext = new CadytsContext(c);
-		controller.addControlerListener(cContext);
-		
 
-		controller.getConfig().controler().setOverwriteFileSetting(
-				true ?
-						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
-		LeastCostPathCalculatorFactory cost = createDefaultLeastCostPathCalculatorFactory(sc);
-		CATripRouterFactory tripRouter = new CATripRouterFactory(sc, cost);
+//		boolean vis = Boolean.parseBoolean(args[2]);
+//		if (vis) {
+//			AbstractCANetwork.EMIT_VIS_EVENTS = true;
+//			Sim2DConfig conf2d = Sim2DConfigUtils.createConfig();
+//			Sim2DScenario sc2d = Sim2DScenarioUtils.createSim2dScenario(conf2d);
+//
+//
+//			sc.addScenarioElement(Sim2DScenario.ELEMENT_NAME, sc2d);
+//			EventBasedVisDebuggerEngine dbg = new EventBasedVisDebuggerEngine(sc);
+//			InfoBox iBox = new InfoBox(dbg, sc);
+//			dbg.addAdditionalDrawer(iBox);
+//			dbg.addAdditionalDrawer(new Branding());
+////			QSimDensityDrawer qDbg = new QSimDensityDrawer(sc);
+////			dbg.addAdditionalDrawer(qDbg);
+//
+//			EventsManager em = controller.getEvents();
+////			em.addHandler(qDbg);
+//			em.addHandler(dbg);
+//		}
 
-		controller.setTripRouterFactory(tripRouter);
+
+
+		controller.addOverridingModule(new CadytsCarModule());
+
+		controller.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
+
+
+//		controller.addOverridingModule(new AbstractModule() {
+//			@Override
+//			public void install() {
+//				addRoutingModuleBinding(TransportMode.walkca).toProvider(CARoutingModule.class);
+//			}
+//		});
 
 		final CAMobsimFactory factory = new CAMobsimFactory();
 		if (args[1].equals("false")) {
@@ -148,11 +153,8 @@ public class CAwCadytsRunner implements IterationStartsListener {
 			
 			@Override
 			public void notifyIterationStarts(IterationStartsEvent event) {
-				if (event.getIteration() % 100 == 0){// && event.getIteration() > 0) {
-					AbstractCANetwork.EMIT_VIS_EVENTS = true;
-				} else {
-					AbstractCANetwork.EMIT_VIS_EVENTS = false;
-				}
+				// && event.getIteration() > 0) {
+				AbstractCANetwork.EMIT_VIS_EVENTS = event.getIteration() % 100 == 0;
 				
 			}
 		});
@@ -161,10 +163,12 @@ public class CAwCadytsRunner implements IterationStartsListener {
 		
 		// include cadyts into the plan scoring (this will add the cadyts corrections to the scores):
 		controller.setScoringFunctionFactory(new ScoringFunctionFactory() {
+			@Inject
+			CadytsContext cContext;
 			@Override
 			public ScoringFunction createNewScoringFunction(Person person) {
 
-				final CharyparNagelScoringParameters params = CharyparNagelScoringParameters.getBuilder(c.planCalcScore()).create();
+				final CharyparNagelScoringParameters params = new CharyparNagelScoringParameters.Builder(controller.getScenario(), person.getId()).build();
 				
 				SumScoringFunction scoringFunctionAccumulator = new SumScoringFunction();
 				scoringFunctionAccumulator.addScoringFunction(new CharyparNagelLegScoring(params, controller.getScenario().getNetwork()));
@@ -183,6 +187,23 @@ public class CAwCadytsRunner implements IterationStartsListener {
 		
 		
 		controller.run();
+	}
+
+	protected static void printUsage() {
+		System.out.println();
+		System.out.println("CAwCadytsRunner");
+		System.out.println("Controller for ca (pedestrian) simulations.");
+		System.out.println();
+		System.out.println("usage : CAwCadytsRunner config multilane_mode ca_link_infos");
+		System.out.println();
+		System.out.println("config:   path to MATSim config file.");
+		System.out.println("multilane_mode:   one of {true,false}.");
+//		System.out.println("visualize:   one of {true,false}.");
+		System.out.println("ca_link_infos:   path to ca_link_infos file.");
+		System.out.println();
+		System.out.println("---------------------");
+		System.out.println("2015, matsim.org");
+		System.out.println();
 	}
 
 	private static LeastCostPathCalculatorFactory createDefaultLeastCostPathCalculatorFactory(
@@ -213,22 +234,6 @@ public class CAwCadytsRunner implements IterationStartsListener {
 			throw new IllegalStateException(
 					"Enumeration Type RoutingAlgorithmType was extended without adaptation of Controler!");
 		}
-	}
-
-	protected static void printUsage() {
-		System.out.println();
-		System.out.println("CARunner");
-		System.out.println("Controller for ca (pedestrian) simulations.");
-		System.out.println();
-		System.out.println("usage : CARunner config multilane_mode visualize");
-		System.out.println();
-		System.out.println("config:   A MATSim config file.");
-		System.out.println("multilane_mode:   one of {true,false}.");
-		System.out.println("visualize:   one of {true,false}.");
-		System.out.println();
-		System.out.println("---------------------");
-		System.out.println("2014, matsim.org");
-		System.out.println();
 	}
 
 	@Override

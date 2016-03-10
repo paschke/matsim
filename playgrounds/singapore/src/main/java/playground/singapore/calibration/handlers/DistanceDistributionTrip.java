@@ -1,16 +1,32 @@
 package playground.singapore.calibration.handlers;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.api.core.v01.population.*;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.population.routes.GenericRoute;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.pt.PtConstants;
@@ -19,12 +35,6 @@ import org.matsim.pt.routes.ExperimentalTransitRouteFactory;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.*;
-import java.util.Map.Entry;
 
 /**
  * 
@@ -71,7 +81,7 @@ public class DistanceDistributionTrip {
 					Leg leg = (Leg)planElement;
 					double lastLinkLenght = network.getLinks().get(leg.getRoute().getEndLinkId()).getLength();
 					if(leg.getMode().equals("car")) {
-						chain.distances.add(RouteUtils.calcDistance((NetworkRoute)leg.getRoute(), network)+lastLinkLenght);
+						chain.distances.add(RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute)leg.getRoute(), network)+lastLinkLenght);
 						chain.modes.add("car");
 					}
 					else if(leg.getMode().equals("transit_walk") && !inPTLeg) {
@@ -82,12 +92,14 @@ public class DistanceDistributionTrip {
 						onlyWalk = false;
 					if(leg.getMode().equals("pt")) {
 						ExperimentalTransitRoute eRoute = (ExperimentalTransitRoute) factory.createRoute(leg.getRoute().getStartLinkId(), leg.getRoute().getEndLinkId());
-						eRoute.setRouteDescription(leg.getRoute().getStartLinkId(), ((GenericRoute)leg.getRoute()).getRouteDescription(), leg.getRoute().getEndLinkId());
+						eRoute.setStartLinkId(leg.getRoute().getStartLinkId());
+						eRoute.setEndLinkId(leg.getRoute().getEndLinkId());
+						eRoute.setRouteDescription(leg.getRoute().getRouteDescription());
 						TransitRoute route = transitSchedule.getTransitLines().get(eRoute.getLineId()).getRoutes().get(eRoute.getRouteId());
-						distancePT += RouteUtils.calcDistance(route.getRoute().getSubRoute(eRoute.getStartLinkId(), eRoute.getEndLinkId()), network)+lastLinkLenght;
+						distancePT += RouteUtils.calcDistanceExcludingStartEndLink(route.getRoute().getSubRoute(eRoute.getStartLinkId(), eRoute.getEndLinkId()), network)+lastLinkLenght;
 					}
 					else if(leg.getMode().equals("transit_walk"))
-						distancePT += CoordUtils.calcDistance(network.getLinks().get(leg.getRoute().getStartLinkId()).getCoord(), network.getLinks().get(leg.getRoute().getEndLinkId()).getCoord());
+						distancePT += CoordUtils.calcEuclideanDistance(network.getLinks().get(leg.getRoute().getStartLinkId()).getCoord(), network.getLinks().get(leg.getRoute().getEndLinkId()).getCoord());
 				}
 				else if(planElement instanceof Activity)
 					if(!((Activity)planElement).getType().equals(PtConstants.TRANSIT_ACTIVITY_TYPE) && inPTLeg) {
@@ -158,9 +170,9 @@ public class DistanceDistributionTrip {
 	 * @throws java.io.IOException
 	 */
 	public static void main(String[] args) throws IOException {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		scenario.getConfig().transit().setUseTransit(true);
-		new MatsimNetworkReader(scenario).parse(args[0]);
+		new MatsimNetworkReader(scenario.getNetwork()).parse(args[0]);
 		new TransitScheduleReader(scenario).readFile(args[1]);
 		int lastIteration = new Integer(args[2]);
 		int iterationsInterval = new Integer(args[3]);

@@ -33,8 +33,7 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.core.utils.geometry.CoordImpl;
-import org.matsim.lanes.data.v20.LaneDefinitions20;
+import org.matsim.lanes.data.v20.Lanes;
 import org.matsim.lanes.data.v20.LanesToLinkAssignment20;
 import org.matsim.contrib.signals.data.signalgroups.v20.SignalGroupData;
 import org.matsim.contrib.signals.data.signalgroups.v20.SignalGroupsData;
@@ -83,7 +82,7 @@ public class DgCalculateSignalGroups {
 	private static final Logger log = Logger.getLogger(DgCalculateSignalGroups.class);
 
 	private Network net;
-	private LaneDefinitions20 lanes;
+	private Lanes lanes;
 	private SignalSystemsData signalSystems;
 	
 	private double right = -Math.PI/4;
@@ -97,7 +96,7 @@ public class DgCalculateSignalGroups {
 	}
 	
 	public DgCalculateSignalGroups(SignalSystemsData signalSystems2, Network network,
-			LaneDefinitions20 laneDefinitions) {
+			Lanes laneDefinitions) {
 		this(signalSystems2, network);
 		this.lanes = laneDefinitions;
 	}
@@ -301,8 +300,8 @@ public class DgCalculateSignalGroups {
 	
 	private Coord getVector(Link link){
 		double x = link.getToNode().getCoord().getX() - link.getFromNode().getCoord().getX();
-		double y = link.getToNode().getCoord().getY() - link.getFromNode().getCoord().getY();		
-		return new CoordImpl(x, y);
+		double y = link.getToNode().getCoord().getY() - link.getFromNode().getCoord().getY();
+		return new Coord(x, y);
 	}
 
 }

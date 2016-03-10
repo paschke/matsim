@@ -38,6 +38,7 @@ import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -61,7 +62,7 @@ public class ShapeConverterPop {
 		
 		Config config = new Config();
 		config.addCoreModules();
-		Controler controler = new Controler(config);
+		MatsimServices controler = new Controler(config);
 		controler.getConfig().controler().setOverwriteFileSetting(
 				true ?
 						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
@@ -81,7 +82,7 @@ public class ShapeConverterPop {
 		config.planCalcScore().addActivityParams(other);
 		
 		Scenario scenario = ScenarioUtils.createScenario(config);
-		new MatsimNetworkReader(scenario).readFile(networkFile);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
 		Population pop = fillScenario(scenario);
 		new PopulationWriter(pop, scenario.getNetwork()).write(plansFile);
 
@@ -139,9 +140,9 @@ public class ShapeConverterPop {
 				Double starty = new Double((Integer) sf.getAttribute("START_Y"));
 				Double endx = new Double((Integer) sf.getAttribute("ENDE_X"));
 				Double endy = new Double((Integer) sf.getAttribute("ENDE_Y"));
-				
-				Coord startCoordinates = scenario.createCoord(startx, starty);
-				Coord endCoordinates = scenario.createCoord(endx, endy);
+
+				Coord startCoordinates = new Coord(startx, starty);
+				Coord endCoordinates = new Coord(endx, endy);
 				
 				String actType = (String) sf.getAttribute("SKOM1"); // activity type
 				actType = actType.toLowerCase();

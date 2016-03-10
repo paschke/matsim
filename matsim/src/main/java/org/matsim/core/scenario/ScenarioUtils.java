@@ -6,7 +6,7 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.households.Households;
-import org.matsim.lanes.data.v20.LaneDefinitions20;
+import org.matsim.lanes.data.v20.Lanes;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.Vehicles;
 
@@ -39,7 +39,7 @@ public class ScenarioUtils {
 		if (config == null) {
 			throw new NullPointerException("config must not be null!");
 		}
-		return new ScenarioImpl(config);
+		return new MutableScenario(config);
 	}
 
 	/**
@@ -48,7 +48,9 @@ public class ScenarioUtils {
 	 *
 	 */
 	public static Scenario loadScenario(final Config config) {
-		return ScenarioLoaderImpl.loadScenario(config);
+		ScenarioLoaderImpl scenarioLoader = new ScenarioLoaderImpl(config);
+		Scenario scenario = scenarioLoader.loadScenario();
+		return scenario;
 	}
 
 	/**
@@ -58,76 +60,49 @@ public class ScenarioUtils {
 	 *
 	 */
 	public static void loadScenario(final Scenario scenario) {
-		ScenarioLoaderImpl.loadScenario(scenario);
+		ScenarioLoaderImpl scenarioLoader = new ScenarioLoaderImpl(scenario);
+		scenarioLoader.loadScenario();
 	}
 	
 	public final static class ScenarioBuilder {
-		private ScenarioImpl scenario;
+		private MutableScenario scenario;
 		public ScenarioBuilder( Config config ) {
-			this.scenario = new ScenarioImpl( config ) ;
+			this.scenario = new MutableScenario( config ) ;
 		}
 		public ScenarioBuilder addScenarioElement(String name, Object o) {
 			scenario.addScenarioElement(name, o); 
-			return this ;
-		}
-		// households:
-		/**
-		 * This is here if you want to instantiate the empty container
-		 */
-		public ScenarioBuilder createHouseholdsContainer() { 
-			scenario.createHouseholdsContainer() ;
 			return this ;
 		}
 		public ScenarioBuilder setHouseholds( Households households ) {
 			scenario.setHouseholds(households);
 			return this ;
 		}
-		// transit schedule:
-		/**
-		 * This is here if you want to instantiate the empty container
-		 */
-		public ScenarioBuilder createTransitSchedule() {
-			scenario.createTransitScheduleContainer() ;
-			return this ;
-		}
 		public ScenarioBuilder setTransitSchedule( TransitSchedule schedule ) {
 			scenario.setTransitSchedule(schedule);
-			return this ;
-		}
-		// vehicles:
-		/**
-		 * This is here if you want to instantiate the empty container
-		 */
-		public ScenarioBuilder createVehiclesContainer() {
-			scenario.createTransitVehicleContainer() ;
 			return this ;
 		}
 		public ScenarioBuilder setVehicles( Vehicles vehicles ) {
 			scenario.setTransitVehicles(vehicles);
 			return this;
 		}
-		// network (always there):
 		public ScenarioBuilder setNetwork( Network network ) {
 			scenario.setNetwork(network);
 			return this ;
 		}
-		// population (always there):
 		public ScenarioBuilder setPopulation( Population population ) {
 			scenario.setPopulation(population);
 			return this ;
 		}
-		// facilities (always there, although that does not make a lot of sense):
 		public ScenarioBuilder setActivityFacilities( ActivityFacilities facilities ) {
 			scenario.setActivityFacilities(facilities);
 			return this ;
 		}
-		// lanes:
-		public ScenarioBuilder setLanes( LaneDefinitions20 lanes ) {
+		public ScenarioBuilder setLanes( Lanes lanes ) {
 			scenario.setLanes(lanes);
 			return this ;
 		}
 		// final creational method:
-		public Scenario createScenario() {
+		public Scenario build() {
 			this.scenario.setLocked(); // prevents that one can cast to ScenarioImpl and change the containers again. kai, nov'14
 			return this.scenario ;
 		}

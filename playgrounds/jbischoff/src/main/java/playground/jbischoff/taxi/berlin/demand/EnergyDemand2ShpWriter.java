@@ -19,32 +19,22 @@
 
 package playground.jbischoff.taxi.berlin.demand;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
-import org.geotools.feature.simple.SimpleFeatureBuilder;
-import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Scenario;
+import org.geotools.feature.simple.*;
+import org.matsim.api.core.v01.*;
+import org.matsim.contrib.zone.Zone;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.gis.ShapeFileWriter;
-import org.matsim.core.utils.io.tabularFileParser.TabularFileHandler;
-import org.matsim.core.utils.io.tabularFileParser.TabularFileParser;
-import org.matsim.core.utils.io.tabularFileParser.TabularFileParserConfig;
+import org.matsim.core.utils.io.tabularFileParser.*;
 import org.opengis.feature.simple.SimpleFeature;
 
-import playground.jbischoff.taxi.berlin.data.BeelineDistanceExractor;
-import playground.michalm.zone.Zone;
+import com.vividsolutions.jts.geom.*;
 
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
+import playground.jbischoff.taxi.berlin.data.BeelineDistanceExractor;
 
 
 public class EnergyDemand2ShpWriter
@@ -108,8 +98,8 @@ public class EnergyDemand2ShpWriter
         		double yarrowoffset = -10.;
         		if (to.getX()-from.getX()<0) xarrowoffset = 10.0;
         		if (to.getY()-from.getY()<0) yarrowoffset = 10.0;
-        		
-        		Coord arrowend = new CoordImpl(to.getX()+xarrowoffset,to.getY()+yarrowoffset);
+
+            Coord arrowend = new Coord(to.getX() + xarrowoffset, to.getY() + yarrowoffset);
         		
                 LineString ls = this.geofac.createLineString(new Coordinate[] {
                         MGC.coord2Coordinate(from),

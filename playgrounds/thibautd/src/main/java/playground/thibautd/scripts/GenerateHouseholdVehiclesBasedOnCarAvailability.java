@@ -19,20 +19,13 @@
  * *********************************************************************** */
 package playground.thibautd.scripts;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.MatsimPopulationReader;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.MatsimXmlParser;
@@ -45,9 +38,15 @@ import org.matsim.households.HouseholdsWriterV10;
 import org.matsim.population.algorithms.PersonAlgorithm;
 import org.matsim.vehicles.Vehicle;
 import org.xml.sax.Attributes;
-
 import playground.ivt.utils.ArgParser;
 import playground.ivt.utils.ArgParser.Args;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 
 /**
  * Generates as many vehicles as persons with "always" a car in each household.
@@ -122,11 +121,11 @@ public class GenerateHouseholdVehiclesBasedOnCarAvailability {
 			@Override
 			public void run(final Person person) {
 				final Household hh = person2hh.get( person.getId() );
-				if ( "always".equals( ((PersonImpl) person).getCarAvail() ) ) {
+				if ( "always".equals( PersonUtils.getCarAvail(person) ) ) {
 					((HouseholdImpl) hh).getVehicleIds().add( Id.create(person.getId().toString(), Vehicle.class) );
 				}
 
-				if ( "sometimes".equals( ((PersonImpl) person).getCarAvail() ) ) {
+				if ( "sometimes".equals( PersonUtils.getCarAvail(person) ) ) {
 					hhsWithSometimes.add( hh.getId() );
 				}
 			}

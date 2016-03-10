@@ -20,6 +20,7 @@
 
 package playground.wrashid.parkingSearch.withinday;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -35,9 +36,9 @@ import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.config.Config;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.router.PlanRouter;
-import org.matsim.core.router.RoutingContextImpl;
 import org.matsim.core.router.TripRouterFactoryBuilderWithDefaults;
-import org.matsim.core.router.costcalculators.TravelTimeAndDistanceBasedTravelDisutilityFactory;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility.Builder;
+import org.matsim.core.router.util.DijkstraFactory;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -100,14 +101,12 @@ public class LegModeCheckerTest extends MatsimTestCase {
 		 * Create PlansCalcRoute object to reroute legs with adapted mode 
 		 */
 		TravelTime travelTimes = new FreeSpeedTravelTime();
-		TravelDisutility travelCosts = new TravelTimeAndDistanceBasedTravelDisutilityFactory().createTravelDisutility(travelTimes, config.planCalcScore());
-		PlanAlgorithm plansCalcRoute =
-				new PlanRouter(
-						new TripRouterFactoryBuilderWithDefaults().build(
-								sc ).instantiateAndConfigureTripRouter(
-										new RoutingContextImpl(
-												travelCosts,
-												travelTimes ) ) );
+		TravelDisutility travelCosts = new Builder( TransportMode.car, config.planCalcScore() ).createTravelDisutility(travelTimes);
+		TripRouterFactoryBuilderWithDefaults builder = new TripRouterFactoryBuilderWithDefaults() ;
+		builder.setLeastCostPathCalculatorFactory( new DijkstraFactory() );
+		builder.setTravelTime(travelTimes);
+		builder.setTravelDisutility(travelCosts);
+		PlanAlgorithm plansCalcRoute = new PlanRouter( builder.build( sc ).get() ) ;
 
 		/*
 		 * Create LegModeChecker to check and adapt leg modes
@@ -180,14 +179,15 @@ public class LegModeCheckerTest extends MatsimTestCase {
 		
 		Network network = sc.getNetwork();
 		NetworkFactory networkFactory = network.getFactory();
-		
-		Node n1 = networkFactory.createNode(Id.create("n1", Node.class), sc.createCoord(0, 0));
-		Node n2 = networkFactory.createNode(Id.create("n2", Node.class), sc.createCoord(10000, 0));
-		Node n3 = networkFactory.createNode(Id.create("n3", Node.class), sc.createCoord(20000, 0));
-		Node n4 = networkFactory.createNode(Id.create("n4", Node.class), sc.createCoord(30000, 0));
-		Node n5 = networkFactory.createNode(Id.create("n5", Node.class), sc.createCoord(30000, 10000));
-		Node n6 = networkFactory.createNode(Id.create("n6", Node.class), sc.createCoord(40000, 0));
-		Node n7 = networkFactory.createNode(Id.create("n7", Node.class), sc.createCoord(30000, -10000));
+
+		Node n1 = networkFactory.createNode(Id.create("n1", Node.class), new Coord((double) 0, (double) 0));
+		Node n2 = networkFactory.createNode(Id.create("n2", Node.class), new Coord((double) 10000, (double) 0));
+		Node n3 = networkFactory.createNode(Id.create("n3", Node.class), new Coord((double) 20000, (double) 0));
+		Node n4 = networkFactory.createNode(Id.create("n4", Node.class), new Coord((double) 30000, (double) 0));
+		Node n5 = networkFactory.createNode(Id.create("n5", Node.class), new Coord((double) 30000, (double) 10000));
+		Node n6 = networkFactory.createNode(Id.create("n6", Node.class), new Coord((double) 40000, (double) 0));
+		double y = -10000;
+		Node n7 = networkFactory.createNode(Id.create("n7", Node.class), new Coord((double) 30000, y));
 		
 		network.addNode(n1);
 		network.addNode(n2);

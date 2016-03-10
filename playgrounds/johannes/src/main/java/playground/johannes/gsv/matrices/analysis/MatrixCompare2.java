@@ -19,38 +19,29 @@
 
 package playground.johannes.gsv.matrices.analysis;
 
-import gnu.trove.TDoubleDoubleHashMap;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
-import playground.johannes.gsv.zones.KeyMatrix;
-import playground.johannes.gsv.zones.MatrixOperations;
-import playground.johannes.gsv.zones.Zone;
-import playground.johannes.gsv.zones.ZoneCollection;
-import playground.johannes.gsv.zones.io.KeyMatrixXMLReader;
-import playground.johannes.gsv.zones.io.Zone2GeoJSON;
-import playground.johannes.sna.math.DescriptivePiStatistics;
-import playground.johannes.sna.math.Histogram;
-import playground.johannes.sna.math.LinearDiscretizer;
-import playground.johannes.sna.util.TXTWriter;
-import playground.johannes.socialnetworks.gis.WGS84DistanceCalculator;
-import playground.johannes.socialnetworks.snowball2.analysis.WSMStatsFactory;
-
 import com.vividsolutions.jts.algorithm.MinimumDiameter;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
+import org.matsim.contrib.common.gis.WGS84DistanceCalculator;
+import org.matsim.contrib.common.stats.DescriptivePiStatistics;
+import org.matsim.contrib.common.stats.Histogram;
+import org.matsim.contrib.common.stats.LinearDiscretizer;
+import org.matsim.contrib.common.stats.StatsWriter;
+import org.matsim.contrib.socnetgen.sna.snowball.analysis.WSMStatsFactory;
+import playground.johannes.synpop.gis.Zone;
+import playground.johannes.synpop.gis.ZoneCollection;
+import playground.johannes.synpop.gis.ZoneGeoJsonIO;
+import playground.johannes.synpop.matrix.MatrixOperations;
+import playground.johannes.synpop.matrix.NumericMatrix;
+import playground.johannes.synpop.matrix.NumericMatrixXMLReader;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 
 /**
  * @author johannes
@@ -70,10 +61,10 @@ public class MatrixCompare2 {
 		/*
 		 * load ref matrix
 		 */
-		KeyMatrixXMLReader reader = new KeyMatrixXMLReader();
+		NumericMatrixXMLReader reader = new NumericMatrixXMLReader();
 		reader.setValidating(false);
 		reader.parse(refFile);
-		KeyMatrix m1 = reader.getMatrix();
+		NumericMatrix m1 = reader.getMatrix();
 
 		MatrixOperations.applyFactor(m1, 1 / 365.0);
 
@@ -84,17 +75,17 @@ public class MatrixCompare2 {
 //		reader2.setValidating(false);
 //		reader2.parse(simFile);
 		reader.parse(simFile);
-		KeyMatrix m2 = reader.getMatrix();
+		NumericMatrix m2 = reader.getMatrix();
 //		KeyMatrix simulation = reader2.getMatrix().toKeyMatrix("gsvId");
 
-//		MatrixOperations.applyFactor(m2, 11.8);
+//		MatrixOperations.multiply(m2, 11.8);
 //		MatrixOperations.applyDiagonalFactor(m2, 1.3);
 		/*
 		 * load zones
 		 */
 		ZoneCollection zones = new ZoneCollection();
 		String data = new String(Files.readAllBytes(Paths.get("/home/johannes/gsv/gis/nuts/de.nuts3.json")));
-		zones.addAll(Zone2GeoJSON.parseFeatureCollection(data));
+		zones.addAll(ZoneGeoJsonIO.parseFeatureCollection(data));
 		zones.setPrimaryKey("gsvId");
 
 		System.out.println(String.format("Intraplan sum: %s", MatrixOperations.sum(m1)));
@@ -102,16 +93,17 @@ public class MatrixCompare2 {
 
 //		System.exit(-1);
 		
-		KeyMatrix mErr = MatrixOperations.errorMatrix(m1, m2);
+		NumericMatrix mErr = new NumericMatrix();
+		MatrixOperations.errorMatrix(m1, m2, mErr);
 		writeErrorRank(mErr, m1, m2, zones);
 
-		KeyMatrix itp_d = distanceMatrix(m1, zones);
+		NumericMatrix itp_d = distanceMatrix(m1, zones);
 		TDoubleDoubleHashMap hist = writeDistanceHist(m1, itp_d);
-		TXTWriter.writeMap(hist, "d", "p", "/home/johannes/gsv/matrices/analysis/itp.dist.txt");
+		StatsWriter.writeHistogram(hist, "d", "p", "/home/johannes/gsv/matrices/analysis/itp.dist.txt");
 
-		KeyMatrix m_d = distanceMatrix(m2, zones);
+		NumericMatrix m_d = distanceMatrix(m2, zones);
 		hist = writeDistanceHist(m2, m_d);
-		TXTWriter.writeMap(hist, "d", "p", "/home/johannes/gsv/matrices/analysis/" + runId + ".dist.stat.txt");
+		StatsWriter.writeHistogram(hist, "d", "p", "/home/johannes/gsv/matrices/analysis/" + runId + ".dist.stat.txt");
 		
 //		System.out.println(String.format("PKM Intraplan (> 100 KM): %s", pkm(m1, itp_d)));
 //		System.out.println(String.format("PKM matsim (> 100 KM): %s", pkm(m2, m_d)));
@@ -120,8 +112,8 @@ public class MatrixCompare2 {
 		System.out.println(String.format("Avt length matsim (> 100 KM): %s", avr(m2, m_d)));
 	}
 
-	private static void writeErrorRank(KeyMatrix err, KeyMatrix m1, KeyMatrix m2, ZoneCollection zoneCollection) {
-		List<Zone> zones = new ArrayList<>(urbanZones(zoneCollection.zoneSet()));
+	private static void writeErrorRank(NumericMatrix err, NumericMatrix m1, NumericMatrix m2, ZoneCollection zoneCollection) {
+		List<Zone> zones = new ArrayList<>(urbanZones(zoneCollection.getZones()));
 		SortedSet<Entry> rank = new TreeSet<>(new Comparator<Entry>() {
 
 			@Override
@@ -211,10 +203,10 @@ public class MatrixCompare2 {
 		private String j;
 	}
 
-	public static KeyMatrix distanceMatrix(KeyMatrix m, ZoneCollection zones) {
+	public static NumericMatrix distanceMatrix(NumericMatrix m, ZoneCollection zones) {
 		GeometryFactory factory = new GeometryFactory();
 		
-		KeyMatrix m_d = new KeyMatrix();
+		NumericMatrix m_d = new NumericMatrix();
 		Set<String> keys = m.keys();
 		for (String i : keys) {
 			for (String j : keys) {
@@ -249,7 +241,7 @@ public class MatrixCompare2 {
 		return m_d;
 	}
 
-	private static TDoubleDoubleHashMap writeDistanceHist(KeyMatrix m, KeyMatrix m_d) {
+	private static TDoubleDoubleHashMap writeDistanceHist(NumericMatrix m, NumericMatrix m_d) {
 		Set<String> keys = m.keys();
 		DescriptivePiStatistics stats = new DescriptivePiStatistics();
 
@@ -269,7 +261,7 @@ public class MatrixCompare2 {
 		return Histogram.createHistogram(stats, new LinearDiscretizer(50000), false);
 	}
 
-	private static double pkm(KeyMatrix m, KeyMatrix m_d) {
+	private static double pkm(NumericMatrix m, NumericMatrix m_d) {
 		Set<String> keys = m.keys();
 
 		double sum = 0;
@@ -290,7 +282,7 @@ public class MatrixCompare2 {
 		return sum;
 	}
 	
-	public static double avr(KeyMatrix m, KeyMatrix m_d) {
+	public static double avr(NumericMatrix m, NumericMatrix m_d) {
 		Set<String> keys = m.keys();
 		DescriptivePiStatistics stats = new WSMStatsFactory().newInstance();
 		

@@ -28,7 +28,6 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Route;
-import org.matsim.facilities.ActivityOptionImpl;
 
 /**
  * @author mrieser
@@ -44,17 +43,12 @@ public abstract class AbstractPopulationWriterHandler implements PopulationWrite
 		if (person instanceof PersonImpl) {
 			PersonImpl p = (PersonImpl)person;
 			// travelcards
-			if (p.getTravelcards() != null) {
-				for (String t : p.getTravelcards()) {
+			if (PersonUtils.getTravelcards(p) != null) {
+				for (String t : PersonUtils.getTravelcards(p)) {
 					this.startTravelCard(t, writer);
 					this.endTravelCard(writer);
 				}
 			}
-			// desires
-			if (p.getDesires() != null) {
-				log.error("Desires are no longer supported and will not be written to file!");
-			}
-
 		}
 		// plans
 		for (Plan plan : person.getPlans()) {
@@ -92,18 +86,6 @@ public abstract class AbstractPopulationWriterHandler implements PopulationWrite
 	public abstract void startTravelCard(final String travelcard, final BufferedWriter out) throws IOException;
 
 	public abstract void endTravelCard(final BufferedWriter out) throws IOException;
-
-	public abstract void startActivity(final String act_type, final BufferedWriter out) throws IOException;
-
-	public abstract void endActivity(final BufferedWriter out) throws IOException;
-
-	public abstract void startPrimaryLocation(final ActivityOptionImpl activity, final BufferedWriter out) throws IOException;
-
-	public abstract void endPrimaryLocation(final BufferedWriter out) throws IOException;
-
-	public abstract void startSecondaryLocation(final ActivityOptionImpl activity, final BufferedWriter out) throws IOException;
-
-	public abstract void endSecondaryLocation(final BufferedWriter out) throws IOException;
 
 	public abstract void startPlan(final Plan plan, final BufferedWriter out) throws IOException;
 

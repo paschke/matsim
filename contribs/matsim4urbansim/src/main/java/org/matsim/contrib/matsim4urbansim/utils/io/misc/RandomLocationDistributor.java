@@ -34,7 +34,6 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.contrib.matsim4urbansim.utils.io.Paths;
 import org.matsim.core.gbl.MatsimRandom;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.ShapeFileReader;
@@ -131,9 +130,9 @@ public class RandomLocationDistributor {
 		do {
 			x = (zoneCoordinate.getX() - radius) + (random.nextDouble() * 2 * radius);
 			y = (zoneCoordinate.getY() - radius) + (random.nextDouble() * 2 * radius);
-			p = new CoordImpl(x, y);
+			p = new Coord(x, y);
 			
-			distance = CoordUtils.calcDistance(zoneCoordinate, p);
+			distance = CoordUtils.calcEuclideanDistance(zoneCoordinate, p);
 			
 		} while ( distance > radius );
 		return p;
@@ -154,7 +153,7 @@ public class RandomLocationDistributor {
 			y = feature.getBounds().getMinY() + random.nextDouble() * (feature.getBounds().getMaxY() - feature.getBounds().getMinY());
 			p = MGC.xy2Point(x, y);
 		} while (!((Geometry) feature.getDefaultGeometry()).contains(p));
-		return new CoordImpl(x,y);
+		return new Coord(x, y);
 	}
 	
 	/**
@@ -192,7 +191,7 @@ public class RandomLocationDistributor {
 	 * @return true if coordinate lies within the radius
 	 */
 	public boolean coordinatesInRadius(Coord coordinateA, Coord coordinateB){
-		double distance = CoordUtils.calcDistance(coordinateA, coordinateB);
+		double distance = CoordUtils.calcEuclideanDistance(coordinateA, coordinateB);
 		boolean withinRadius = (distance <= radius);
 		return withinRadius;
 	}

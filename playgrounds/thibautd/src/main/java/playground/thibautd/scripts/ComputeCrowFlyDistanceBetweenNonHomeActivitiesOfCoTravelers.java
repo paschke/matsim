@@ -19,9 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.scripts;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Activity;
@@ -29,6 +26,11 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Route;
+import org.matsim.contrib.socnetsim.jointtrips.population.DriverRoute;
+import org.matsim.contrib.socnetsim.jointtrips.population.DriverRouteFactory;
+import org.matsim.contrib.socnetsim.jointtrips.population.JointActingTypes;
+import org.matsim.contrib.socnetsim.jointtrips.population.PassengerRoute;
+import org.matsim.contrib.socnetsim.jointtrips.population.PassengerRouteFactory;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationFactoryImpl;
@@ -38,11 +40,8 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.io.IOUtils;
 
-import org.matsim.contrib.socnetsim.jointtrips.population.DriverRoute;
-import org.matsim.contrib.socnetsim.jointtrips.population.DriverRouteFactory;
-import org.matsim.contrib.socnetsim.jointtrips.population.JointActingTypes;
-import org.matsim.contrib.socnetsim.jointtrips.population.PassengerRoute;
-import org.matsim.contrib.socnetsim.jointtrips.population.PassengerRouteFactory;
+import java.io.BufferedWriter;
+import java.io.IOException;
 
 /**
  * looks at co travelers with only one joint trip in a 3 acts plan, and computes the crow fly distance
@@ -56,10 +55,10 @@ public class ComputeCrowFlyDistanceBetweenNonHomeActivitiesOfCoTravelers {
 
 		final Scenario scenario = ScenarioUtils.createScenario( ConfigUtils.createConfig() );
 		((PopulationFactoryImpl) scenario.getPopulation().getFactory()).getModeRouteFactory().setRouteFactory(
-				JointActingTypes.DRIVER,
+				DriverRoute.class,//JointActingTypes.DRIVER,
 				new DriverRouteFactory() );
 		((PopulationFactoryImpl) scenario.getPopulation().getFactory()).getModeRouteFactory().setRouteFactory(
-				JointActingTypes.PASSENGER,
+				PassengerRoute.class,//JointActingTypes.PASSENGER,
 				new PassengerRouteFactory() );
 		new MatsimPopulationReader( scenario ).readFile( popFile );
 
@@ -77,7 +76,7 @@ public class ComputeCrowFlyDistanceBetweenNonHomeActivitiesOfCoTravelers {
 			final Activity driverNonJoint = getOtherNonHome( driver , driverAct );
 
 			writer.newLine();
-			writer.write( passengerNonJoint.getType() +"\t"+ driverNonJoint.getType() +"\t"+ CoordUtils.calcDistance( passengerNonJoint.getCoord() , driverNonJoint.getCoord() ) );
+			writer.write( passengerNonJoint.getType() +"\t"+ driverNonJoint.getType() +"\t"+ CoordUtils.calcEuclideanDistance( passengerNonJoint.getCoord() , driverNonJoint.getCoord() ) );
 		}
 		writer.close();
 	}

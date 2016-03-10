@@ -26,9 +26,8 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.core.gbl.MatsimRandom;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.population.algorithms.AbstractPersonAlgorithm;
 import org.matsim.population.algorithms.PlanAlgorithm;
@@ -86,7 +85,7 @@ public class PersonModeChoiceModel extends AbstractPersonAlgorithm implements Pl
 				} else {
 					Activity act = (Activity) pe;
 					if (prevAct != null) {
-						plan_dist += CoordUtils.calcDistance(act.getCoord(), prevAct.getCoord());
+						plan_dist += CoordUtils.calcEuclideanDistance(act.getCoord(), prevAct.getCoord());
 						String type = act.getType();
 						if (mainpurpose == 1){
 							if (type == W) { mainpurpose = 0; break; }
@@ -114,10 +113,10 @@ public class PersonModeChoiceModel extends AbstractPersonAlgorithm implements Pl
 		// setting parameters
 		model.setAge(p.getAge());
 		model.setHHDimension(p.getHousehold().getPersonCount());
-		model.setLicenseOwnership(((PersonImpl) person).hasLicense());
+		model.setLicenseOwnership(PersonUtils.hasLicense(person));
 		model.setUrbanDegree(p.getHousehold().getMunicipality().getRegType());
 		model.setCar(p.getCarAvail());
-		model.setTickets(((PersonImpl) person).getTravelcards());
+		model.setTickets(PersonUtils.getTravelcards(person));
 		model.setDistanceTour(plan_dist/1000.0); // model needs meters!
 		model.setLicenseOwnership(p.hasLicense());
 		model.setMainPurpose(mainpurpose);

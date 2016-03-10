@@ -20,29 +20,33 @@
 
 package playground.telaviv.locationchoice.matsimdc;
 
+import java.util.HashMap;
+import java.util.Map;
+//import org.matsim.core.trafficmonitoring.TravelTimeCalculatorFactoryImpl;
+
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.locationchoice.bestresponse.DestinationChoiceBestResponseContext;
 import org.matsim.core.config.Config;
-import org.matsim.core.controler.Controler;
-import org.matsim.core.population.PlanImpl;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.scoring.ScoringFunction;
 import org.matsim.core.scoring.ScoringFunctionAccumulator;
-import org.matsim.core.scoring.functions.*;
+import org.matsim.core.scoring.ScoringFunctionFactory;
+import org.matsim.core.scoring.functions.CharyparNagelActivityScoring;
+import org.matsim.core.scoring.functions.CharyparNagelAgentStuckScoring;
+import org.matsim.core.scoring.functions.CharyparNagelLegScoring;
+import org.matsim.core.scoring.functions.CharyparNagelMoneyScoring;
+import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 
 import playground.telaviv.facilities.FacilitiesCreator;
 import playground.telaviv.locationchoice.CalculateDestinationChoice;
 
-import java.util.HashMap;
-import java.util.Map;
-//import org.matsim.core.trafficmonitoring.TravelTimeCalculatorFactoryImpl;
-
-public class DCScoringFunctionFactory extends org.matsim.core.scoring.functions.CharyparNagelScoringFunctionFactory {
-	private final Controler controler;
+public class DCScoringFunctionFactory implements ScoringFunctionFactory {
+	private final MatsimServices controler;
 	private DestinationChoiceBestResponseContext dcContext;
 	private Config config;	
 //	private int iteration = -1;
@@ -53,8 +57,7 @@ public class DCScoringFunctionFactory extends org.matsim.core.scoring.functions.
 
 	private CharyparNagelScoringParameters params = null;
 	
-	public DCScoringFunctionFactory(Config config, Controler controler, DestinationChoiceBestResponseContext dcContext) {
-        super(config.planCalcScore(), controler.getScenario().getNetwork());
+	public DCScoringFunctionFactory(Config config, MatsimServices controler, DestinationChoiceBestResponseContext dcContext) {
 		this.controler = controler;
 		this.dcContext = dcContext;
 		this.config = config;
@@ -84,7 +87,7 @@ public class DCScoringFunctionFactory extends org.matsim.core.scoring.functions.
 			this.dcCalculator = new CalculateDestinationChoice(this.dcContext.getScenario());
 			this.dcCalculator.calculateVTODForDCModule();
 
-		this.params = CharyparNagelScoringParameters.getBuilder(this.config.planCalcScore()).create();
+		this.params = new CharyparNagelScoringParameters.Builder(this.config.planCalcScore(), this.config.planCalcScore().getScoringParameters(null), this.controler.getConfig().scenario()).build();
 			
 			// actually not necessary here:
 //			this.dcCalculator.calculateDynamicFactors(
@@ -104,14 +107,19 @@ public class DCScoringFunctionFactory extends org.matsim.core.scoring.functions.
 		
 		ScoringFunctionAccumulator scoringFunctionAccumulator = new ScoringFunctionAccumulator();		
 		CharyparNagelActivityScoring activityScoringFunction = new DCActivityScoringFunction(
-					(PlanImpl) person, 
+
+//					(PlanImpl) person,
+					person.getSelectedPlan(),
+					// I found "(PlanImpl) person".  This could never have worked.  But when making PlanImpl final, it does not even
+					// compile any more.  I am thus speculating that person.getSelectedPlan() was meant.  kai, nov'15
+					
 					this.dcContext.getFacilityPenalties(), 
 					dcContext,
 					this.facilityToZoneIndexMap,
 					this.dcCalculator);
 		scoringFunctionAccumulator.addScoringFunction(activityScoringFunction);
-		scoringFunctionAccumulator.addScoringFunction(new CharyparNagelLegScoring(CharyparNagelScoringParameters.getBuilder(config.planCalcScore()).create(), controler.getScenario().getNetwork()));
-		scoringFunctionAccumulator.addScoringFunction(new CharyparNagelAgentStuckScoring(CharyparNagelScoringParameters.getBuilder(config.planCalcScore()).create()));
+		scoringFunctionAccumulator.addScoringFunction(new CharyparNagelLegScoring(params, controler.getScenario().getNetwork()));
+		scoringFunctionAccumulator.addScoringFunction(new CharyparNagelAgentStuckScoring(params));
 		scoringFunctionAccumulator.addScoringFunction(new CharyparNagelMoneyScoring(params));
 		return scoringFunctionAccumulator;
 		

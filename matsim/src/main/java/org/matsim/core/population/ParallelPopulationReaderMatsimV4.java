@@ -36,9 +36,11 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.config.Config;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.transformations.IdentityTransformation;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.households.Households;
-import org.matsim.lanes.data.v20.LaneDefinitions20;
+import org.matsim.lanes.data.v20.Lanes;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 import org.matsim.vehicles.Vehicles;
@@ -58,7 +60,7 @@ import org.xml.sax.helpers.AttributesImpl;
 public class ParallelPopulationReaderMatsimV4 extends PopulationReaderMatsimV4 {
 	
 	static final Logger log = Logger.getLogger(ParallelPopulationReaderMatsimV4.class);
-	
+
 	private final boolean isPopulationStreaming;
 	private final int numThreads;
 	private final BlockingQueue<List<Tag>> queue;
@@ -67,9 +69,19 @@ public class ParallelPopulationReaderMatsimV4 extends PopulationReaderMatsimV4 {
 
 	private Thread[] threads;
 	private List<Tag> currentPersonXmlData;
-		
-	public ParallelPopulationReaderMatsimV4(final Scenario scenario) {
-		super(scenario);
+
+	private final CoordinateTransformation coordinateTransformation;
+
+	public ParallelPopulationReaderMatsimV4(
+			final Scenario scenario ) {
+		this( new IdentityTransformation() , scenario );
+	}
+
+	public ParallelPopulationReaderMatsimV4(
+			final CoordinateTransformation coordinateTransformation,
+			final Scenario scenario) {
+		super( coordinateTransformation , scenario );
+		this.coordinateTransformation = coordinateTransformation;
 		
 		/*
 		 * Check whether population streaming is activated
@@ -99,7 +111,11 @@ public class ParallelPopulationReaderMatsimV4 extends PopulationReaderMatsimV4 {
 		threads = new Thread[numThreads];
 		for (int i = 0; i < numThreads; i++) {
 			
-			ParallelPopulationReaderMatsimV4Runner runner = new ParallelPopulationReaderMatsimV4Runner(this.collectorScenario, this.queue);
+			ParallelPopulationReaderMatsimV4Runner runner =
+					new ParallelPopulationReaderMatsimV4Runner(
+							this.coordinateTransformation,
+							this.collectorScenario,
+							this.queue);
 			
 			Thread thread = new Thread(runner);
 			thread.setDaemon(true);
@@ -126,7 +142,7 @@ public class ParallelPopulationReaderMatsimV4 extends PopulationReaderMatsimV4 {
 		else {
 			// If it is an new person, create a new person and a list for its attributes.
 			if (PERSON.equals(name)) {
-				PersonImpl person = (PersonImpl) this.plans.getFactory().createPerson(Id.create(atts.getValue("id"), Person.class));
+				Person person = this.plans.getFactory().createPerson(Id.create(atts.getValue("id"), Person.class));
 				currentPersonXmlData = new ArrayList<Tag>();
 				PersonTag personTag = new PersonTag();
 				personTag.person = person;
@@ -210,9 +226,8 @@ public class ParallelPopulationReaderMatsimV4 extends PopulationReaderMatsimV4 {
 			return this.delegate.getActivityFacilities();
 		}
 
-		@Override
 		public Coord createCoord(double x, double y) {
-			return this.delegate.createCoord(x, y);
+			return new Coord(x, y);
 		}
 
 		@Override
@@ -231,12 +246,6 @@ public class ParallelPopulationReaderMatsimV4 extends PopulationReaderMatsimV4 {
 		}
 
 		@Override
-		public Object removeScenarioElement(String name) {
-			return this.delegate.removeScenarioElement(name);
-		}
-
-
-		@Override
 		public Object getScenarioElement(String name) {
 			return this.delegate.getScenarioElement(name);
 		}
@@ -252,7 +261,7 @@ public class ParallelPopulationReaderMatsimV4 extends PopulationReaderMatsimV4 {
 		}
 
 		@Override
-		public LaneDefinitions20 getLanes() {
+		public Lanes getLanes() {
 			return this.delegate.getLanes();
 		}
 
@@ -311,7 +320,7 @@ public class ParallelPopulationReaderMatsimV4 extends PopulationReaderMatsimV4 {
 	}
 	
 	public final class PersonTag extends Tag {
-		PersonImpl person;
+		Person person;
 	}
 	
 	public final class EndTag extends Tag {

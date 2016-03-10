@@ -162,7 +162,7 @@ public class MultiNodeDijkstra /*extends Dijkstra*/ {
 		}
 
 		if (minCostNode == null) {
-			log.warn("No route was found");
+			log.trace("No route was found");
 			return null;
 		}
 		Node toNode = minCostNode;
@@ -188,6 +188,7 @@ public class MultiNodeDijkstra /*extends Dijkstra*/ {
 	/**
 	 * Allow replacing the RouterPriorityQueue.
 	 */
+	@SuppressWarnings("static-method")
 	/*package*/ RouterPriorityQueue<? extends Node> createRouterPriorityQueue() {
 		return new PseudoRemovePriorityQueue<Node>(500);
 	}

@@ -7,11 +7,11 @@ import org.matsim.api.core.v01.events.LinkLeaveEvent;
 import org.matsim.api.core.v01.network.Link;
 
 public class CAQLink {
-	private final QLinkInternalI ql;
+	private final QLinkI ql;
 	private final TransitionArea transitionArea;
 	private final QNetwork network;
 	
-	CAQLink(QNetwork network, QLinkInternalI qLinkImpl, TransitionArea transitionArea) {
+	CAQLink(QNetwork network, QLinkI qLinkImpl, TransitionArea transitionArea) {
 		this.network = network;
 		this.ql = qLinkImpl;
 		this.transitionArea = transitionArea;
@@ -36,6 +36,6 @@ public class CAQLink {
 	public void notifyMoveOverBorderNode(QVehicle vehicle, Id<Link> leftLinkId){
 		double now = network.simEngine.getMobsim().getSimTimer().getTimeOfDay();
 		network.simEngine.getMobsim().getEventsManager().processEvent(new LinkLeaveEvent(
-				now, vehicle.getDriver().getId(), leftLinkId, vehicle.getId()));
+				now, vehicle.getId(), leftLinkId));
 	}
 }

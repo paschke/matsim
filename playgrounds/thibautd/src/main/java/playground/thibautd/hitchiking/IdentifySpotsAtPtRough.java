@@ -19,12 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.hitchiking;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Stack;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
@@ -36,13 +30,17 @@ import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.algorithms.TransportModeNetworkFilter;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.core.utils.misc.Counter;
 import org.xml.sax.Attributes;
-
 import playground.thibautd.parknride.herbiespecific.RelevantCoordinates;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Stack;
 
 /**
  * chooses car links near PT stops.
@@ -116,7 +114,7 @@ public class IdentifySpotsAtPtRough {
 	private static NetworkImpl getCarNetwork( final String netFile ) {
 		log.info( "read network from "+netFile );
 		Scenario sc = ScenarioUtils.createScenario( ConfigUtils.createConfig() );
-		new MatsimNetworkReader( sc ).readFile( netFile );
+		new MatsimNetworkReader(sc.getNetwork()).readFile( netFile );
 		NetworkImpl net = NetworkImpl.createNetwork();
 
 		log.info( "filter network" );
@@ -138,9 +136,7 @@ public class IdentifySpotsAtPtRough {
 				final Stack<String> context) {
 			if ( !name.equals( "stopFacility" ) ) return;
 			boolean added = coords.add(
-					new CoordImpl( 
-						Double.parseDouble( atts.getValue( "x" ) ),
-						Double.parseDouble( atts.getValue( "y" ) )));
+					new Coord(Double.parseDouble(atts.getValue("x")), Double.parseDouble(atts.getValue("y"))));
 
 			if ( added ) accCount.incCounter();
 			else rejCount.incCounter();
@@ -162,11 +158,11 @@ public class IdentifySpotsAtPtRough {
 		private final List<Coord> coords = new ArrayList<Coord>();
 
 		public boolean add(final Coord toAdd) {
-			if ( CoordUtils.calcDistance( CENTER , toAdd ) > MAX_DIST_TO_CENTER ) {
+			if ( CoordUtils.calcEuclideanDistance( CENTER , toAdd ) > MAX_DIST_TO_CENTER ) {
 				return false;
 			}
 			for (Coord c : coords) {
-				if ( CoordUtils.calcDistance( c , toAdd ) < MIN_DIST ) {
+				if ( CoordUtils.calcEuclideanDistance( c , toAdd ) < MIN_DIST ) {
 					return false;
 				}
 			}

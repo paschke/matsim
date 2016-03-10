@@ -22,11 +22,17 @@
 
 package org.matsim.core.trafficmonitoring;
 
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Singleton;
-import org.matsim.api.core.v01.Scenario;
+import com.google.inject.name.Names;
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.config.groups.TravelTimeCalculatorConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.router.util.LinkToLinkTravelTime;
 import org.matsim.core.router.util.TravelTime;
+import org.matsim.core.utils.collections.CollectionUtils;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -43,28 +49,31 @@ public class TravelTimeCalculatorModule extends AbstractModule {
 
     @Override
     public void install() {
-        // I declare that there is something of type TravelTimeCalculator which
-        //  - will exist only once (live as long as the Controler).
-        //  - will be available to other bound classes via injection
-        //  - will come out of the Provider below.
-        // If I was in a script, I could also pass an instance directly which I created myself, but
-        // here, the Scenario is not available yet, so I defer construction.
-        bind(TravelTimeCalculator.class).toProvider(TravelTimeCalculatorProvider.class).in(Singleton.class);
-        // I declare that my single TravelTimeCalculator is an EventHandler.
-        // The Controler will wire it into the EventsManager later.
-        // (Again, there is a second method to add an instance directly.)
-        addEventHandlerBinding().to(TravelTimeCalculator.class);
-        // I export interfaces TravelTime and LinkToLinkTravelTime, and I say
-        // what is behind them, see below. The Providers
-        // are just getters which access the TravelTimeCalculator.
-        // I don't say "asSingleton" here, because I don't need to care -
-        // The TravelTimeCalculator is the singleton, and the TravelTime reference can be
-        // fetched from it as often as the framework wants.
-        bind(TravelTime.class).toProvider(TravelTimeProvider.class);
-        bind(LinkToLinkTravelTime.class).toProvider(LinkToLinkTravelTimeProvider.class);
+        if (getConfig().travelTimeCalculator().getSeparateModes()) {
+            for (final String mode : CollectionUtils.stringToSet(getConfig().travelTimeCalculator().getAnalyzedModes())) {
+                bind(TravelTimeCalculator.class).annotatedWith(Names.named(mode)).toProvider(new SingleModeTravelTimeCalculatorProvider(mode)).in(Singleton.class);
+                addTravelTimeBinding(mode).toProvider(new Provider<TravelTime>() {
+                    @Inject Injector injector;
+                    @Override
+                    public TravelTime get() {
+                        return injector.getInstance(Key.get(TravelTimeCalculator.class, Names.named(mode))).getLinkTravelTimes();
+                    }
+                });
+            }
+        } else {
+            bind(TravelTimeCalculator.class).toProvider(TravelTimeCalculatorProvider.class).in(Singleton.class);
+            if (getConfig().travelTimeCalculator().isCalculateLinkTravelTimes()) {
+                for (String mode : CollectionUtils.stringToSet(getConfig().travelTimeCalculator().getAnalyzedModes())) {
+                    addTravelTimeBinding(mode).toProvider(ObservedLinkTravelTimes.class);
+                }
+            }
+            if (getConfig().travelTimeCalculator().isCalculateLinkToLinkTravelTimes()) {
+                bind(LinkToLinkTravelTime.class).toProvider(ObservedLinkToLinkTravelTimes.class);
+            }
+        }
     }
 
-    static class TravelTimeProvider implements Provider<TravelTime> {
+    private static class ObservedLinkTravelTimes implements Provider<TravelTime> {
 
         @Inject
         TravelTimeCalculator travelTimeCalculator;
@@ -76,7 +85,7 @@ public class TravelTimeCalculatorModule extends AbstractModule {
 
     }
 
-    static class LinkToLinkTravelTimeProvider implements Provider<LinkToLinkTravelTime> {
+    private static class ObservedLinkToLinkTravelTimes implements Provider<LinkToLinkTravelTime> {
 
         @Inject
         TravelTimeCalculator travelTimeCalculator;
@@ -88,16 +97,38 @@ public class TravelTimeCalculatorModule extends AbstractModule {
 
     }
 
-    static class TravelTimeCalculatorProvider implements Provider<TravelTimeCalculator> {
+    private static class TravelTimeCalculatorProvider implements Provider<TravelTimeCalculator> {
 
-        @Inject
-        Scenario scenario;
+        @Inject TravelTimeCalculatorConfigGroup config;
+        @Inject EventsManager eventsManager;
+        @Inject Network network;
 
         @Override
         public TravelTimeCalculator get() {
-            return TravelTimeCalculator.create(scenario.getNetwork(), scenario.getConfig().travelTimeCalculator());
+            TravelTimeCalculator calculator = new TravelTimeCalculator(network, config.getTraveltimeBinSize(), 30*3600, config.isCalculateLinkTravelTimes(), config.isCalculateLinkToLinkTravelTimes(), config.isFilterModes(), CollectionUtils.stringToSet(config.getAnalyzedModes()));
+            eventsManager.addHandler(calculator);
+            return TravelTimeCalculator.configure(calculator, config, network);
+        }
+    }
+
+    private static class SingleModeTravelTimeCalculatorProvider implements Provider<TravelTimeCalculator> {
+
+        @Inject TravelTimeCalculatorConfigGroup config;
+        @Inject EventsManager eventsManager;
+        @Inject Network network;
+
+        private String mode;
+
+        SingleModeTravelTimeCalculatorProvider(String mode) {
+            this.mode = mode;
         }
 
+        @Override
+        public TravelTimeCalculator get() {
+            TravelTimeCalculator calculator = new TravelTimeCalculator(network, config.getTraveltimeBinSize(), 30*3600, config.isCalculateLinkTravelTimes(), config.isCalculateLinkToLinkTravelTimes(), true, CollectionUtils.stringToSet(mode));
+            eventsManager.addHandler(calculator);
+            return TravelTimeCalculator.configure(calculator, config, network);
+        }
     }
 
 }

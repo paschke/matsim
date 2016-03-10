@@ -19,39 +19,43 @@
  * *********************************************************************** */
 package org.matsim.contrib.socnetsim.jointtrips.router;
 
+import com.google.inject.Provider;
+import com.google.inject.name.Names;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.*;
-import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
-import org.matsim.core.network.NetworkImpl;
-import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.population.PersonImpl;
-import org.matsim.core.population.PlanImpl;
-import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility;
-import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.util.DijkstraFactory;
-import org.matsim.core.router.util.TravelDisutility;
-import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
-import org.matsim.core.utils.geometry.CoordImpl;
-import org.matsim.facilities.ActivityFacilities;
-import org.matsim.population.algorithms.PlanAlgorithm;
-
 import org.matsim.contrib.socnetsim.jointtrips.population.DriverRoute;
 import org.matsim.contrib.socnetsim.jointtrips.population.JointActingTypes;
 import org.matsim.contrib.socnetsim.jointtrips.population.PassengerRoute;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.controler.AbstractModule;
+import org.matsim.core.controler.Injector;
+import org.matsim.core.events.EventsUtils;
+import org.matsim.core.network.NetworkImpl;
+import org.matsim.core.population.ActivityImpl;
+import org.matsim.core.population.PlanImpl;
+import org.matsim.core.population.PopulationUtils;
+import org.matsim.core.router.TripRouter;
+import org.matsim.core.router.TripRouterModule;
+import org.matsim.core.router.costcalculators.TravelDisutilityModule;
+import org.matsim.core.scenario.ScenarioByInstanceModule;
+import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.trafficmonitoring.TravelTimeCalculatorModule;
+import org.matsim.facilities.ActivityFacilities;
+import org.matsim.population.algorithms.PlanAlgorithm;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -61,7 +65,7 @@ public class JointTripRouterFactoryTest {
 	private static final Logger log =
 		Logger.getLogger(JointTripRouterFactoryTest.class);
 
-	private JointTripRouterFactory factory;
+	private Provider<TripRouter> factory;
 	private Scenario scenario;
 
 	@Before
@@ -83,10 +87,10 @@ public class JointTripRouterFactoryTest {
 		Scenario sc = ScenarioUtils.createScenario(
 				ConfigUtils.createConfig() );
 		NetworkImpl net = (NetworkImpl) sc.getNetwork();
-		Node node1inst = net.createAndAddNode( node1 , new CoordImpl( 0 , 1 ) );
-		Node node2inst = net.createAndAddNode( node2 , new CoordImpl( 0 , 2 ) );
-		Node node3inst = net.createAndAddNode( node3 , new CoordImpl( 0 , 3 ) );
-		Node node4inst = net.createAndAddNode( node4 , new CoordImpl( 0 , 4 ) );
+		Node node1inst = net.createAndAddNode( node1 , new Coord((double) 0, (double) 1));
+		Node node2inst = net.createAndAddNode( node2 , new Coord((double) 0, (double) 2));
+		Node node3inst = net.createAndAddNode( node3 , new Coord((double) 0, (double) 3));
+		Node node4inst = net.createAndAddNode( node4 , new Coord((double) 0, (double) 4));
 
 		net.createAndAddLink( link1 , node1inst , node2inst , 1 , 1 , 1 , 1 );
 		net.createAndAddLink( link2 , node2inst , node3inst , 1 , 1 , 1 , 1 );
@@ -97,7 +101,7 @@ public class JointTripRouterFactoryTest {
 		Id<Person> passengerId = Id.create( "passenger" , Person.class );
 
 		// driver
-		PersonImpl pers = new PersonImpl( driverId );
+		Person pers = PopulationUtils.createPerson(driverId);
 		PlanImpl plan = new PlanImpl( pers );
 		pers.addPlan( plan );
 		pers.setSelectedPlan( plan );
@@ -116,7 +120,7 @@ public class JointTripRouterFactoryTest {
 		dLeg.setRoute( dRoute );
 
 		// passenger
-		pers = new PersonImpl( passengerId );
+		pers = PopulationUtils.createPerson(passengerId);
 		plan = new PlanImpl( pers );
 		pers.addPlan( plan );
 		pers.setSelectedPlan( plan );
@@ -124,18 +128,18 @@ public class JointTripRouterFactoryTest {
 
 		ActivityImpl a = plan.createAndAddActivity( "home" , link1 );
 		a.setEndTime( 1246534 );
-		a.setCoord( new CoordImpl( 0 , 1 ) );
+		a.setCoord(new Coord((double) 0, (double) 1));
 		plan.createAndAddLeg( TransportMode.walk );
 		a = plan.createAndAddActivity( JointActingTypes.INTERACTION , link1 );
 		a.setMaximumDuration( 0 );
-		a.setCoord( new CoordImpl( 0 , 2 ) );
+		a.setCoord(new Coord((double) 0, (double) 2));
 		Leg pLeg = plan.createAndAddLeg( JointActingTypes.PASSENGER );
 		a = plan.createAndAddActivity( JointActingTypes.INTERACTION , link3 );
 		a.setMaximumDuration( 0 );
-		a.setCoord( new CoordImpl( 0 , 3 ) );
+		a.setCoord(new Coord((double) 0, (double) 3));
 		plan.createAndAddLeg( TransportMode.walk );
 		a = plan.createAndAddActivity( "home" , link3 );
-		a.setCoord( new CoordImpl( 0 , 4 ) );
+		a.setCoord(new Coord((double) 0, (double) 4));
 
 		PassengerRoute pRoute = new PassengerRoute( link1 , link3 );
 		pRoute.setDriverId( driverId );
@@ -144,20 +148,22 @@ public class JointTripRouterFactoryTest {
 		return sc;
 	}
 
-	private static JointTripRouterFactory createFactory( final Scenario scenario ) {
-		return new JointTripRouterFactory(
-				scenario,
-				new TravelDisutilityFactory () {
+	private static Provider<TripRouter> createFactory(final Scenario scenario) {
+		com.google.inject.Injector injector = Injector.createInjector(
+				scenario.getConfig(),
+				AbstractModule.override(Collections.singleton(new AbstractModule() {
 					@Override
-					public TravelDisutility createTravelDisutility(
-							TravelTime timeCalculator,
-							PlanCalcScoreConfigGroup cnScoringGroup) {
-						return new RandomizingTimeDistanceTravelDisutility.Builder().createTravelDisutility(timeCalculator, cnScoringGroup);
+					public void install() {
+						bind(EventsManager.class).toInstance(EventsUtils.createEventsManager(scenario.getConfig()));
+						install(new ScenarioByInstanceModule(scenario));
+						install(new TripRouterModule());
+						install(new TravelTimeCalculatorModule());
+						install(new TravelDisutilityModule());
+						bind(Integer.class).annotatedWith(Names.named("iteration")).toInstance(0);
 					}
-				},
-				new FreeSpeedTravelTime(),
-				new DijkstraFactory(),
-				null);
+				}), new JointTripRouterModule()));
+
+		return injector.getProvider(TripRouter.class);
 	}
 
 	@Test

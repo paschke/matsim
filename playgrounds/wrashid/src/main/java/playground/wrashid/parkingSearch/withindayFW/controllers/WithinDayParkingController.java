@@ -20,37 +20,20 @@
 
 package playground.wrashid.parkingSearch.withindayFW.controllers;
 
-import com.google.inject.Provider;
-
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.TransportMode;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.events.ReplanningEvent;
 import org.matsim.core.controler.listener.ReplanningListener;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.gbl.MatsimRandom;
-import org.matsim.core.mobsim.framework.Mobsim;
-import org.matsim.core.mobsim.framework.MobsimFactory;
-import org.matsim.core.network.NetworkImpl;
-import org.matsim.core.population.PersonImpl;
-import org.matsim.core.router.PlanRouter;
-import org.matsim.core.router.RoutingContext;
-import org.matsim.core.router.RoutingContextImpl;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.facilities.ActivityFacility;
-import org.matsim.facilities.algorithms.WorldConnectLocations;
-import org.matsim.population.Desires;
 import org.matsim.population.algorithms.ParallelPersonAlgorithmRunner;
-
 import playground.wrashid.parkingSearch.withinday.WithinDayController;
 import playground.wrashid.parkingSearch.withindayFW.core.InsertParkingActivities;
 import playground.wrashid.parkingSearch.withindayFW.core.LegModeChecker;
 import playground.wrashid.parkingSearch.withindayFW.core.ParkingAgentsTracker;
 import playground.wrashid.parkingSearch.withindayFW.core.ParkingInfrastructure;
-import playground.wrashid.parkingSearch.withindayFW.core.mobsim.ParkingQSimFactory;
-import playground.wrashid.parkingSearch.withindayFW.impl.ParkingCostCalculatorFW;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -77,7 +60,7 @@ public abstract class WithinDayParkingController extends WithinDayController imp
 		super(args);
 
 		// register this as a Controller Listener
-		super.addControlerListener(this);
+		controler.addControlerListener(this);
 		
 		throw new RuntimeException(Gbl.SET_UP_IS_NOW_FINAL ) ;
 	}
@@ -186,7 +169,7 @@ public abstract class WithinDayParkingController extends WithinDayController imp
 //
 //		RoutingContext routingContext = new RoutingContextImpl(this.getTravelDisutilityFactory(), super.getTravelTimeCollector(), this.getConfig().planCalcScore());
 //		
-//		insertParkingActivities = new InsertParkingActivities(getScenario(), this.getWithinDayTripRouterFactory().instantiateAndConfigureTripRouter(routingContext), parkingInfrastructure);
+//		insertParkingActivities = new InsertParkingActivities(getScenario(), this.getWithinDayTripRouterFactory().get(routingContext), parkingInfrastructure);
 //
 //		this.getWithinDayEngine().initializeReplanningModules(numReplanningThreads);
 //		final MobsimFactory mobsimFactory = new ParkingQSimFactory(insertParkingActivities, parkingInfrastructure, this.getWithinDayEngine());
@@ -215,23 +198,12 @@ public abstract class WithinDayParkingController extends WithinDayController imp
 //
 //	}
 
-	private void setDesiresIfApplicable() {
-		for (Person p:getScenario().getPopulation().getPersons().values()){
-			PersonImpl person=(PersonImpl) p;
-			Desires desires = person.getDesires();
-			if (desires!=null){
-				// setting typical parking duration
-				// if missing, this causes score to become Infinity (e.g. kti scenario)
-				desires.putActivityDuration("parking", 180);
-			}
-		}
-	}
 
 	protected void startUpBegin() {
 		
 	}
 
-	private HashMap<String, HashSet<Id>> initParkingTypes(Controler controler) {
+	private HashMap<String, HashSet<Id>> initParkingTypes(MatsimServices controler) {
 		HashMap<String, HashSet<Id>> parkingTypes = new HashMap<String, HashSet<Id>>();
 
 		HashSet<Id> streetParking=new HashSet<Id>();
@@ -239,7 +211,7 @@ public abstract class WithinDayParkingController extends WithinDayController imp
 		parkingTypes.put("streetParking", streetParking);
 		parkingTypes.put("garageParking", garageParking);
 		
-		for (ActivityFacility facility : ((ScenarioImpl) controler.getScenario()).getActivityFacilities()
+		for (ActivityFacility facility : ((MutableScenario) controler.getScenario()).getActivityFacilities()
 				.getFacilities().values()) {
 
 			// if the facility offers a parking activity
@@ -265,7 +237,7 @@ public abstract class WithinDayParkingController extends WithinDayController imp
 		//	legModeChecker.run(person.getSelectedPlan());
 		//}
 		
-		ParallelPersonAlgorithmRunner.run(this.getScenario().getPopulation(), numReplanningThreads, legModeChecker);
+		ParallelPersonAlgorithmRunner.run(controler.getScenario().getPopulation(), numReplanningThreads, legModeChecker);
 	}
 
 	/*

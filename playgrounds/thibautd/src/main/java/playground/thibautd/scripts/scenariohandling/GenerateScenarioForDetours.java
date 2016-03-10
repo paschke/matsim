@@ -19,29 +19,50 @@
  * *********************************************************************** */
 package playground.thibautd.scripts.scenariohandling;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.NetworkWriter;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.*;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.PopulationFactory;
+import org.matsim.api.core.v01.population.PopulationWriter;
+import org.matsim.contrib.socnetsim.usage.replanning.GroupReplanningConfigGroup;
+import org.matsim.contrib.socnetsim.usage.replanning.GroupReplanningConfigGroup.StrategyParameterSet;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.ConfigWriter;
-import org.matsim.core.config.groups.*;
+import org.matsim.core.config.groups.ControlerConfigGroup;
+import org.matsim.core.config.groups.HouseholdsConfigGroup;
+import org.matsim.core.config.groups.NetworkConfigGroup;
+import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
+import org.matsim.core.config.groups.PlansConfigGroup;
+import org.matsim.core.config.groups.QSimConfigGroup;
+import org.matsim.core.config.groups.ScenarioConfigGroup;
+import org.matsim.core.config.groups.SubtourModeChoiceConfigGroup;
 import org.matsim.core.network.NetworkImpl;
-import org.matsim.core.population.PersonImpl;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.population.PersonUtils;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
-import org.matsim.households.*;
-import org.matsim.contrib.socnetsim.usage.replanning.GroupReplanningConfigGroup;
-import org.matsim.contrib.socnetsim.usage.replanning.GroupReplanningConfigGroup.StrategyParameterSet;
+import org.matsim.households.Household;
+import org.matsim.households.HouseholdImpl;
+import org.matsim.households.Households;
+import org.matsim.households.HouseholdsImpl;
+import org.matsim.households.HouseholdsWriterV10;
 import playground.thibautd.utils.UniqueIdFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
 
 /**
  * @author thibautd
@@ -76,7 +97,7 @@ public class GenerateScenarioForDetours {
 				outputPopulation,
 				outputHouseholds );
 
-		final ScenarioImpl sc = (ScenarioImpl) ScenarioUtils.createScenario( config );
+		final MutableScenario sc = (MutableScenario) ScenarioUtils.createScenario( config );
 		createNetwork( sc.getNetwork() );
 		createPopulation( sc.getPopulation() , sc.getHouseholds() );
 
@@ -198,7 +219,7 @@ public class GenerateScenarioForDetours {
 						final Person driver =
 							population.getFactory().createPerson(
 									personIdFactory.createNextId(Person.class) );
-						((PersonImpl) driver).setCarAvail( "always" );
+						PersonUtils.setCarAvail(driver, "always");
 						driver.addPlan(
 								createPlan(
 									random,
@@ -213,7 +234,7 @@ public class GenerateScenarioForDetours {
 						final Person passenger =
 							population.getFactory().createPerson(
 									personIdFactory.createNextId(Person.class) );
-						((PersonImpl) passenger).setCarAvail( "never" );
+						PersonUtils.setCarAvail(passenger, "never");
 						passenger.addPlan(
 								createPlan(
 									random,
@@ -272,22 +293,22 @@ public class GenerateScenarioForDetours {
 		final Node homeOriginNode =
 			network.getFactory().createNode(
 				nodeIdFactory.createNextId(Node.class),
-				new CoordImpl( X_HOME , 0 ) );
+					new Coord(X_HOME, (double) 0));
 		network.addNode( homeOriginNode );
 		final Node homeDestinationNode =
 			network.getFactory().createNode(
 				nodeIdFactory.createNextId(Node.class),
-				new CoordImpl( X_HOME , 0 ) );
+					new Coord(X_HOME, (double) 0));
 		network.addNode( homeDestinationNode );
 		final Node workOriginNode =
 			network.getFactory().createNode(
 				nodeIdFactory.createNextId(Node.class),
-				new CoordImpl( X_WORK , 0 ) );
+					new Coord(X_WORK, (double) 0));
 		network.addNode( workOriginNode );
 		final Node workDestinationNode =
 			network.getFactory().createNode(
 				nodeIdFactory.createNextId(Node.class),
-				new CoordImpl( X_WORK , 0 ) );
+					new Coord(X_WORK, (double) 0));
 		network.addNode( workDestinationNode );
 
 		network.addLink(
@@ -317,9 +338,7 @@ public class GenerateScenarioForDetours {
 			final Node node =
 				network.getFactory().createNode(
 						nodeIdFactory.createNextId(Node.class),
-						new CoordImpl(
-							X_WORK,
-							i * LENGTH_DETOUR ) );
+						new Coord(X_WORK, (double) (i * LENGTH_DETOUR)));
 			network.addNode( node );
 
 			network.addLink(
@@ -342,7 +361,7 @@ public class GenerateScenarioForDetours {
 		for ( Link l : network.getLinks().values() ) {
 			l.setCapacity( LINK_CAPACITY );
 			l.setLength(
-					CoordUtils.calcDistance( 
+					CoordUtils.calcEuclideanDistance( 
 						l.getFromNode().getCoord(),
 						l.getToNode().getCoord() ) );
 			l.setFreespeed( FREESPEED );

@@ -1,6 +1,5 @@
 package playground.sergioo.passivePlanning2012.core.scenario;
 
-import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Population;
@@ -8,7 +7,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.households.Households;
-import org.matsim.lanes.data.v20.LaneDefinitions20;
+import org.matsim.lanes.data.v20.Lanes;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.Vehicles;
 
@@ -44,16 +43,8 @@ public class ScenarioSocialNetwork implements Scenario {
 		return delegate.getConfig();
 	}
 	@Override
-	public Coord createCoord(double x, double y) {
-		return delegate.createCoord(x, y);
-	}
-	@Override
 	public void addScenarioElement(String name, Object o) {
 		delegate.addScenarioElement(name, o);
-	}
-	@Override
-	public Object removeScenarioElement(String name) {
-		return delegate.removeScenarioElement(name);
 	}
 	@Override
 	public Object getScenarioElement(String name) {
@@ -77,7 +68,7 @@ public class ScenarioSocialNetwork implements Scenario {
 	}
 
 	@Override
-	public LaneDefinitions20 getLanes() {
+	public Lanes getLanes() {
 		return delegate.getLanes();
 	}
 

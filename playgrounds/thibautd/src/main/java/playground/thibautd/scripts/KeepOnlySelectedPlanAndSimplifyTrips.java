@@ -19,15 +19,16 @@
  * *********************************************************************** */
 package playground.thibautd.scripts;
 
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationImpl;
 import org.matsim.core.population.PopulationWriter;
 import org.matsim.core.router.MainModeIdentifierImpl;
@@ -75,7 +76,7 @@ public class KeepOnlySelectedPlanAndSimplifyTrips {
 			@Override
 			public void run(final Person person) {
 				if ( atts.getAttribute( person.getId().toString() , "subpopulation" ) != null ) return;
-				((PersonImpl) person).removeUnselectedPlans();
+				PersonUtils.removeUnselectedPlans(((PersonImpl) person));
 				trips2legs.run( person.getSelectedPlan() );
 
 				for ( PlanElement pe : person.getSelectedPlan().getPlanElements() ) {

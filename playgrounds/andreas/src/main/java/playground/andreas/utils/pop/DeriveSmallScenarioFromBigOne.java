@@ -2,20 +2,20 @@ package playground.andreas.utils.pop;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.network.MatsimNetworkReader;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationImpl;
 import org.matsim.core.population.PopulationReader;
 import org.matsim.core.population.PopulationWriter;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 
 import playground.andreas.bln.pop.SharedNetScenario;
 import playground.andreas.mzilske.bvg09.DataPrepare;
@@ -48,31 +48,31 @@ public class DeriveSmallScenarioFromBigOne {
 		String outMultimodalNetworkFile = "./network.multimodal.xml.gz";
 		String outRoutedPlansFile = "./plan.routedOevModell.xml.gz";
 
-		Coord minXY = new CoordImpl(4590999.0, 5805999.0);
-		Coord maxXY = new CoordImpl(4606021.0, 5822001.0);
+		Coord minXY = new Coord(4590999.0, 5805999.0);
+		Coord maxXY = new Coord(4606021.0, 5822001.0);
 
 
 		log.info("Start DeriveSmallScenarioFromBigOne");
 
 		log.info("Start PopGeoFilter");
 
-		ScenarioImpl bigNetScenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario bigNetScenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		log.info("Reading network " + bigNetworkFile);
 		Network bigNet = bigNetScenario.getNetwork();
-		new MatsimNetworkReader(bigNetScenario).readFile(bigNetworkFile);
+		new MatsimNetworkReader(bigNetScenario.getNetwork()).readFile(bigNetworkFile);
 
-		ScenarioImpl smallNetScenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario smallNetScenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		log.info("Reading network " + smallNetworkFile);
 		Network smallNet = smallNetScenario.getNetwork();
-		new MatsimNetworkReader(smallNetScenario).readFile(smallNetworkFile);
+		new MatsimNetworkReader(smallNetScenario.getNetwork()).readFile(smallNetworkFile);
 
 		log.info("Reading routed population: " + wholeRoutedPlansFile);
-		Population wholeRoutedPop = ((ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig())).getPopulation();
+		Population wholeRoutedPop = ((MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig())).getPopulation();
 		PopulationReader popReader = new MatsimPopulationReader(new SharedNetScenario(bigNetScenario, wholeRoutedPop));
 		popReader.readFile(wholeRoutedPlansFile);
 
 		log.info("Reading unrouted population: " + unroutedWholePlansFile);
-		Population unroutedWholePop = ((ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig())).getPopulation();
+		Population unroutedWholePop = ((MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig())).getPopulation();
 		PopulationReader origPopReader = new MatsimPopulationReader(new SharedNetScenario(bigNetScenario, unroutedWholePop));
 		origPopReader.readFile(unroutedWholePlansFile);
 
@@ -107,17 +107,16 @@ public class DeriveSmallScenarioFromBigOne {
 		config.setParam("plans", "inputPlansFile", setBoundingBoxOut);
 //		config.setParam("plans", "outputPlansFile", xy2linksOut);
 
-		ScenarioLoaderImpl sl = new ScenarioLoaderImpl(config);
-		sl.loadNetwork();
-		Network network = sl.getScenario().getNetwork();
-		config = sl.getScenario().getConfig();
+		Scenario scenario = ScenarioUtils.createScenario(config);
+		Network network = NetworkUtils.createNetwork();
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(config.network().getInputFile());
 
-		final PopulationImpl plans = (PopulationImpl) sl.getScenario().getPopulation();
+		final PopulationImpl plans = (PopulationImpl) scenario.getPopulation();
 		plans.setIsStreaming(true);
-		final PopulationReader plansReader = new MatsimPopulationReader(sl.getScenario());
+		final PopulationReader plansReader = new MatsimPopulationReader(scenario);
 		final PopulationWriter plansWriter = new PopulationWriter(plans, network);
 		plansWriter.startStreaming(xy2linksOut);//config.plans().getOutputFile());
-		plans.addAlgorithm(new org.matsim.population.algorithms.XY2Links(network));
+		plans.addAlgorithm(new org.matsim.population.algorithms.XY2Links(network, null));
 		plans.addAlgorithm(plansWriter);
 		plansReader.readFile(config.plans().getInputFile());
 		plans.printPlansCount();

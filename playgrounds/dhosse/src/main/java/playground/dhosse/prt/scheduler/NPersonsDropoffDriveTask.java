@@ -2,10 +2,9 @@ package playground.dhosse.prt.scheduler;
 
 import java.util.List;
 
-import org.matsim.contrib.dvrp.router.VrpPathWithTravelData;
-
-import playground.michalm.taxi.data.TaxiRequest;
-import playground.michalm.taxi.schedule.TaxiDriveWithPassengerTask;
+import org.matsim.contrib.dvrp.path.VrpPathWithTravelData;
+import org.matsim.contrib.taxi.data.TaxiRequest;
+import org.matsim.contrib.taxi.schedule.TaxiDriveWithPassengerTask;
 
 public class NPersonsDropoffDriveTask extends TaxiDriveWithPassengerTask {
 
@@ -34,7 +33,7 @@ public class NPersonsDropoffDriveTask extends TaxiDriveWithPassengerTask {
     @Override
     public TaxiTaskType getTaxiTaskType()
     {
-        return TaxiTaskType.DRIVE_WITH_PASSENGER;
+        return TaxiTaskType.DRIVE_OCCUPIED;
     }
 
 

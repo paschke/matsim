@@ -30,11 +30,10 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-
-import playground.ikaddoura.noise2.events.NoiseEventAffected;
-import playground.ikaddoura.noise2.events.NoiseEventCaused;
-import playground.ikaddoura.noise2.handler.NoiseEventAffectedHandler;
-import playground.ikaddoura.noise2.handler.NoiseEventCausedHandler;
+import org.matsim.contrib.noise.events.NoiseEventAffected;
+import org.matsim.contrib.noise.events.NoiseEventCaused;
+import org.matsim.contrib.noise.handler.NoiseEventAffectedHandler;
+import org.matsim.contrib.noise.handler.NoiseEventCausedHandler;
 
 /**
  * Analyzes an event file with noise events.
@@ -53,6 +52,9 @@ public class NoiseAnalysisHandler implements NoiseEventCausedHandler, NoiseEvent
 	private SortedMap<Id<Person>, Double> id2causedNoiseCost = new TreeMap<Id<Person>, Double>();
 	private SortedMap<Id<Person>, Double> id2affectedNoiseCost = new TreeMap<Id<Person>, Double>();
 
+	private double causedNoiseCost = 0.;
+	private double affectedNoiseCost = 0.;
+	
 	public NoiseAnalysisHandler(BasicPersonTripAnalysisHandler basicHandler) {
 		this.basicHandler = basicHandler;
 	}
@@ -62,6 +64,8 @@ public class NoiseAnalysisHandler implements NoiseEventCausedHandler, NoiseEvent
 		personId2tripNumber2causedNoiseCost.clear();
 		id2causedNoiseCost.clear();
 		id2affectedNoiseCost.clear();
+		causedNoiseCost = 0.;
+		affectedNoiseCost = 0.;
 	}
 
 	@Override
@@ -72,16 +76,14 @@ public class NoiseAnalysisHandler implements NoiseEventCausedHandler, NoiseEvent
 			caughtNoiseEvent = true;
 		}
 
-		Id<Person> id = event.getCausingAgentId();
-		Double amountByEvent = event.getAmount();
-		Double amountSoFar = id2causedNoiseCost.get(id);
+		causedNoiseCost = causedNoiseCost + event.getAmount();
 		
+		Double amountSoFar = id2causedNoiseCost.get(event.getCausingAgentId());
 		if (amountSoFar == null) {
-			id2causedNoiseCost.put(id, amountByEvent);
+			id2causedNoiseCost.put(event.getCausingAgentId(), event.getAmount());
 		}
 		else {
-			amountSoFar += amountByEvent;
-			id2causedNoiseCost.put(id, amountSoFar);
+			id2causedNoiseCost.put(event.getCausingAgentId(), amountSoFar + event.getAmount());
 		}	
 		
 		// trip-specific noise cost
@@ -99,23 +101,29 @@ public class NoiseAnalysisHandler implements NoiseEventCausedHandler, NoiseEvent
 			}
 		}
 		
-		if (personId2tripNumber2causedNoiseCost.containsKey(event.getCausingAgentId()) && personId2tripNumber2causedNoiseCost.get(event.getCausingAgentId()).containsKey(tripNumber)) {
+		if (personId2tripNumber2causedNoiseCost.containsKey(event.getCausingAgentId())) {
 			
-			double causedAmountBefore = personId2tripNumber2causedNoiseCost.get(event.getCausingAgentId()).get(tripNumber);
-			double causedAmountUpdated = causedAmountBefore + event.getAmount();
+			if (personId2tripNumber2causedNoiseCost.get(event.getCausingAgentId()).containsKey(tripNumber)) {
+				
+				double causedAmountBefore = personId2tripNumber2causedNoiseCost.get(event.getCausingAgentId()).get(tripNumber);
+				double causedAmountUpdated = causedAmountBefore + event.getAmount();
+				
+				Map<Integer,Double> tripNumber2causedAmount = personId2tripNumber2causedNoiseCost.get(event.getCausingAgentId());
+				tripNumber2causedAmount.put(tripNumber, causedAmountUpdated);
+				personId2tripNumber2causedNoiseCost.put(event.getCausingAgentId(), tripNumber2causedAmount);
+				
+			} else {
+				Map<Integer,Double> tripNumber2causedDelay = personId2tripNumber2causedNoiseCost.get(event.getCausingAgentId());
+				tripNumber2causedDelay.put(tripNumber, event.getAmount());
+				personId2tripNumber2causedNoiseCost.put(event.getCausingAgentId(), tripNumber2causedDelay);
+			}
 			
-			Map<Integer,Double> tripNumber2causedAmount = personId2tripNumber2causedNoiseCost.get(event.getCausingAgentId());
-			tripNumber2causedAmount.put(tripNumber, causedAmountUpdated);
-			personId2tripNumber2causedNoiseCost.put(event.getCausingAgentId(), tripNumber2causedAmount);
-		
 		} else {
 			
 			Map<Integer,Double> tripNumber2causedDelay = new HashMap<>();
 			tripNumber2causedDelay.put(tripNumber, event.getAmount());
 			personId2tripNumber2causedNoiseCost.put(event.getCausingAgentId(), tripNumber2causedDelay);
-
-		}
-		
+		}		
 	}
 
 	@Override
@@ -126,16 +134,14 @@ public class NoiseAnalysisHandler implements NoiseEventCausedHandler, NoiseEvent
 			caughtNoiseEvent = true;
 		}
 		
-		Id<Person> id = event.getAffectedAgentId();
-		Double amountByEvent = event.getAmount();
-		Double amountSoFar = id2affectedNoiseCost.get(id);
+		affectedNoiseCost = affectedNoiseCost + event.getAmount();
 		
+		Double amountSoFar = id2affectedNoiseCost.get(event.getAffectedAgentId());
 		if (amountSoFar == null) {
-			id2affectedNoiseCost.put(id, amountByEvent);
+			id2affectedNoiseCost.put(event.getAffectedAgentId(), event.getAmount());
 		}
 		else {
-			amountSoFar += amountByEvent;
-			id2affectedNoiseCost.put(id, amountSoFar);
+			id2affectedNoiseCost.put(event.getAffectedAgentId(), amountSoFar + event.getAmount());
 		}
 	}
 
@@ -148,11 +154,20 @@ public class NoiseAnalysisHandler implements NoiseEventCausedHandler, NoiseEvent
 	}
 
 	public Map<Id<Person>,Map<Integer,Double>> getPersonId2tripNumber2causedNoiseCost() {
+		// the trip number may be wrong because of the interval based computation of noise
 		return personId2tripNumber2causedNoiseCost;
 	}
 
 	public boolean isCaughtNoiseEvent() {
 		return caughtNoiseEvent;
+	}
+
+	public double getCausedNoiseCost() {
+		return causedNoiseCost;
+	}
+
+	public double getAffectedNoiseCost() {
+		return affectedNoiseCost;
 	}
 	
 }

@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.PersonMoneyEvent;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.listener.AfterMobsimListener;
 
@@ -46,17 +47,18 @@ public class AfterSimulationListener implements AfterMobsimListener {
 	@Override
 	public void notifyAfterMobsim(AfterMobsimEvent event) {
 
-		optimizedCharger = new OptimizedCharger(logEnergyConsumption.getEnergyConsumption(), logParkingTimes.getParkingTimes(), Double.parseDouble(event.getControler().getConfig().findParam("PSF", "default.maxBatteryCapacity")));
+		optimizedCharger = new OptimizedCharger(logEnergyConsumption.getEnergyConsumption(), logParkingTimes.getParkingTimes(), Double.parseDouble(event.getServices().getConfig().findParam("PSF", "default.maxBatteryCapacity")));
 		optimizedCharger.outputOptimizationData(event);
 
 		chargingTimes = optimizedCharger.getChargingTimes();
 
 		ChargingTimes.printEnergyUsageStatistics(chargingTimes, ParametersPSF.getHubLinkMapping());
-
-		addCostOfElectricalChargingToTheScore();
+		
+		EventsManager events = event.getServices().getEvents() ;
+		addCostOfElectricalChargingToTheScore(events);
 	}
 
-	private void addCostOfElectricalChargingToTheScore() {
+	private static void addCostOfElectricalChargingToTheScore(EventsManager events) {
 		for (Id personId : chargingTimes.keySet()) {
 			ChargingTimes curChargingTime = chargingTimes.get(personId);
 
@@ -74,7 +76,8 @@ public class AfterSimulationListener implements AfterMobsimListener {
 
 
 				// add price to score.
-				ParametersPSF.getEvents().processEvent(
+//				ParametersPSF.getEvents().processEvent(
+				events.processEvent(
 						new PersonMoneyEvent(chargingStartTime, personId, negativeUtilitiesForCharging));
 
 				if (ParametersPSF.getMainChargingPriceScalingFactor() == -1.0) {

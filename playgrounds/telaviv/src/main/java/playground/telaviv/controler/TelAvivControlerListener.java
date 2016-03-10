@@ -39,9 +39,10 @@ import org.matsim.contrib.analysis.christoph.ActivitiesAnalyzer;
 import org.matsim.contrib.analysis.christoph.DistanceDistribution;
 import org.matsim.contrib.analysis.christoph.DistanceDistribution.DistributionClass;
 import org.matsim.contrib.analysis.christoph.TripsAnalyzer;
+import org.matsim.contrib.locationchoice.DestinationChoiceConfigGroup;
 import org.matsim.contrib.locationchoice.utils.ActTypeConverter;
 import org.matsim.core.config.Config;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.events.ShutdownEvent;
 import org.matsim.core.controler.events.StartupEvent;
@@ -73,7 +74,7 @@ public class TelAvivControlerListener implements StartupListener, IterationEndsL
 	@Override
 	public void notifyStartup(StartupEvent event) {
 		
-		Controler controler = event.getControler();
+		MatsimServices controler = event.getServices();
 		Scenario scenario = controler.getScenario();
 		Config config = controler.getConfig();
 		
@@ -320,11 +321,12 @@ public class TelAvivControlerListener implements StartupListener, IterationEndsL
 		/*
 		 * further analysis stuff for location choice
 		 */
-		double analysisBinSize = Double.parseDouble(config.findParam("locationchoice", "analysisBinSize"));
-		double analysisBoundary = Double.parseDouble(config.findParam("locationchoice", "analysisBoundary"));
-		String idExclusion = config.findParam("locationchoice", "idExclusion");
+		DestinationChoiceConfigGroup dccg = (DestinationChoiceConfigGroup) scenario.getConfig().getModule(DestinationChoiceConfigGroup.GROUP_NAME);
+		double analysisBinSize = dccg.getAnalysisBinSize();
+		double analysisBoundary = dccg.getAnalysisBoundary();
+		String idExclusion = dccg.getIdExclusion().toString();
 		ActTypeConverter converter = new ActTypeConverter(false);
-		Set<String> flexibleTypes = CollectionUtils.stringToSet(config.findParam("locationchoice", "flexible_types"));
+		Set<String> flexibleTypes = CollectionUtils.stringToSet(dccg.getFlexibleTypes());
   		for (String actType : flexibleTypes) {
   			String filename = TelAvivConfig.basePath + "/locationchoice/" + actType + "ReferenceShares.txt";
   			if (!new File(filename).exists()) {
@@ -359,22 +361,22 @@ public class TelAvivControlerListener implements StartupListener, IterationEndsL
 	@Override
 	public void notifyIterationEnds(IterationEndsEvent event) {
 	
-		String inputFile = event.getControler().getControlerIO().getIterationFilename(event.getIteration(), "countscompare.txt");
-		String outputFile = event.getControler().getControlerIO().getIterationFilename(event.getIteration(), "countscompare.csv");
+		String inputFile = event.getServices().getControlerIO().getIterationFilename(event.getIteration(), "countscompare.txt");
+		String outputFile = event.getServices().getControlerIO().getIterationFilename(event.getIteration(), "countscompare.csv");
 		
 		runCountsCompare(inputFile, outputFile);
 	}
 	
 	@Override
 	public void notifyShutdown(ShutdownEvent event) {
-		String runId = event.getControler().getConfig().controler().getRunId();
+		String runId = event.getServices().getConfig().controler().getRunId();
 		if (runId == null) runId = "";
 		else if (runId.length() > 0) runId = runId + ".";
 		
-		int lastIter = event.getControler().getConfig().controler().getLastIteration();
+		int lastIter = event.getServices().getConfig().controler().getLastIteration();
 		
-		String inputFile = event.getControler().getControlerIO().getIterationFilename(lastIter, "countscompare.txt");
-		String outputFile = event.getControler().getControlerIO().getIterationFilename(lastIter, "countscompare.csv");
+		String inputFile = event.getServices().getControlerIO().getIterationFilename(lastIter, "countscompare.txt");
+		String outputFile = event.getServices().getControlerIO().getIterationFilename(lastIter, "countscompare.csv");
 		
 		runCountsCompare(inputFile, outputFile);
 	}

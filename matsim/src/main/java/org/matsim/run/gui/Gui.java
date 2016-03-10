@@ -28,6 +28,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.run.Controler;
 
 /**
  * @author mrieser / Senozon AG
@@ -58,9 +59,15 @@ public class Gui extends JFrame {
 
 	private PopulationSampler popSampler = null;
 	private JTextArea textErrOut;
+	private final String mainClass;
 	
-	public Gui() {
-		setTitle("MATSim");
+	private File lastUsedDirectory;
+	
+	private Gui(final String title, final Class<?> mainClass) {
+		setTitle(title);
+		this.mainClass = mainClass.getCanonicalName();
+		
+		this.lastUsedDirectory = new File(".");
 		
 		JLabel lblConfigurationFile = new JLabel("Configuration file:");
 		
@@ -78,24 +85,12 @@ public class Gui extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				JFileChooser chooser = new JFileChooser();
+				chooser.setCurrentDirectory(Gui.this.lastUsedDirectory);
 				int result = chooser.showOpenDialog(null);
 				if (result == JFileChooser.APPROVE_OPTION) {
 					File f = chooser.getSelectedFile();
-					String filename = f.getAbsolutePath();
-					txtConfigfilename.setText(filename);
-					
-					Config config = ConfigUtils.createConfig();
-					ConfigUtils.loadConfig(config, filename);
-					
-					File par = f.getParentFile();
-					File outputDir = new File(par, config.controler().getOutputDirectory());
-					try {
-						txtOutput.setText(outputDir.getCanonicalPath());
-					} catch (IOException e1) {
-						txtOutput.setText(outputDir.getAbsolutePath());
-					}
-					
-					btnStartMatsim.setEnabled(true);
+					Gui.this.lastUsedDirectory = f.getParentFile();
+					loadConfigFile(f);
 				}
 			}
 		});
@@ -357,7 +352,7 @@ public class Gui extends JFrame {
 						"-cp",
 						absoluteClasspath.toString(),
 						"-Xmx" + txtRam.getText() + "m",
-						"org.matsim.run.Controler",
+						Gui.this.mainClass,
 						txtConfigfilename.getText()
 				};
 				Gui.this.textStdOut.setText("");
@@ -387,6 +382,31 @@ public class Gui extends JFrame {
 		
 	}
 	
+	public void loadConfigFile(final File configFile) {
+		String configFilename = configFile.getAbsolutePath();
+		
+		Config config = ConfigUtils.createConfig();
+		try {
+			ConfigUtils.loadConfig(config, configFilename);
+		} catch (Exception e) {
+			Gui.this.textStdOut.setText("");
+			Gui.this.textStdOut.append("The configuration file could not be loaded. Error message:\n");
+			Gui.this.textStdOut.append(e.getMessage());
+			return;
+		}
+		txtConfigfilename.setText(configFilename);
+		
+		File par = configFile.getParentFile();
+		File outputDir = new File(par, config.controler().getOutputDirectory());
+		try {
+			txtOutput.setText(outputDir.getCanonicalPath());
+		} catch (IOException e1) {
+			txtOutput.setText(outputDir.getAbsolutePath());
+		}
+		
+		btnStartMatsim.setEnabled(true);		
+	}
+	
 	public void stopMATSim() {
 		ExeRunner runner = this.exeRunner;
 		if (runner != null) {
@@ -406,13 +426,23 @@ public class Gui extends JFrame {
 		}
 	}
 	
-	public static void main(String[] args) {
-		
+	public static Gui show(final String title, final Class<?> mainClass) {
 		System.setProperty("apple.laf.useScreenMenuBar", "true");
-		
-		Gui gui = new Gui();
+
+		Gui gui = new Gui(title, mainClass);
 		gui.pack();
 		gui.setLocationByPlatform(true);
 		gui.setVisible(true);
+		return gui;
+	}
+	
+	public static void main(String[] args) {
+		Gui gui = Gui.show("MATSim", Controler.class);
+		if (args.length > 0) {
+			File configFile = new File(args[0]);
+			if (configFile.exists()) {
+				gui.loadConfigFile(configFile);
+			}
+		}
 	}
 }

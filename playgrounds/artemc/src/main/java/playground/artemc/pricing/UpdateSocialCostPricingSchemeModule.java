@@ -2,9 +2,10 @@ package playground.artemc.pricing;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.events.IterationStartsEvent;
 import org.matsim.core.controler.listener.ControlerListener;
@@ -39,7 +40,12 @@ public class UpdateSocialCostPricingSchemeModule extends AbstractModule {
 		RoadPricingSchemeImpl roadPricingScheme;
 		SocialCostCalculator scc;
 
+		/*Time bin size for calculation of social cost and toll setting. Should be the same as for the router.*/
 		private final int timeslice = 5 * 60;
+
+		/*Smoothing factor of toll changes: New toll = OldToll * (1-blendFactor) + NewToll * blendFactor
+		* blendFactor = 1.0 leads to no smoothing at all, but given a small network and high demand can lead to unstable behaviour.
+		  blendFactor = 0.1 seems to be a good compromise between convergence speed and stability.  */
 		private final double blendFactor = 0.1;
 
 		@Inject
@@ -56,7 +62,7 @@ public class UpdateSocialCostPricingSchemeModule extends AbstractModule {
 		@Override
 		public void notifyIterationStarts(IterationStartsEvent event) {
 			if(event.getIteration()==0) {
-				Controler controler = event.getControler();
+				MatsimServices controler = event.getServices();
 				this.scc = new SocialCostCalculator(controler.getScenario().getNetwork(), timeslice, controler.getEvents(), controler.getLinkTravelTimes(), controler, blendFactor);
 				controler.addControlerListener(scc);
 				controler.getEvents().addHandler(scc);
@@ -66,20 +72,20 @@ public class UpdateSocialCostPricingSchemeModule extends AbstractModule {
 		@Override
 		public void notifyIterationEnds(final IterationEndsEvent event) {
 
-			Controler controler = event.getControler();
+			MatsimServices controler = event.getServices();
 
 			log.info("Updating tolls according to social cost imposed...");
 
 			// initialize the social costs calculator
 
-			for (Id<Link> link : event.getControler().getScenario().getNetwork().getLinks().keySet()) {
+			for (Id<Link> link : event.getServices().getScenario().getNetwork().getLinks().keySet()) {
 
 			if(roadPricingScheme.getTypicalCostsForLink().containsKey(link))
 				roadPricingScheme.getTypicalCostsForLink().get(link).clear();
 
 					for (int i = 0; i < scc.getSocialCostsMap().get(link).socialCosts.length; i++) {
 						double socialCost = scc.getSocialCostsMap().get(link).socialCosts[i];
-						double opportunityCostOfCarTravel = - controler.getConfig().planCalcScore().getTraveling_utils_hr() + controler.getConfig().planCalcScore().getPerforming_utils_hr();
+						double opportunityCostOfCarTravel = -controler.getConfig().planCalcScore().getModes().get(TransportMode.car).getMarginalUtilityOfTraveling() + controler.getConfig().planCalcScore().getPerforming_utils_hr();
 						double toll = (opportunityCostOfCarTravel * socialCost / 3600) / controler.getConfig().planCalcScore().getMarginalUtilityOfMoney();
 
 						if(toll<0.01){

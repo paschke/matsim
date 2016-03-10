@@ -2,7 +2,6 @@ package playground.wrashid.nan.analysis;
 
 
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
@@ -10,9 +9,7 @@ import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.contrib.parking.lib.GeneralLib;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.core.scenario.MutableScenario;
 
 
 public class CordonTripCountAnalyzer {
@@ -25,7 +22,7 @@ public class CordonTripCountAnalyzer {
 		String plansFile=basePath + "output_plans.xml.gz";
 		String networkFile=basePath + "output_network.xml.gz";
 		String facilititiesPath=basePath + "output_facilities.xml.gz";
-		ScenarioImpl scenario = (ScenarioImpl) GeneralLib.readScenario(plansFile, networkFile, facilititiesPath);
+		MutableScenario scenario = (MutableScenario) GeneralLib.readScenario(plansFile, networkFile, facilititiesPath);
 		
 		
 		int nuberTripsWorkRelated=0;
@@ -109,7 +106,7 @@ public class CordonTripCountAnalyzer {
 	}
 	
 	public static boolean isInsideCordon(Coord coord){
-		Coord center=new CoordImpl(683400.75,247500.0687); 
+		Coord center= new Coord(683400.75, 247500.0687);
 		double radius=1000;
 		
 		return GeneralLib.getDistance(center,coord)<radius;

@@ -140,7 +140,7 @@ public final class TransitRouterNetworkWW implements Network {
 			this.route = route;
 			this.line = line;
 			if(route==null)
-				this.length = CoordUtils.calcDistance(this.toNode.stop.getStopFacility().getCoord(), this.fromNode.stop.getStopFacility().getCoord());
+				this.length = CoordUtils.calcEuclideanDistance(this.toNode.stop.getStopFacility().getCoord(), this.fromNode.stop.getStopFacility().getCoord());
 			else {
 				this.length = 0;
 				for(Id<Link> linkId:route.getRoute().getSubRoute(fromNode.stop.getStopFacility().getLinkId(), toNode.stop.getStopFacility().getLinkId()).getLinkIds())
@@ -377,11 +377,11 @@ public final class TransitRouterNetworkWW implements Network {
 		return transitNetwork;
 	}
 	public Collection<TransitRouterNetworkNode> getNearestNodes(final Coord coord, final double distance) {
-		return this.qtNodes.get(coord.getX(), coord.getY(), distance);
+		return this.qtNodes.getDisk(coord.getX(), coord.getY(), distance);
 	}
 
 	public TransitRouterNetworkNode getNearestNode(final Coord coord) {
-		return this.qtNodes.get(coord.getX(), coord.getY());
+		return this.qtNodes.getClosest(coord.getX(), coord.getY());
 	}
 
 	@Override

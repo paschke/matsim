@@ -19,26 +19,25 @@
 
 package playground.johannes.gsv.matrices.analysis;
 
+import com.vividsolutions.jts.geom.Point;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.apache.log4j.Logger;
+import org.matsim.contrib.common.gis.CartesianDistanceCalculator;
+import org.matsim.contrib.common.gis.DistanceCalculator;
+import org.matsim.contrib.common.stats.Discretizer;
+import org.matsim.contrib.common.stats.LinearDiscretizer;
+import playground.johannes.synpop.gis.Zone;
+import playground.johannes.synpop.gis.ZoneCollection;
+import playground.johannes.synpop.gis.ZoneGeoJsonIO;
+import playground.johannes.synpop.matrix.MatrixOperations;
+import playground.johannes.synpop.matrix.NumericMatrix;
+import playground.johannes.synpop.matrix.NumericMatrixXMLReader;
+import playground.johannes.synpop.matrix.ODMatrixOperations;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Set;
-
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-import org.apache.log4j.Logger;
-
-import com.vividsolutions.jts.geom.Point;
-
-import playground.johannes.gsv.zones.KeyMatrix;
-import playground.johannes.gsv.zones.MatrixOperations;
-import playground.johannes.gsv.zones.Zone;
-import playground.johannes.gsv.zones.ZoneCollection;
-import playground.johannes.gsv.zones.io.KeyMatrixXMLReader;
-import playground.johannes.gsv.zones.io.Zone2GeoJSON;
-import playground.johannes.sna.math.Discretizer;
-import playground.johannes.sna.math.LinearDiscretizer;
-import playground.johannes.socialnetworks.gis.CartesianDistanceCalculator;
-import playground.johannes.socialnetworks.gis.DistanceCalculator;
 
 /**
  * @author johannes
@@ -58,7 +57,7 @@ public class NUTSCompare {
 		
 		ZoneCollection zones = new ZoneCollection();
 		String data = new String(Files.readAllBytes(Paths.get("/home/johannes/gsv/gis/nuts/de.nuts3.gk3.geojson")));
-		zones.addAll(Zone2GeoJSON.parseFeatureCollection(data));
+		zones.addAll(ZoneGeoJsonIO.parseFeatureCollection(data));
 		data = null;
 		zones.setPrimaryKey("gsvId");
 		
@@ -66,10 +65,10 @@ public class NUTSCompare {
 		/*
 		 * itp
 		 */
-		KeyMatrixXMLReader reader = new KeyMatrixXMLReader();
+		NumericMatrixXMLReader reader = new NumericMatrixXMLReader();
 		reader.setValidating(false);
 		reader.parse(itpFile);
-		KeyMatrix itpNuts3 = reader.getMatrix();
+		NumericMatrix itpNuts3 = reader.getMatrix();
 		
 		MatrixOperations.applyFactor(itpNuts3, 1/365.0);
 		removeEntries(itpNuts3, zones, distThreshold);
@@ -77,13 +76,13 @@ public class NUTSCompare {
 		 * tomtom
 		 */
 		reader.parse(tomtomFile);
-		KeyMatrix tomtomNuts3 = reader.getMatrix();
+		NumericMatrix tomtomNuts3 = reader.getMatrix();
 		removeEntries(tomtomNuts3, zones, distThreshold);
 		/*
 		 * sim
 		 */
 		reader.parse(simFile);
-		KeyMatrix simNuts3 = reader.getMatrix();
+		NumericMatrix simNuts3 = reader.getMatrix();
 		
 		MatrixOperations.applyFactor(simNuts3, 11);
 		MatrixOperations.applyDiagonalFactor(simNuts3, 1.3);
@@ -99,9 +98,9 @@ public class NUTSCompare {
 		
 		logger.info(String.format("Matrix sum: itp = %s, tomtom = %s, sim = %s", itpSum, tomtomSum, simSum));
 		
-		KeyMatrix itpNuts1 = MatrixOperations.aggregate(itpNuts3, zones, "nuts1_code");
-		KeyMatrix tomtomNuts1 = MatrixOperations.aggregate(tomtomNuts3, zones, "nuts1_code");
-		KeyMatrix simNuts1 = MatrixOperations.aggregate(simNuts3, zones, "nuts1_code");
+		NumericMatrix itpNuts1 = ODMatrixOperations.aggregate(itpNuts3, zones, "nuts1_code");
+		NumericMatrix tomtomNuts1 = ODMatrixOperations.aggregate(tomtomNuts3, zones, "nuts1_code");
+		NumericMatrix simNuts1 = ODMatrixOperations.aggregate(simNuts3, zones, "nuts1_code");
 		
 		logger.info(String.format("DE1-DE9 itp: %s", itpNuts1.get("DE2", "DE9")));
 		logger.info(String.format("DE1-DE9 tomtom: %s", tomtomNuts1.get("DE2", "DE9")));
@@ -137,9 +136,9 @@ public class NUTSCompare {
 //		tomtomSum = MatrixOperations.sum(tomtomInhab);
 //		simSum = MatrixOperations.sum(simInhab);
 //		
-//		MatrixOperations.applyFactor(itpInhab, 1/itpSum);
-//		MatrixOperations.applyFactor(tomtomInhab, 1/tomtomSum);
-//		MatrixOperations.applyFactor(simInhab, 1/simSum);
+//		MatrixOperations.multiply(itpInhab, 1/itpSum);
+//		MatrixOperations.multiply(tomtomInhab, 1/tomtomSum);
+//		MatrixOperations.multiply(simInhab, 1/simSum);
 		
 		
 //		DescriptiveStatistics stats = absError(tomtomInhab, itpInhab);
@@ -152,8 +151,9 @@ public class NUTSCompare {
 		logger.info(String.format("%s : mean = %.2f, median = %.2f, var = %.2f, min = %.2f, max = %.2f", name, stats.getMean(), stats.getPercentile(50), stats.getVariance(), stats.getMin(), stats.getMax()));
 	}
 	
-	private static DescriptiveStatistics absError(KeyMatrix m1, KeyMatrix m2) {
-		KeyMatrix errMatrix = MatrixOperations.errorMatrix(m1, m2);
+	private static DescriptiveStatistics absError(NumericMatrix m1, NumericMatrix m2) {
+		NumericMatrix errMatrix = new NumericMatrix();
+		MatrixOperations.errorMatrix(m1, m2, errMatrix);
 //		KeyMatrix errMatrix = MatrixOperations.diffMatrix(m1, m2);
 		
 		DescriptiveStatistics stats = new DescriptiveStatistics();
@@ -177,7 +177,7 @@ public class NUTSCompare {
 		return stats;
 	}
 	
-	private static void removeEntries(KeyMatrix m, ZoneCollection zones, double distThreshold) {
+	private static void removeEntries(NumericMatrix m, ZoneCollection zones, double distThreshold) {
 		DistanceCalculator dCalc = new CartesianDistanceCalculator();
 		Set<String> keys = m.keys();
 		int cnt = 0;
@@ -208,7 +208,7 @@ public class NUTSCompare {
 
 	private static void addInhabCats(ZoneCollection zones) {
 		Discretizer disc = new LinearDiscretizer(250000);
-		for(Zone zone : zones.zoneSet()) {
+		for(Zone zone : zones.getZones()) {
 			double val = Double.parseDouble(zone.getAttribute("inhabitants"));
 			val = disc.index(val);
 			val = Math.min(5, val);

@@ -20,9 +20,13 @@
 
 package playground.telaviv.analysis;
 
-import org.matsim.api.core.v01.population.*;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Route;
 import org.matsim.contrib.locationchoice.utils.ActTypeConverter;
-import org.matsim.core.config.Config;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.listener.IterationEndsListener;
 import org.matsim.core.population.PlanImpl;
@@ -48,11 +52,6 @@ public class ComparingDistanceStats implements IterationEndsListener {
 	private ActTypeConverter actTypeConverter;
 	private String mode;
 	private String idExclusion;
-	
-	public ComparingDistanceStats(Config config, String bestOrSelected, String type, ActTypeConverter actTypeConverter, String mode, double[] referenceShares) {
-		this(Double.parseDouble(config.findParam("locationchoice", "analysisBinSize")), Double.parseDouble(config.findParam("locationchoice", "analysisBoundary")), 
-				config.findParam("locationchoice", "idExclusion"), bestOrSelected, type, actTypeConverter, mode, referenceShares);
-	}
 
 	public ComparingDistanceStats(double analysisBinSize, double analysisBoundary, String idExclusion, String bestOrSelected, String type, ActTypeConverter actTypeConverter, String mode, double[] referenceShares) {
 		this.analysisBinSize = analysisBinSize;
@@ -69,7 +68,7 @@ public class ComparingDistanceStats implements IterationEndsListener {
 	public void notifyIterationEnds(final IterationEndsEvent event) {	
 		this.bins.clear();
 
-        for (Person p : event.getControler().getScenario().getPopulation().getPersons().values()) {
+        for (Person p : event.getServices().getScenario().getPopulation().getPersons().values()) {
 			
 			// continue if person is in the analysis population or if the id is not numeric
 			if (!this.isInteger(p.getId().toString()) ||
@@ -100,10 +99,10 @@ public class ComparingDistanceStats implements IterationEndsListener {
 						Route route = previousLeg.getRoute();
 						if (route instanceof NetworkRoute) {
 							if (route.getDistance() != Double.NaN) distance = route.getDistance();
-							else distance = RouteUtils.calcDistance((NetworkRoute) route, event.getControler().getScenario().getNetwork());
+							else distance = RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) route, event.getServices().getScenario().getNetwork());
 						} else {
 							if (route.getDistance() != Double.NaN) distance = route.getDistance();
-							else distance = CoordUtils.calcDistance(((Activity) pe).getCoord(), plan.getPreviousActivity(plan.getPreviousLeg((Activity)pe)).getCoord());
+							else distance = CoordUtils.calcEuclideanDistance(((Activity) pe).getCoord(), plan.getPreviousActivity(plan.getPreviousLeg((Activity)pe)).getCoord());
 						}
 						this.bins.addVal(distance, 1.0);
 					}	
@@ -111,7 +110,7 @@ public class ComparingDistanceStats implements IterationEndsListener {
 			}
 		}
 		
-		String path = event.getControler().getControlerIO().getIterationFilename(event.getIteration(), "comparing,plan=" + this.bestOrSelected + 
+		String path = event.getServices().getControlerIO().getIterationFilename(event.getIteration(), "comparing,plan=" + this.bestOrSelected +
 				",analysisBinSize=" + this.analysisBinSize + ",analysisBoundary=" + this.analysisBoundary + ",activityType=" + type + 
 				",mode=" + mode);
 		this.bins.plotBinnedDistribution(path, "#", "m");

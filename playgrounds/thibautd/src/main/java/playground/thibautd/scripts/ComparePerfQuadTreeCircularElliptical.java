@@ -19,12 +19,11 @@
  * *********************************************************************** */
 package playground.thibautd.scripts;
 
+import org.apache.log4j.Logger;
+import org.matsim.core.utils.collections.QuadTree;
+
 import java.util.Arrays;
 import java.util.Collection;
-
-import org.apache.log4j.Logger;
-
-import org.matsim.core.utils.collections.QuadTree;
 
 /**
  * @author thibautd
@@ -70,10 +69,10 @@ public class ComparePerfQuadTreeCircularElliptical {
 
 			{
 			final double startCircular = System.currentTimeMillis();
-				final Collection<Object> circle = qt.get(
+				final Collection<Object> circle = qt.getDisk(
 						settings.centerCircleX,
 						settings.centerCircleY,
-						settings.radiusCircle );
+						settings.radiusCircle);
 				final double endCircular = System.currentTimeMillis();
 				log.info( "time circular: "+(endCircular - startCircular)+"ms" );
 				log.info( circle.size()+" elements in disk" );

@@ -19,15 +19,14 @@
  * *********************************************************************** */
 package playground.johannes.coopsim.services;
 
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.contrib.socnetgen.sna.graph.social.SocialVertex;
+import org.matsim.core.population.PersonUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.core.population.PersonImpl;
-
-import playground.johannes.socialnetworks.graph.social.SocialVertex;
 
 /**
  * @author illenberger
@@ -61,7 +60,7 @@ public class TransitionService implements SimService<Boolean> {
 		
 		for(SocialVertex ego : egos) {
 			Person person = ego.getPerson().getPerson();
-			if(person.getPlans().get(0).isSelected()) {
+			if(PersonUtils.isSelected(person.getPlans().get(0))) {
 				newState.add(person.getPlans().get(0));
 				oldState.add(person.getPlans().get(1));
 			} else {
@@ -109,7 +108,7 @@ public class TransitionService implements SimService<Boolean> {
 		 */
 		for(int i = 0; i < remove.size(); i++) {
 			Plan plan = remove.get(i);
-			PersonImpl person = (PersonImpl) plan.getPerson();
+			Person person = plan.getPerson();
 			person.getPlans().remove(plan);
 			person.setSelectedPlan(person.getPlans().get(0));
 		}

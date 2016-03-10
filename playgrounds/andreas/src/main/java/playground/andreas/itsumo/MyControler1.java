@@ -22,6 +22,7 @@ package playground.andreas.itsumo;
 
 import com.google.inject.Provider;
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -34,6 +35,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.mobsim.framework.Mobsim;
@@ -44,25 +46,20 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.PlanImpl;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.run.Events2Snapshot;
 
 import java.io.File;
 
 
-public class MyControler1 extends Controler {
+public class MyControler1 {
 
 	private static final Logger log = Logger.getLogger(MyControler1.class);
-
-	public MyControler1(final Scenario scenario) {
-		super(scenario);
-	}
 
 	protected int[] generateDistribution(final LinkImpl[] netLinks, final int popSize, final LinkImpl[] givenLinks, final double[] probs) {
 
@@ -119,31 +116,31 @@ public class MyControler1 extends Controler {
 		Link link9 = network.getLinks().get(Id.create("9", Link.class));
 		Link link15 = network.getLinks().get(Id.create("15", Link.class));
 		for (int i=0; i<100; i++) {
-			PersonImpl p = new PersonImpl(Id.create(i+1, Person.class));
+			Person p = PopulationUtils.createPerson(Id.create(i + 1, Person.class));
 
 			try {
 				PlanImpl plan1 = new PlanImpl(p);
-				ActivityImpl act1a = plan1.createAndAddActivity("h", new CoordImpl(100., 100.));
+				ActivityImpl act1a = plan1.createAndAddActivity("h", new Coord(100., 100.));
 				act1a.setLinkId(link9.getId());
 				act1a.setEndTime(0*60*60.);
 				LegImpl leg = plan1.createAndAddLeg(TransportMode.car);
 				NetworkRoute route = new LinkNetworkRouteImpl(link9.getId(), link15.getId());
 				route.setLinkIds(link9.getId(), NetworkUtils.getLinkIds(RouteUtils.getLinksFromNodes(NetworkUtils.getNodes(network, "3 4"))), link15.getId());
 				leg.setRoute(route);
-				ActivityImpl act1b = plan1.createAndAddActivity("h", new CoordImpl(200., 200.));
+				ActivityImpl act1b = plan1.createAndAddActivity("h", new Coord(200., 200.));
 				act1b.setLinkId(link15.getId());
 				act1b.setStartTime(8*60*60);
 				p.addPlan(plan1);
 
 				PlanImpl plan2 = new PlanImpl(p);
-				ActivityImpl act2a = plan1.createAndAddActivity("h", new CoordImpl(100., 100.));
+				ActivityImpl act2a = plan1.createAndAddActivity("h", new Coord(100., 100.));
 				act2a.setLinkId(link9.getId());
 				act2a.setEndTime(0*60*60.);
 				LegImpl leg2 = plan2.createAndAddLeg(TransportMode.car);
 				NetworkRoute route2 = new LinkNetworkRouteImpl(link9.getId(), link15.getId());
 				route2.setLinkIds(link9.getId(), NetworkUtils.getLinkIds(RouteUtils.getLinksFromNodes(NetworkUtils.getNodes(network, "3 6 4"))), link15.getId());
 				leg2.setRoute(route2);
-				ActivityImpl act2b = plan1.createAndAddActivity("h", new CoordImpl(200., 200.));
+				ActivityImpl act2b = plan1.createAndAddActivity("h", new Coord(200., 200.));
 				act2b.setLinkId(link15.getId());
 				act2b.setStartTime(8*60*60);
 				p.addPlan(plan2);
@@ -291,7 +288,7 @@ public class MyControler1 extends Controler {
 	 * Conversion of events -> snapshots
 	 *
 	 */
-	protected void makeVis(){
+	protected static void makeVis(MatsimServices controler){
 
 		File driversLog = new File("./drivers.txt");
 		File visDir = new File("./output/vis");
@@ -302,10 +299,10 @@ public class MyControler1 extends Controler {
 			driversLog.renameTo(eventsFile);
 
 			Events2Snapshot events2Snapshot = new org.matsim.run.Events2Snapshot();
-            events2Snapshot.run(eventsFile, this.getConfig(), getScenario().getNetwork());
+            events2Snapshot.run(eventsFile, controler.getConfig(), controler.getScenario().getNetwork());
 
 			// Run NetVis if possible
-			if (this.getConfig().getParam("simulation", "snapshotFormat").equalsIgnoreCase("netvis")){
+			if (controler.getConfig().getParam("simulation", "snapshotFormat").equalsIgnoreCase("netvis")){
 				String[] visargs = {"./output/vis/Snapshot"};
 				// NetVis.main(visargs);
 			}
@@ -317,16 +314,16 @@ public class MyControler1 extends Controler {
 	}
 
 	private void generatePerson(final int ii, final Link sourceLink, final Link destLink, final Population population){
-		PersonImpl p = new PersonImpl(Id.create(ii, Person.class));
+		Person p = PopulationUtils.createPerson(Id.create(ii, Person.class));
 		PlanImpl plan = new org.matsim.core.population.PlanImpl(p);
 		try {
-			ActivityImpl act1 = plan.createAndAddActivity("h", new CoordImpl(100., 100.));
+			ActivityImpl act1 = plan.createAndAddActivity("h", new Coord(100., 100.));
 			act1.setLinkId(sourceLink.getId());
 			act1.setStartTime(0.);
 			act1.setEndTime(0 * 60 * 60.);
 
 			plan.createAndAddLeg(TransportMode.car);
-			ActivityImpl act2 = plan.createAndAddActivity("h", new CoordImpl(200., 200.));
+			ActivityImpl act2 = plan.createAndAddActivity("h", new Coord(200., 200.));
 			act2.setLinkId(destLink.getId());
 			act2.setStartTime(8 * 60 * 60);
 
@@ -370,7 +367,7 @@ public class MyControler1 extends Controler {
 		loadNetwork(scenario);
 		loadPopulation(scenario);
 
-		final MyControler1 controler = new MyControler1(scenario);
+		final Controler controler = new Controler(scenario);
 		controler.getConfig().controler().setOverwriteFileSetting(
 				true ?
 						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
@@ -401,7 +398,7 @@ public class MyControler1 extends Controler {
 
 		controler.run();
 
-		controler.makeVis();
+		makeVis(controler);
 	}
 
 }

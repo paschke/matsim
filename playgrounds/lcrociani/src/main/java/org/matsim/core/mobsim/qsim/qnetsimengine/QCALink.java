@@ -1,6 +1,7 @@
 package org.matsim.core.mobsim.qsim.qnetsimengine;
 
 import java.util.Collection;
+import java.util.List;
 
 import matsimConnector.agents.Pedestrian;
 import matsimConnector.engine.CAAgentFactory;
@@ -24,7 +25,7 @@ public class QCALink extends AbstractQLink {
 	private final CAAgentFactory agentFactoryCA;
 	private final TransitionArea transitionArea;
 
-	public QCALink(Link link, QNetwork network, QLinkInternalI qLink, CAEnvironment environmentCA, CAAgentFactory agentFactoryCA, TransitionArea transitionArea) {
+	public QCALink(Link link, QNetwork network, QLinkI qLink, CAEnvironment environmentCA, CAAgentFactory agentFactoryCA, TransitionArea transitionArea) {
 		super(link, network);
 		this.link = link;
 		//this.qLink = qLink;
@@ -80,7 +81,7 @@ public class QCALink extends AbstractQLink {
 				
 		double now = this.qNetwork.simEngine.getMobsim().getSimTimer().getTimeOfDay();
 		this.qNetwork.simEngine.getMobsim().getEventsManager().processEvent(new LinkEnterEvent(
-				now, veh.getDriver().getId(), this.getLink().getId(), veh.getId()));
+				now, veh.getId(), this.getLink().getId()));
 		this.qNetwork.simEngine.getMobsim().getEventsManager().processEvent(new CAAgentConstructEvent(
 				now, pedestrian));
 	}
@@ -88,9 +89,9 @@ public class QCALink extends AbstractQLink {
 	public void notifyMoveOverBorderNode(QVehicle vehicle, Id<Link> nextLinkId){
 		double now = this.qNetwork.simEngine.getMobsim().getSimTimer().getTimeOfDay();
 		network.simEngine.getMobsim().getEventsManager().processEvent(new LinkLeaveEvent(
-				now, vehicle.getDriver().getId(), this.link.getId(), vehicle.getId()));
+				now, vehicle.getId(), this.link.getId()));
 		network.simEngine.getMobsim().getEventsManager().processEvent(new LinkEnterEvent(
-				now, vehicle.getDriver().getId(), nextLinkId, vehicle.getId()));
+				now, vehicle.getId(), nextLinkId));
 	}
 	
 	@Override
@@ -100,30 +101,6 @@ public class QCALink extends AbstractQLink {
 	}
 	
 	@Override
-	public QVehicle popFirstVehicle() {		
-		// NOT NEEDED
-		throw new RuntimeException("Method not needed for the moment");
-	}
-
-	@Override
-	public QVehicle getFirstVehicle() {
-		// NOT NEEDED
-		throw new RuntimeException("Method not needed for the moment");
-	}
-
-	@Override
-	double getLastMovementTimeOfFirstVehicle() {
-		// NOT NEEDED
-		throw new RuntimeException("Method not needed for the moment");
-	}
-
-	@Override
-	boolean hasGreenForToLink(Id<Link> toLinkId) {
-		// NOT NEEDED
-		throw new RuntimeException("Method not needed for the moment");
-	}
-
-	@Override
 	boolean isAcceptingFromUpstream() {
 		return transitionArea.acceptPedestrians();
 	}
@@ -131,5 +108,11 @@ public class QCALink extends AbstractQLink {
 	public TransitionArea getTransitionArea() {
 		return transitionArea;
 	}
+	
+	@Override
+	List<QLaneI> getToNodeQueueLanes() {
+		throw new RuntimeException("not implemented") ;
+	}
+
 
 }

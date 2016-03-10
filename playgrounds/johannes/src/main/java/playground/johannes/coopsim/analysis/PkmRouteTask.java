@@ -19,10 +19,6 @@
 
 package playground.johannes.coopsim.analysis;
 
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.network.Link;
@@ -30,8 +26,11 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-
 import playground.johannes.coopsim.pysical.Trajectory;
+
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * @author johannes
@@ -65,7 +64,7 @@ public class PkmRouteTask extends TrajectoryAnalyzerTask {
 					if (entry.getValue().test(t, leg, i)) {
 						if (leg.getRoute() instanceof NetworkRoute) {
 							NetworkRoute route = (NetworkRoute) leg.getRoute();
-							sum += RouteUtils.calcDistance(route, network);
+							sum += RouteUtils.calcDistanceExcludingStartEndLink(route, network);
 
 							Link startLink = network.getLinks().get(route.getStartLinkId());
 							sum += startLink.getLength() * startEndFactor;

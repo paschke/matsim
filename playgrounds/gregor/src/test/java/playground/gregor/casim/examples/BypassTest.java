@@ -19,24 +19,17 @@
 
 package playground.gregor.casim.examples;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import com.google.inject.Provider;
 import org.jfree.util.Log;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.NetworkFactory;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.Population;
-import org.matsim.api.core.v01.population.PopulationFactory;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.ControlerConfigGroup;
@@ -44,23 +37,22 @@ import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.mobsim.framework.Mobsim;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility;
-import org.matsim.core.router.util.AStarLandmarksFactory;
-import org.matsim.core.router.util.DijkstraFactory;
-import org.matsim.core.router.util.FastAStarLandmarksFactory;
-import org.matsim.core.router.util.FastDijkstraFactory;
-import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
+import org.matsim.core.router.util.*;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.testcases.MatsimTestCase;
 import org.matsim.utils.eventsfilecomparison.EventsFileComparator;
-
-import playground.gregor.casim.run.CATripRouterFactory;
+import playground.gregor.TransportMode;
+import playground.gregor.casim.run.CARoutingModule;
 import playground.gregor.casim.simulation.CAMobsimFactory;
 import playground.gregor.casim.simulation.physics.AbstractCANetwork;
 import playground.gregor.casim.simulation.physics.CASingleLaneNetworkFactory;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class BypassTest extends MatsimTestCase {
 
@@ -132,10 +124,15 @@ public class BypassTest extends MatsimTestCase {
 
 		final Controler controller = new Controler(sc);
 
-		LeastCostPathCalculatorFactory cost = createDefaultLeastCostPathCalculatorFactory(sc);
-		CATripRouterFactory tripRouter = new CATripRouterFactory(sc, cost);
+		controller.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 
-		controller.setTripRouterFactory(tripRouter);
+
+		controller.addOverridingModule(new AbstractModule() {
+			@Override
+			public void install() {
+				addRoutingModuleBinding(TransportMode.walkca).toProvider(CARoutingModule.class);
+			}
+		});
 
 		final CAMobsimFactory factory = new CAMobsimFactory();
 		factory.setCANetworkFactory(new CASingleLaneNetworkFactory());
@@ -166,36 +163,6 @@ public class BypassTest extends MatsimTestCase {
 		String test = getOutputDirectory() + "/ITERS/it.20/20.events.xml.gz";
 		int res = EventsFileComparator.compare(ref, test);
 		assertEquals("Equal events files", 0, res);
-	}
-
-	private LeastCostPathCalculatorFactory createDefaultLeastCostPathCalculatorFactory(
-			Scenario scenario) {
-		Config config = scenario.getConfig();
-		if (config.controler().getRoutingAlgorithmType()
-				.equals(ControlerConfigGroup.RoutingAlgorithmType.Dijkstra)) {
-			return new DijkstraFactory();
-		} else if (config
-				.controler()
-				.getRoutingAlgorithmType()
-				.equals(ControlerConfigGroup.RoutingAlgorithmType.AStarLandmarks)) {
-			return new AStarLandmarksFactory(
-					scenario.getNetwork(),
-					new FreespeedTravelTimeAndDisutility(config.planCalcScore()),
-					config.global().getNumberOfThreads());
-		} else if (config.controler().getRoutingAlgorithmType()
-				.equals(ControlerConfigGroup.RoutingAlgorithmType.FastDijkstra)) {
-			return new FastDijkstraFactory();
-		} else if (config
-				.controler()
-				.getRoutingAlgorithmType()
-				.equals(ControlerConfigGroup.RoutingAlgorithmType.FastAStarLandmarks)) {
-			return new FastAStarLandmarksFactory(
-					scenario.getNetwork(),
-					new FreespeedTravelTimeAndDisutility(config.planCalcScore()));
-		} else {
-			throw new IllegalStateException(
-					"Enumeration Type RoutingAlgorithmType was extended without adaptation of Controler!");
-		}
 	}
 
 	private void createPopulation(Scenario sc) {
@@ -241,20 +208,16 @@ public class BypassTest extends MatsimTestCase {
 	private void createNetwork(Scenario sc) {
 		Network net = sc.getNetwork();
 		NetworkFactory fac = net.getFactory();
-		Node n0 = fac.createNode(Id.create("n0", Node.class), new CoordImpl(
-				-40, 0));
-		Node n1 = fac.createNode(Id.create("n1", Node.class), new CoordImpl(
-				-10, 0));
-		Node n2 = fac.createNode(Id.create("n2", Node.class), new CoordImpl(-5,
-				0));
-		Node n2b = fac.createNode(Id.create("n2b", Node.class), new CoordImpl(
-				0, 20));
-		Node n3 = fac.createNode(Id.create("n3", Node.class), new CoordImpl(5,
-				0));
-		Node n4 = fac.createNode(Id.create("n4", Node.class), new CoordImpl(10,
-				0));
-		Node n5 = fac.createNode(Id.create("n5", Node.class), new CoordImpl(40,
-				0));
+		final double x2 = -40;
+		Node n0 = fac.createNode(Id.create("n0", Node.class), new Coord(x2, (double) 0));
+		final double x1 = -10;
+		Node n1 = fac.createNode(Id.create("n1", Node.class), new Coord(x1, (double) 0));
+		final double x = -5;
+		Node n2 = fac.createNode(Id.create("n2", Node.class), new Coord(x, (double) 0));
+		Node n2b = fac.createNode(Id.create("n2b", Node.class), new Coord((double) 0, (double) 20));
+		Node n3 = fac.createNode(Id.create("n3", Node.class), new Coord((double) 5, (double) 0));
+		Node n4 = fac.createNode(Id.create("n4", Node.class), new Coord((double) 10, (double) 0));
+		Node n5 = fac.createNode(Id.create("n5", Node.class), new Coord((double) 40, (double) 0));
 		net.addNode(n0);
 		net.addNode(n1);
 		net.addNode(n2);
@@ -366,6 +329,46 @@ public class BypassTest extends MatsimTestCase {
 		((NetworkImpl) net).setEffectiveCellSize(.26);
 		((NetworkImpl) net).setEffectiveLaneWidth(.71);
 
+	}
+
+	private LeastCostPathCalculatorFactory createDefaultLeastCostPathCalculatorFactory(
+			Scenario scenario) {
+		Config config = scenario.getConfig();
+		if (config.controler().getRoutingAlgorithmType()
+				.equals(ControlerConfigGroup.RoutingAlgorithmType.Dijkstra)) {
+			return new DijkstraFactory();
+		}
+		else {
+			if (config
+					.controler()
+					.getRoutingAlgorithmType()
+					.equals(ControlerConfigGroup.RoutingAlgorithmType.AStarLandmarks)) {
+				return new AStarLandmarksFactory(
+						scenario.getNetwork(),
+						new FreespeedTravelTimeAndDisutility(config.planCalcScore()),
+						config.global().getNumberOfThreads());
+			}
+			else {
+				if (config.controler().getRoutingAlgorithmType()
+						.equals(ControlerConfigGroup.RoutingAlgorithmType.FastDijkstra)) {
+					return new FastDijkstraFactory();
+				}
+				else {
+					if (config
+							.controler()
+							.getRoutingAlgorithmType()
+							.equals(ControlerConfigGroup.RoutingAlgorithmType.FastAStarLandmarks)) {
+						return new FastAStarLandmarksFactory(
+								scenario.getNetwork(),
+								new FreespeedTravelTimeAndDisutility(config.planCalcScore()));
+					}
+					else {
+						throw new IllegalStateException(
+								"Enumeration Type RoutingAlgorithmType was extended without adaptation of Controler!");
+					}
+				}
+			}
+		}
 	}
 
 }

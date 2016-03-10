@@ -19,6 +19,20 @@
  * *********************************************************************** */
 package playground.thibautd.socnetsimusages.cliques.herbie.scoring;
 
+import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.contrib.locationchoice.facilityload.FacilityPenalty;
+import org.matsim.contrib.locationchoice.facilityload.ScoringPenalty;
+import org.matsim.contrib.socnetsim.jointtrips.population.JointActingTypes;
+import org.matsim.core.config.Config;
+import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
+import org.matsim.facilities.ActivityFacilities;
+import org.matsim.facilities.ActivityOption;
+import org.matsim.facilities.OpeningTime;
+import org.matsim.facilities.OpeningTimeImpl;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -28,23 +42,6 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
-
-import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.contrib.locationchoice.facilityload.FacilityPenalty;
-import org.matsim.contrib.locationchoice.facilityload.ScoringPenalty;
-import org.matsim.core.config.Config;
-import org.matsim.core.population.PersonImpl;
-import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
-import org.matsim.facilities.ActivityFacilities;
-import org.matsim.facilities.ActivityOption;
-import org.matsim.facilities.OpeningTime;
-import org.matsim.facilities.OpeningTimeImpl;
-import org.matsim.facilities.OpeningTime.DayType;
-
-import org.matsim.contrib.socnetsim.jointtrips.population.JointActingTypes;
 
 /**
  * @author thibautd
@@ -64,10 +61,9 @@ org.matsim.core.scoring.functions.CharyparNagelActivityScoring {
 	private final CharyparNagelScoringParameters params;
 	private final Plan plan;
 
-	private static final DayType DEFAULT_DAY = DayType.wed;
 	private static final SortedSet<OpeningTime> DEFAULT_OPENING_TIME = new TreeSet<OpeningTime>();
 	static {
-		OpeningTime defaultOpeningTime = new OpeningTimeImpl(DEFAULT_DAY, Double.MIN_VALUE, Double.MAX_VALUE);
+		OpeningTime defaultOpeningTime = new OpeningTimeImpl(Double.MIN_VALUE, Double.MAX_VALUE);
 		DEFAULT_OPENING_TIME.add(defaultOpeningTime);
 	}
 
@@ -248,7 +244,8 @@ org.matsim.core.scoring.functions.CharyparNagelActivityScoring {
 
 	protected double getPerformanceScore(String actType, double duration) {
 
-		double typicalDuration = ((PersonImpl) this.plan.getPerson()).getDesires().getActivityDuration(actType);
+		if ( true ) throw new UnsupportedOperationException();
+		double typicalDuration = 0;//((PersonImpl) this.plan.getPerson()).getDesires().getActivityDuration(actType);
 
 		// initialize zero utility durations here for better code readability, because we only need them here
 		double zeroUtilityDuration;

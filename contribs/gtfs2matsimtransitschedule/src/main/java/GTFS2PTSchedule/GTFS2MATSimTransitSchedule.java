@@ -57,7 +57,6 @@ import org.matsim.core.network.NodeImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
@@ -169,7 +168,7 @@ public class GTFS2MATSimTransitSchedule {
 			String line = reader.readLine();
 			while(line!=null) {
 				Id<Node> id = Id.create(line, Node.class);
-				network.addNode(network.getFactory().createNode(id, new CoordImpl(Double.parseDouble(reader.readLine()), Double.parseDouble(reader.readLine()))));
+				network.addNode(network.getFactory().createNode(id, new Coord(Double.parseDouble(reader.readLine()), Double.parseDouble(reader.readLine()))));
 				line = reader.readLine();
 			}
 			reader.close();
@@ -183,7 +182,7 @@ public class GTFS2MATSimTransitSchedule {
 			while(line!=null) {
 				Node fromNode = network.getNodes().get(Id.create(reader.readLine(), Node.class));
 				Node toNode = network.getNodes().get(Id.create(reader.readLine(), Node.class));
-				double length = CoordUtils.calcDistance(coordinateTransformation.transform(fromNode.getCoord()),coordinateTransformation.transform(toNode.getCoord()));
+				double length = CoordUtils.calcEuclideanDistance(coordinateTransformation.transform(fromNode.getCoord()),coordinateTransformation.transform(toNode.getCoord()));
 				Link link = linkFactory.createLink(Id.create(line, Link.class), fromNode, toNode, network, length, DEFAULT_FREE_SPEED, DEFAULT_CAPACITY, 1);
 				Set<String> modes = new HashSet<String>();
 				modes.add("car");
@@ -297,7 +296,7 @@ public class GTFS2MATSimTransitSchedule {
 	 * @param indices
 	 */
 	public void processStop(String[] parts, int[] indices, int publicSystemNumber) {
-		stops[publicSystemNumber].put(parts[indices[0]],new Stop(new CoordImpl(Double.parseDouble(parts[indices[1]]),Double.parseDouble(parts[indices[2]])),parts[indices[3]],true));
+		stops[publicSystemNumber].put(parts[indices[0]],new Stop(new Coord(Double.parseDouble(parts[indices[1]]), Double.parseDouble(parts[indices[2]])),parts[indices[3]],true));
 	}
 	public void processCalendar(String[] parts, int[] indices, int publicSystemNumber) {
 		boolean[] days = new boolean[7];
@@ -318,7 +317,7 @@ public class GTFS2MATSimTransitSchedule {
 			actual = new Shape(parts[indices[0]]);
 			shapes[publicSystemNumber].put(parts[indices[0]], actual);
 		}
-		actual.addPoint(new CoordImpl(Double.parseDouble(parts[indices[1]]), Double.parseDouble(parts[indices[2]])),Integer.parseInt(parts[indices[3]]));
+		actual.addPoint(new Coord(Double.parseDouble(parts[indices[1]]), Double.parseDouble(parts[indices[2]])),Integer.parseInt(parts[indices[3]]));
 	}
 	public void processRoute(String[] parts, int[] indices, int publicSystemNumber) {
 		routes[publicSystemNumber].put(parts[indices[0]], new Route(parts[indices[1]], RouteTypes.values()[Integer.parseInt(parts[indices[2]])]));
@@ -378,7 +377,7 @@ public class GTFS2MATSimTransitSchedule {
 			splitStopLinks(publicSystemNumber);
 			new NetworkWriter(network).write(RoutesPathsGenerator.NEW_NETWORK_FOLDER+"nTemp.xml");
 			Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-			(new MatsimNetworkReader(scenario)).readFile(RoutesPathsGenerator.NEW_NETWORK_FOLDER+"nTemp.xml");
+			(new MatsimNetworkReader(scenario.getNetwork())).readFile(RoutesPathsGenerator.NEW_NETWORK_FOLDER+"nTemp.xml");
 			network = scenario.getNetwork();
 		}
 	}
@@ -517,7 +516,7 @@ public class GTFS2MATSimTransitSchedule {
 	 */
 	public static void main(String[] args) throws Exception {
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		(new MatsimNetworkReader(scenario)).readFile(args[1]);
+		(new MatsimNetworkReader(scenario.getNetwork())).readFile(args[1]);
 		Network network = scenario.getNetwork();
 		//Convert lengths of the link from km to m and speeds from km/h to m/s
 		for(Link link:network.getLinks().values()) {

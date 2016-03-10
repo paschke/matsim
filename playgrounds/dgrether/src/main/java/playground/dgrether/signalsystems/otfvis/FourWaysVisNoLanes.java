@@ -26,8 +26,7 @@ import org.matsim.core.config.groups.QSimConfigGroup.SnapshotStyle;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.mobsim.qsim.QSimUtils;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.vis.otfvis.OTFClientLive;
 import org.matsim.vis.otfvis.OTFVisConfigGroup;
@@ -49,7 +48,7 @@ public class FourWaysVisNoLanes {
     String popFile = TESTINPUTDIR + "plans.xml.gz";
     
     
-    ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+    MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
     scenario.getConfig().network().setInputFile(netFile);
     scenario.getConfig().plans().setInputFile(popFile);
     scenario.getConfig().qsim().setSnapshotStyle( SnapshotStyle.queue ) ;;
@@ -61,11 +60,10 @@ public class FourWaysVisNoLanes {
 		scenario.getConfig().qsim().setNodeOffset(30.0);
     
     
-    ScenarioLoaderImpl loader = new ScenarioLoaderImpl(scenario);
-    loader.loadScenario();
+		ScenarioUtils.loadScenario(scenario);
     
     EventsManager events = EventsUtils.createEventsManager();
-        QSim otfVisQSim = (QSim) QSimUtils.createDefaultQSim(scenario, events);
+        QSim otfVisQSim = QSimUtils.createDefaultQSim(scenario, events);
     OnTheFlyServer server = OTFVis.startServerAndRegisterWithQSim(scenario.getConfig(), scenario, events, otfVisQSim);
     OTFClientLive.run(scenario.getConfig(), server);
     otfVisQSim.run();

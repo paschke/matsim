@@ -19,14 +19,11 @@
  * *********************************************************************** */
 package playground.jbischoff.taxi.usability;
 
-import org.matsim.contrib.dvrp.MatsimVrpContext;
-import org.matsim.contrib.dvrp.MatsimVrpContextImpl;
-import org.matsim.contrib.dvrp.data.VrpData;
-import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.controler.Controler;
-import org.matsim.core.router.TripRouterFactory;
+import org.matsim.contrib.dvrp.*;
+import org.matsim.core.controler.*;
 
-import playground.michalm.taxi.run.TaxiLauncherUtils;
+import playground.michalm.taxi.data.ETaxiData;
+import playground.michalm.taxi.data.file.*;
 
 /**
  * @author jbischoff
@@ -48,12 +45,21 @@ public class ConfigBasedTaxiLaunchUtils {
 		final TaxiConfigGroup tcg = (TaxiConfigGroup) controler.getScenario().getConfig().getModule("taxiConfig");
       	context = new MatsimVrpContextImpl();
 		context.setScenario(controler.getScenario());
-		VrpData vrpData = TaxiLauncherUtils.initTaxiData(context.getScenario(), tcg.getVehiclesFile(), tcg.getRanksFile());
+        ETaxiData vrpData = new ETaxiData();
+        new ETaxiReader(context.getScenario(), vrpData).parse(tcg.getVehiclesFile());
+        new TaxiRankReader(context.getScenario(), vrpData).parse(tcg.getRanksFile());
 		context.setVrpData(vrpData);	 
-    
-       
-        TripRouterFactory factory = new TaxiTripRouterFactory(controler); 
-		controler.setTripRouterFactory(factory);
+		TaxiStatsControlerListener tscl = new TaxiStatsControlerListener(context,tcg);
+		controler.addControlerListener(tscl);
+		controler.addOverridingModule(new AbstractModule() {
+			
+						
+			@Override
+			public void install() {
+				addRoutingModuleBinding("taxi").toInstance(new TaxiserviceRoutingModule(controler));
+				
+			}
+		});
 		controler.addOverridingModule(new AbstractModule() {
 			
 			@Override

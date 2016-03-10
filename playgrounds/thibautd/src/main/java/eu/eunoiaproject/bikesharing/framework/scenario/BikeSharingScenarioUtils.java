@@ -19,9 +19,9 @@
  * *********************************************************************** */
 package eu.eunoiaproject.bikesharing.framework.scenario;
 
-import java.util.Arrays;
-import java.util.Map;
-
+import eu.eunoiaproject.bikesharing.framework.BikeSharingConstants;
+import eu.eunoiaproject.bikesharing.framework.router.BikeSharingTripRouterModule;
+import eu.eunoiaproject.bikesharing.framework.router.TransitMultiModalAccessRoutingModule.RoutingData;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -29,32 +29,29 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.contrib.multimodal.config.MultiModalConfigGroup;
 import org.matsim.contrib.multimodal.router.util.LinkSlopesReader;
 import org.matsim.contrib.multimodal.router.util.MultiModalTravelTimeFactory;
+import org.matsim.contrib.socnetsim.utils.CollectionUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ModeParams;
+import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.population.routes.RouteFactory;
-import org.matsim.core.router.TripRouterFactory;
-import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
 import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility;
-import org.matsim.core.router.util.TravelDisutility;
-import org.matsim.core.router.util.TravelTime;
+import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
-
-import playground.thibautd.router.multimodal.AccessEgressMultimodalTripRouterFactory;
+import playground.thibautd.router.multimodal.AccessEgressMultimodalTripRouterModule;
+import playground.thibautd.router.multimodal.AccessEgressNetworkBasedTeleportationRoute;
 import playground.thibautd.router.multimodal.AccessEgressNetworkBasedTeleportationRouteFactory;
 import playground.thibautd.router.multimodal.LinkSlopeScorer;
 import playground.thibautd.router.multimodal.SlopeAwareTravelDisutilityFactory;
-import org.matsim.contrib.socnetsim.utils.CollectionUtils;
-import eu.eunoiaproject.bikesharing.framework.BikeSharingConstants;
-import eu.eunoiaproject.bikesharing.framework.router.BikeSharingTripRouterFactory;
-import eu.eunoiaproject.bikesharing.framework.router.TransitMultiModalAccessRoutingModule.RoutingData;
+
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  * Provides helper methods to load a bike sharing scenario.
@@ -143,34 +140,31 @@ public class BikeSharingScenarioUtils {
 
 		if ( multimodalConfigGroup != null ) {
 			final RouteFactory factory = new AccessEgressNetworkBasedTeleportationRouteFactory( );
-			for (String mode : org.matsim.core.utils.collections.CollectionUtils.stringToArray(multimodalConfigGroup.getSimulatedModes())) {
-				((PopulationFactoryImpl) scenario.getPopulation().getFactory()).setRouteFactory(mode, factory);
-			}
+			((PopulationFactoryImpl) scenario.getPopulation().getFactory()).setRouteFactory(AccessEgressNetworkBasedTeleportationRoute.class, factory);
 		}
 
-		((PopulationFactoryImpl) scenario.getPopulation().getFactory()).setRouteFactory( BikeSharingConstants.MODE , new BikeSharingRouteFactory() );
+		((PopulationFactoryImpl) scenario.getPopulation().getFactory()).setRouteFactory( BikeSharingRoute.class , new BikeSharingRouteFactory() );
 	}
 
-	public static TripRouterFactory createTripRouterFactoryAndConfigureRouteFactories(
-			final TravelDisutilityFactory disutilityFactory,
+	public static AbstractModule createTripRouterFactoryAndConfigureRouteFactories(
+			//final TravelDisutilityFactory disutilityFactory,
 			final Scenario scenario,
 			final LinkSlopeScorer scorer,
 			final RoutingData routingData,
 			final boolean forceScheduleRouting ) {
+		// Pretty ugly after refatoring to injection. could be all put into modules.
 		final MultiModalConfigGroup multimodalConfigGroup = (MultiModalConfigGroup)
 			scenario.getConfig().getModule(
 					MultiModalConfigGroup.GROUP_NAME );
 
 		if ( !multimodalConfigGroup.isMultiModalSimulationEnabled() ) {
-			return new BikeSharingTripRouterFactory( scenario , scorer );
+			return new BikeSharingTripRouterModule( scenario , scorer );
 		}
 
 		// PrepareMultiModalScenario.run( scenario );
 
-		final RouteFactory factory = new AccessEgressNetworkBasedTeleportationRouteFactory( );
-        for (String mode : org.matsim.core.utils.collections.CollectionUtils.stringToArray(multimodalConfigGroup.getSimulatedModes())) {
-			((PopulationFactoryImpl) scenario.getPopulation().getFactory()).setRouteFactory(mode, factory);
-		}
+		final RouteFactory factory = new AccessEgressNetworkBasedTeleportationRouteFactory();
+		((PopulationFactoryImpl) scenario.getPopulation().getFactory()).setRouteFactory(AccessEgressNetworkBasedTeleportationRoute.class, factory);
 
 		final Map<Id<Link>, Double> linkSlopes = (Map<Id<Link>, Double>)
 			scenario.getScenarioElement( LINK_SLOPES_ELEMENT_NAME );
@@ -179,58 +173,55 @@ public class BikeSharingScenarioUtils {
 					scenario.getConfig(),
 					linkSlopes );
 
-		final BikeSharingTripRouterFactory bsFact =
+		final BikeSharingTripRouterModule bikeSharingTripRouterModule =
 				routingData == null ?
-					new BikeSharingTripRouterFactory(
+					new BikeSharingTripRouterModule(
 						scenario,
 						scorer ) :
-					new BikeSharingTripRouterFactory(
+					new BikeSharingTripRouterModule(
 						routingData,
 						scenario,
 						scorer );
-		bsFact.setRoutePtUsingSchedule( forceScheduleRouting );
-	
-		final AccessEgressMultimodalTripRouterFactory fact =
-			new AccessEgressMultimodalTripRouterFactory(
+		bikeSharingTripRouterModule.setRoutePtUsingSchedule(forceScheduleRouting);
+
+
+		final AccessEgressMultimodalTripRouterModule accessEgressMultimodalTripRouterModule =
+			new AccessEgressMultimodalTripRouterModule(
 				scenario,
-				multiModalTravelTimeFactory.createTravelTimes(),
-				disutilityFactory,
-				bsFact );
+				multiModalTravelTimeFactory.createTravelTimes() );
 
 		if ( scorer != null ) {
-			fact.setDisutilityFactoryForMode(
+			accessEgressMultimodalTripRouterModule.setDisutilityFactoryForMode(
 					TransportMode.bike,
 					createSlopeAwareDisutilityFactory(
-						scorer,
-						TransportMode.bike ) );
+							scorer,
+							TransportMode.bike,
+							scenario.getConfig().planCalcScore()));
 
-			fact.setDisutilityFactoryForMode(
+			accessEgressMultimodalTripRouterModule.setDisutilityFactoryForMode(
 					BikeSharingConstants.MODE,
 					createSlopeAwareDisutilityFactory(
-						scorer,
-						BikeSharingConstants.MODE ) );
+							scorer,
+							BikeSharingConstants.MODE,
+							scenario.getConfig().planCalcScore()));
 		}
 
-		return fact;
+		return new AbstractModule() {
+			@Override
+			public void install() {
+				install( bikeSharingTripRouterModule );
+				install( accessEgressMultimodalTripRouterModule );
+			}
+		};
 	}
 
 	private static TravelDisutilityFactory createSlopeAwareDisutilityFactory(
 			final LinkSlopeScorer scorer,
-			final String mode ) {
+			final String mode, 
+			final PlanCalcScoreConfigGroup cnScoringGroup ) {
 		return new SlopeAwareTravelDisutilityFactory(
 				scorer,
-				new TravelDisutilityFactory() {
-					@Override
-					public TravelDisutility createTravelDisutility(
-							final TravelTime timeCalculator,
-							final PlanCalcScoreConfigGroup cnScoringGroup ) {
-						final ModeParams pars = cnScoringGroup.getModes().get( mode );
-						return new RandomizingTimeDistanceTravelDisutility(
-									timeCalculator,
-									(-pars.getMarginalUtilityOfTraveling() / 3600.) + (cnScoringGroup.getPerforming_utils_hr() / 3600.0),
-									-pars.getMarginalUtilityOfDistance()  );
-					}
-				} );
+				new RandomizingTimeDistanceTravelDisutility.Builder( mode, cnScoringGroup ) ) ;
 	}
 }
 

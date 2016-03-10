@@ -22,8 +22,10 @@ package org.matsim.core.controler.corelisteners;
 
 import org.apache.log4j.Logger;
 import org.matsim.analysis.IterationStopWatch;
-import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.PopulationWriter;
+import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.ControlerConfigGroup;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.BeforeMobsimEvent;
@@ -31,6 +33,8 @@ import org.matsim.core.controler.listener.BeforeMobsimListener;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 
 /**
  * {@link org.matsim.core.controler.listener.ControlerListener} that dumps the
@@ -45,39 +49,42 @@ import com.google.inject.Singleton;
 final class PlansDumpingImpl implements PlansDumping, BeforeMobsimListener {
 
 	static final private Logger log = Logger.getLogger(PlansDumpingImpl.class);
-	private Scenario sc ;
-	private int writePlansInterval, firstIteration ;
-	private IterationStopWatch stopwatch ;
-	private OutputDirectoryHierarchy controlerIO;
 
-	boolean calledViaOldConstructor = false ;
+	@Inject private Config config;
+	@Inject private Network network;
+	@Inject private Population population;
+	@Inject private IterationStopWatch stopwatch;
+	@Inject private OutputDirectoryHierarchy controlerIO;
+	private int writePlansInterval, firstIteration;
 
 	@Inject
-	PlansDumpingImpl(
-			final Scenario sc,
-			final IterationStopWatch stopwatch,
-			final OutputDirectoryHierarchy controlerIO ) {
-		this.sc = sc ;
-		this.firstIteration = sc.getConfig().controler().getFirstIteration();
-		this.writePlansInterval = sc.getConfig().controler().getWritePlansInterval();
-		this.stopwatch = stopwatch ;
-		this.controlerIO = controlerIO ;
+	PlansDumpingImpl(ControlerConfigGroup config) {
+		this.firstIteration = config.getFirstIteration();
+		this.writePlansInterval = config.getWritePlansInterval();
 	}
 
 	@Override
 	public void notifyBeforeMobsim(final BeforeMobsimEvent event) {
-		if ( calledViaOldConstructor ) {
-			this.sc = event.getControler().getScenario() ;
-			this.firstIteration = event.getControler().getConfig().controler().getFirstIteration() ;
-			this.writePlansInterval = sc.getConfig().controler().getWritePlansInterval() ;
-			this.stopwatch = event.getControler().stopwatch ;
-			this.controlerIO = event.getControler().getControlerIO() ;
-		}
 		if ((writePlansInterval > 0) && ((event.getIteration() % writePlansInterval== 0)
 				|| (event.getIteration() == (firstIteration + 1)))) {
 			stopwatch.beginOperation("dump all plans");
 			log.info("dumping plans...");
-			new PopulationWriter(sc.getPopulation(), sc.getNetwork()).write(controlerIO.getIterationFilename(event.getIteration(), "plans.xml.gz"));
+			final String inputCRS = config.plans().getInputCRS();
+			final String internalCRS = config.global().getCoordinateSystem();
+
+			if ( inputCRS == null ) {
+				new PopulationWriter(population, network).write(controlerIO.getIterationFilename(event.getIteration(), "plans.xml.gz"));
+			}
+			else {
+				log.info( "re-projecting population from "+internalCRS+" to "+inputCRS+" for export" );
+
+				final CoordinateTransformation transformation =
+						TransformationFactory.getCoordinateTransformation(
+								internalCRS,
+								inputCRS );
+
+				new PopulationWriter(transformation, population, network).write(controlerIO.getIterationFilename(event.getIteration(), "plans.xml.gz"));
+			}
 			log.info("finished plans dump.");
 			stopwatch.endOperation("dump all plans");
 		}

@@ -27,16 +27,16 @@ import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.StartupEvent;
 import org.matsim.core.controler.listener.StartupListener;
-import org.matsim.core.router.RoutingContext;
-import org.matsim.core.router.RoutingContextImpl;
+import org.matsim.core.router.TripRouter;
 import org.matsim.core.router.costcalculators.OnlyTimeDependentTravelDisutilityFactory;
-import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.util.DijkstraFactory;
-import org.matsim.core.router.util.TravelDisutility;
-import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scoring.functions.OnlyTravelTimeDependentScoringFunctionFactory;
 import org.matsim.withinday.controller.WithinDayControlerListener;
+import org.matsim.withinday.mobsim.WithinDayEngine;
 import org.matsim.withinday.replanning.identifiers.ActivityEndIdentifierFactory;
+import org.matsim.withinday.replanning.identifiers.tools.ActivityReplanningMap;
+
+import javax.inject.Inject;
+import javax.inject.Provider;
 
 /**
  * This class should give an example what is needed to run
@@ -50,6 +50,9 @@ import org.matsim.withinday.replanning.identifiers.ActivityEndIdentifierFactory;
 final class RunWithinDayExample implements StartupListener {
 
 	private Scenario scenario;
+	private Provider<TripRouter> tripRouterProvider;
+	private WithinDayEngine withinDayEngine;
+	private ActivityReplanningMap activityReplanningMap;
 	private WithinDayControlerListener withinDayControlerListener;
 	
 
@@ -65,50 +68,29 @@ final class RunWithinDayExample implements StartupListener {
 			System.out.println();
 		} else {
 			final Controler controler = new Controler(args);
-			controler.addControlerListener(new RunWithinDayExample(controler));
-
-			controler.getConfig().controler().setOverwriteFileSetting(
-					true ?
-							OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-							OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
-
+			controler.addOverridingModule(new AbstractModule() {
+				@Override
+				public void install() {
+					addControlerListenerBinding().to(RunWithinDayExample.class);
+					bindCarTravelDisutilityFactory().toInstance(new OnlyTimeDependentTravelDisutilityFactory());
+				}
+			});
+			// Use a Scoring Function that only scores the travel times.  Result will be that the router (see below) routes only based on travel times
+			controler.setScoringFunctionFactory(new OnlyTravelTimeDependentScoringFunctionFactory());
+			controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 			controler.run();
 		}
 		System.exit(0);
 	}
-	
-	public RunWithinDayExample(Controler controler) {
-		
-		this.scenario = controler.getScenario();
+
+	@Inject
+	public RunWithinDayExample(Scenario scenario, Provider<TripRouter> tripRouterProvider, WithinDayEngine withinDayEngine, ActivityReplanningMap activityReplanningMap) {
+		this.scenario = scenario;
+		this.tripRouterProvider = tripRouterProvider;
+		this.withinDayEngine = withinDayEngine;
+		this.activityReplanningMap = activityReplanningMap;
 		this.withinDayControlerListener = new WithinDayControlerListener();
-		
 		this.scenario.getConfig().qsim().setSnapshotStyle(QSimConfigGroup.SnapshotStyle.queue);
-
-		// only necessary for visualization, which does, however, not work that well (replanned plans cannot be visualized):
-//		this.withinDayControlerListener.setOriginalMobsimFactory( new MobsimFactory() {
-//			@Override
-//			public Mobsim createMobsim(Scenario sc, EventsManager eventsManager) {
-//				QSim qsim = (QSim) new QSimFactory().createMobsim(sc, eventsManager) ;
-//
-//				OnTheFlyServer server = OTFVis.startServerAndRegisterWithQSim( sc.getConfig(), sc, eventsManager, qsim ) ;
-//				OTFClientLive.run(sc.getConfig(), server);
-//				
-//				return qsim ;
-//			}
-//		} );
-
-		// Use a Scoring Function that only scores the travel times.  Result will be that the router (see below) routes only based on travel times
-		controler.setScoringFunctionFactory(new OnlyTravelTimeDependentScoringFunctionFactory());
-		controler.addOverridingModule(new AbstractModule() {
-			@Override
-			public void install() {
-				bindTravelDisutilityFactory().toInstance(new OnlyTimeDependentTravelDisutilityFactory());
-			}
-		});
-
-		// workaround
-		// yyyy	 this works around what?
-		this.withinDayControlerListener.setLeastCostPathCalculatorFactory(new DijkstraFactory());
 	}
 
 	@Override
@@ -121,21 +103,13 @@ final class RunWithinDayExample implements StartupListener {
 	}
 	
 	private void initReplanners() {
-		// plug the "routing context" together (needed later):
-		final TravelTime travelTimeCollector = this.withinDayControlerListener.getTravelTimeCollector();
-		final TravelDisutilityFactory travelDisutilityFactory = this.withinDayControlerListener.getTravelDisutilityFactory();
-		final TravelDisutility travelDisutility = travelDisutilityFactory.createTravelDisutility(travelTimeCollector, this.scenario.getConfig().planCalcScore());
-		RoutingContext routingContext = new RoutingContextImpl(travelDisutility, travelTimeCollector);
-		
 		// this defines which agents are replanned:
-		ActivityEndIdentifierFactory activityEndIdentifierFactory = new ActivityEndIdentifierFactory(this.withinDayControlerListener.getActivityReplanningMap());
+		ActivityEndIdentifierFactory activityEndIdentifierFactory = new ActivityEndIdentifierFactory(this.activityReplanningMap);
 
 		// this defines the agent replanning:
-		NextActivityAppendingReplannerFactory duringActivityReplannerFactory =
-				new NextActivityAppendingReplannerFactory(this.scenario, this.withinDayControlerListener.getWithinDayEngine(),
-				this.withinDayControlerListener.getWithinDayTripRouterFactory(), routingContext);
+		NextActivityAppendingReplannerFactory duringActivityReplannerFactory = new NextActivityAppendingReplannerFactory(this.scenario, this.withinDayEngine, this.tripRouterProvider);
 		duringActivityReplannerFactory.addIdentifier(activityEndIdentifierFactory.createIdentifier());
-		this.withinDayControlerListener.getWithinDayEngine().addDuringActivityReplannerFactory(duringActivityReplannerFactory);
+		this.withinDayEngine.addDuringActivityReplannerFactory(duringActivityReplannerFactory);
 	}
 
 }

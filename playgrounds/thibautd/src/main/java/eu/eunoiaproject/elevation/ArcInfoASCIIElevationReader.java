@@ -19,15 +19,14 @@
  * *********************************************************************** */
 package eu.eunoiaproject.elevation;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-
 import org.apache.log4j.Logger;
-
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.core.utils.misc.Counter;
+
+import java.io.BufferedReader;
+import java.io.IOException;
 
 /**
  * Reads elevation data in the ArcInfo ASCII exchange format.
@@ -115,7 +114,7 @@ public class ArcInfoASCIIElevationReader {
 		return new GridElevationProvider(
 				nCols,
 				nRows,
-				new CoordImpl( llx , lly ),
+				new Coord(llx, lly),
 				cellSize );
 	}
 

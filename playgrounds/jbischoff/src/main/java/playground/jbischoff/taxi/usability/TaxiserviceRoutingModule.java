@@ -20,19 +20,13 @@
 
 package playground.jbischoff.taxi.usability;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.core.controler.Controler;
-import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PopulationFactoryImpl;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
-import org.matsim.core.router.EmptyStageActivityTypes;
-import org.matsim.core.router.RoutingModule;
-import org.matsim.core.router.StageActivityTypes;
+import org.matsim.api.core.v01.population.*;
+import org.matsim.core.controler.MatsimServices;
+import org.matsim.core.population.*;
+import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.router.*;
 import org.matsim.facilities.Facility;
 
 /**
@@ -41,12 +35,13 @@ import org.matsim.facilities.Facility;
  */
 public class TaxiserviceRoutingModule implements RoutingModule {
 
-	private final Controler controler;
-	public TaxiserviceRoutingModule (Controler controler) {
+	private final MatsimServices controler;
+	public TaxiserviceRoutingModule (MatsimServices controler) {
 		
 		this.controler = controler;
 	}
 	
+	@SuppressWarnings("rawtypes")
 	@Override
 	public List<? extends PlanElement> calcRoute(Facility fromFacility,
 			Facility toFacility, double departureTime, Person person) {
@@ -57,8 +52,8 @@ public class TaxiserviceRoutingModule implements RoutingModule {
 		
 		Leg taxiLeg = new LegImpl("taxi");
 		taxiLeg.setTravelTime( travelTime );
-		LinkNetworkRouteImpl route = 
-				(LinkNetworkRouteImpl) ((PopulationFactoryImpl)controler.getScenario().getPopulation().getFactory()).getModeRouteFactory().createRoute("car", fromFacility.getLinkId(), toFacility.getLinkId());
+		NetworkRoute route = 
+				(NetworkRoute) ((PopulationFactoryImpl)controler.getScenario().getPopulation().getFactory()).getModeRouteFactory().createRoute(NetworkRoute.class, fromFacility.getLinkId(), toFacility.getLinkId());
 		route.setTravelTime( travelTime);
 		
 		taxiLeg.setRoute(route);

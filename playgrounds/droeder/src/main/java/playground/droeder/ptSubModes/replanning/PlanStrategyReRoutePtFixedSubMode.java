@@ -32,12 +32,15 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.replanning.PlanStrategyModule;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.replanning.PlanStrategy;
 import org.matsim.core.replanning.ReplanningContext;
 import org.matsim.core.replanning.selectors.GenericPlanSelector;
 import org.matsim.core.replanning.selectors.RandomPlanSelector;
 import org.matsim.core.replanning.selectors.RandomUnscoredPlanSelector;
+import org.matsim.core.router.TripRouter;
+
+import javax.inject.Inject;
+import javax.inject.Provider;
 
 
 /**
@@ -54,7 +57,8 @@ public class PlanStrategyReRoutePtFixedSubMode implements PlanStrategy {
 	private Scenario sc;
 	private Map<Id, List<String>> originalModes;
 
-	
+	private Provider<TripRouter> tripRouterProvider;
+
 	public static final String ORIGINALLEGMODES = "originalLegModes";
 
 	/**
@@ -62,9 +66,11 @@ public class PlanStrategyReRoutePtFixedSubMode implements PlanStrategy {
 	 * a special behavior for pt. As pt consists of many submodes (e.g. bus, train, ...) the 
 	 * rerouting is done within the submode defined in a leg.
 	 * @param sc
+	 * @param tripRouterProvider
 	 */
-	public PlanStrategyReRoutePtFixedSubMode(Scenario sc){
+	public PlanStrategyReRoutePtFixedSubMode(Scenario sc, Provider<TripRouter> tripRouterProvider){
 		this.sc = sc;
+		this.tripRouterProvider = tripRouterProvider;
 		this.selector = new RandomPlanSelector();
 		// call in constructor, because should be done only once...
 		this.storeOriginalLegModes();
@@ -93,8 +99,8 @@ public class PlanStrategyReRoutePtFixedSubMode implements PlanStrategy {
 			return;
 		}
 		//make the chosen Plan selected and create a deep copy. The copied plan will be selected automatically.
-		((PersonImpl)person).setSelectedPlan(p);
-		this.plans.add(((PersonImpl)person).createCopyOfSelectedPlanAndMakeSelected());
+		((Person)person).setSelectedPlan(p);
+		this.plans.add(((Person)person).createCopyOfSelectedPlanAndMakeSelected());
 	}
 
 	@Override
@@ -104,7 +110,7 @@ public class PlanStrategyReRoutePtFixedSubMode implements PlanStrategy {
 		// TODO this module is maybe no longer necessary as the pt-routing infrastructure has changed
 		this.modules.add(new PtSubModePtInteractionRemoverStrategy(this.sc));
 		this.modules.add(new ReturnToOldModesStrategy(this.sc, this.originalModes));
-		this.modules.add(new ReRoutePtSubModeStrategy(this.sc, replanningContext));
+		this.modules.add(new ReRoutePtSubModeStrategy(this.sc, tripRouterProvider));
 	}
 	
 	private void storeOriginalLegModes() {

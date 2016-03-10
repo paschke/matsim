@@ -15,7 +15,6 @@ import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.MatsimPopulationReader;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 
 import others.sergioo.util.dataBase.DataBaseAdmin;
@@ -32,7 +31,7 @@ public class PlansGetActDepartures {
 					+ tableName
 					+ "(full_pop_pid varchar(45),departure real, activity varchar(45)) ");
             for (Id<Person> personId : plans.getPersons().keySet()) {
-                PersonImpl person = (PersonImpl) plans.getPersons().get(
+                Person person = plans.getPersons().get(
                         personId);
 
                 for (int i = person.getPlans().size() - 1; i >= 0; i--) {
@@ -70,7 +69,7 @@ public class PlansGetActDepartures {
 		MatsimRandom.reset(123);
 		scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 
-		new MatsimNetworkReader(scenario).readFile("data/plans/singapore6.xml.gz");
+		new MatsimNetworkReader(scenario.getNetwork()).readFile("data/plans/singapore6.xml.gz");
 		new MatsimPopulationReader(scenario)
 				.readFile("data/plans/matsimSG2plans.xml.gz");
 //		.readFile("data/short_plans.xml");

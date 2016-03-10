@@ -19,6 +19,7 @@
 
 package playground.jbischoff.taxi.evaluation;
 
+
 import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
@@ -26,9 +27,9 @@ import java.util.Map.Entry;
 import org.matsim.api.core.v01.*;
 import org.matsim.api.core.v01.events.*;
 import org.matsim.api.core.v01.events.handler.*;
-import org.matsim.contrib.dvrp.extensions.taxi.TaxiUtils;
+import org.matsim.contrib.taxi.TaxiUtils;
 
-import playground.michalm.taxi.TaxiRequestCreator;
+import com.google.common.math.DoubleMath;
 
 
 /**
@@ -48,6 +49,12 @@ public class TaxiCustomerWaitTimeAnalyser
 
 
     public TaxiCustomerWaitTimeAnalyser(Scenario scen)
+	{
+		this(scen, Double.MAX_VALUE);
+	}
+
+
+	public TaxiCustomerWaitTimeAnalyser(Scenario scen, double upperLimit)
     {
         this.scenario = scen;
         this.taxicalltime = new HashMap<Id, Double>();
@@ -56,6 +63,7 @@ public class TaxiCustomerWaitTimeAnalyser
         this.linkAg = new HashMap<Id, Id>();
         this.totalWaitTime = new ArrayList<Double>();
         this.waitTimes = new ArrayList<WaitTimeLogRow>();
+        
     }
 
 
@@ -147,13 +155,8 @@ public class TaxiCustomerWaitTimeAnalyser
 
     public double calculateAverageWaitTime()
     {
-        double totalWt = 0;
-        for (Double d : this.totalWaitTime) {
-            totalWt = totalWt + d;
-        }
 
-        double averageWt = totalWt / this.totalWaitTime.size();
-        return averageWt;
+    	return  DoubleMath.mean(this.totalWaitTime);
 
     }
 
@@ -189,6 +192,7 @@ public class TaxiCustomerWaitTimeAnalyser
             bw.close();
 
             bw = new BufferedWriter(new FileWriter(new File(waitstatsFile + "linkWait.txt")));
+            bw.append("linkId\tx\ty\tWaitTime\tTrips\n");
             for (Entry<Id, Double> e : this.linkWaitTime.entrySet()) {
                 Coord coord = scenario.getNetwork().getLinks().get(e.getKey()).getCoord();
                 bw.write(e.getKey() + "\t" + coord.getX() + "\t" + coord.getY() + "\t"
@@ -200,6 +204,8 @@ public class TaxiCustomerWaitTimeAnalyser
             bw.close();
 
             bw = new BufferedWriter(new FileWriter(new File(waitstatsFile + "agentWaitTimes.txt")));
+            bw.append("time\tagent\tlinkId\twaitTime");
+            bw.newLine();
             for (WaitTimeLogRow wtlr : this.waitTimes) {
                 bw.append(wtlr.toString());
                 bw.newLine();

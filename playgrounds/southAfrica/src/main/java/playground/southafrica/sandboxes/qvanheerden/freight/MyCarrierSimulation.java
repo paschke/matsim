@@ -10,10 +10,20 @@
 
 package playground.southafrica.sandboxes.qvanheerden.freight;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.contrib.freight.carrier.*;
+import org.matsim.contrib.freight.carrier.Carrier;
+import org.matsim.contrib.freight.carrier.CarrierPlan;
+import org.matsim.contrib.freight.carrier.CarrierPlanXmlReaderV2;
+import org.matsim.contrib.freight.carrier.CarrierPlanXmlWriterV2;
+import org.matsim.contrib.freight.carrier.CarrierVehicleTypeLoader;
+import org.matsim.contrib.freight.carrier.CarrierVehicleTypeReader;
+import org.matsim.contrib.freight.carrier.CarrierVehicleTypes;
+import org.matsim.contrib.freight.carrier.Carriers;
 import org.matsim.contrib.freight.controler.CarrierModule;
 import org.matsim.contrib.freight.replanning.CarrierPlanStrategyManagerFactory;
 import org.matsim.contrib.freight.replanning.modules.ReRouteVehicles;
@@ -25,6 +35,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.ControlerDefaults;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.listener.IterationEndsListener;
@@ -48,10 +59,8 @@ import org.matsim.core.scoring.SumScoringFunction;
 import org.matsim.core.scoring.SumScoringFunction.LegScoring;
 import org.matsim.core.scoring.functions.CharyparNagelLegScoring;
 import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
-import playground.southafrica.utilities.Header;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import playground.southafrica.utilities.Header;
 
 
 public class MyCarrierSimulation {
@@ -176,13 +185,14 @@ public class MyCarrierSimulation {
 
 	}
 
-	public CarrierPlanStrategyManagerFactory createReplanStrategyFactory(final CarrierVehicleTypes types, final Controler controler){
+	public CarrierPlanStrategyManagerFactory createReplanStrategyFactory(final CarrierVehicleTypes types, final MatsimServices controler){
 		// From KnFreight
 		CarrierPlanStrategyManagerFactory stratManFactory = new CarrierPlanStrategyManagerFactory() {
-			public GenericStrategyManager<CarrierPlan, Carrier> createStrategyManager() {
+			@Override
+		public GenericStrategyManager<CarrierPlan, Carrier> createStrategyManager() {
 				TravelTime travelTimes = controler.getLinkTravelTimes() ;
 				TravelDisutility travelCosts = ControlerDefaults.createDefaultTravelDisutilityFactory(scenario).createTravelDisutility(
-						travelTimes , scenario.getConfig().planCalcScore() );
+						travelTimes );
 				LeastCostPathCalculator router = controler.getLeastCostPathCalculatorFactory().createPathCalculator(scenario.getNetwork(),
 						travelCosts, travelTimes) ;
 				GenericStrategyManager<CarrierPlan, Carrier> mgr = new GenericStrategyManager<CarrierPlan, Carrier>() ;
@@ -202,9 +212,9 @@ public class MyCarrierSimulation {
 				}
 				{
 //					GenericPlanStrategy<CarrierPlan> strategy = 
-//							new SelectBestPlanAndOptimizeItsVehicleRouteFactory(scenario.getNetwork(), types, controler.getLinkTravelTimes()).createStrategy() ;
+//							new SelectBestPlanAndOptimizeItsVehicleRouteFactory(scenario.getNetwork(), types, services.getLinkTravelTimes()).createStrategy() ;
 //					mgr.addStrategy( strategy, null, 0.3 );
-//					mgr.addChangeRequest((int)(0.8*scenario.getConfig().controler().getLastIteration()), strategy, null, 0. );
+//					mgr.addChangeRequest((int)(0.8*scenario.getConfig().services().getLastIteration()), strategy, null, 0. );
 				}
 				{				
 					// the strategy to solve the pickup-and-delivery problem during the iterations is gone for the time being.  enough other
@@ -227,7 +237,7 @@ public class MyCarrierSimulation {
 			public ScoringFunction createScoringFunction(Carrier carrier) {
 				SumScoringFunction sum = new SumScoringFunction() ;
 
-				final LegScoring legScoringFunction = new CharyparNagelLegScoring(CharyparNagelScoringParameters.getBuilder(scenario.getConfig().planCalcScore()).create(),
+				final LegScoring legScoringFunction = new CharyparNagelLegScoring(new CharyparNagelScoringParameters.Builder(scenario.getConfig().planCalcScore(), scenario.getConfig().planCalcScore().getScoringParameters(null), scenario.getConfig().scenario()).build(),
 						scenario.getNetwork() );
 				sum.addScoringFunction(legScoringFunction ) ;
 
@@ -242,7 +252,7 @@ public class MyCarrierSimulation {
 	}
 
 	//freight part from sschroeder/usecases/chessboard/RunPassengerAlongWithCarrier
-	public void prepareFreightOutput(Controler controler, final Carriers carriers) {
+	public void prepareFreightOutput(MatsimServices controler, final Carriers carriers) {
 		final LegHistogram freightOnly = new LegHistogram(900);
         freightOnly.setPopulation(controler.getScenario().getPopulation());
 		freightOnly.setInclPop(false);
@@ -256,7 +266,7 @@ public class MyCarrierSimulation {
 			@Override
 			public void notifyIterationEnds(IterationEndsEvent event) {
 				//write plans
-				String dir = event.getControler().getControlerIO().getIterationPath(event.getIteration());
+				String dir = event.getServices().getControlerIO().getIterationPath(event.getIteration());
 				new CarrierPlanXmlWriterV2(carriers).write(dir + "/" + event.getIteration() + ".carrierPlans.xml");
 
 				//write stats

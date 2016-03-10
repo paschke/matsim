@@ -8,8 +8,7 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.transitSchedule.TransitScheduleImpl;
 import org.matsim.pt.transitSchedule.TransitScheduleReaderV1;
@@ -30,10 +29,10 @@ public class HafasOSMMerger {
 	static final String osmNetworkFile = "e:/_out/ts/transit-network_bln.xml";
 	static final String lineToConvert = "M10";
 
-	ScenarioImpl hafasScenario;
+	MutableScenario hafasScenario;
 	Config hafasConfig;
 
-	ScenarioImpl osmScenario;
+	MutableScenario osmScenario;
 	Config osmConfig;
 
 	/**
@@ -132,22 +131,20 @@ public class HafasOSMMerger {
 
 	private void importHafasSchedule() {
 
-		this.hafasScenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		this.hafasScenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		this.hafasConfig = this.hafasScenario.getConfig();
 		this.hafasConfig.transit().setUseTransit(true);
 		this.hafasConfig.network().setInputFile(this.osmNetworkFile);
-		ScenarioLoaderImpl hafasLoader = new ScenarioLoaderImpl(this.hafasScenario);
-		hafasLoader.loadScenario();
+		ScenarioUtils.loadScenario(this.hafasScenario);
 
-		this.osmScenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		this.osmScenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		this.osmConfig = this.osmScenario.getConfig();
 		this.osmConfig.transit().setUseTransit(true);
 		this.osmConfig.network().setInputFile(this.osmNetworkFile);
-		ScenarioLoaderImpl osmLoader = new ScenarioLoaderImpl(this.osmScenario);
-		osmLoader.loadScenario();
+		ScenarioUtils.loadScenario(this.osmScenario);
 
-		new TransitScheduleReaderV1(this.hafasScenario.getTransitSchedule(), this.hafasScenario.getNetwork()).readFile(hafasTransitSchedule);
-		new TransitScheduleReaderV1(this.osmScenario.getTransitSchedule(), this.osmScenario.getNetwork()).readFile(osmTransitSchedule);
+		new TransitScheduleReaderV1(this.hafasScenario).readFile(hafasTransitSchedule);
+		new TransitScheduleReaderV1(this.osmScenario).readFile(osmTransitSchedule);
 	}
 
 	private void readHafas() {

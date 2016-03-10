@@ -113,7 +113,7 @@ public final class PtMatrix {
 
 					PtStop destinationStop = ptStopIds[destination];
 					Coord destinationCoord = destinationStop.getCoord();
-					double distance = CoordUtils.calcDistance(originCoord, destinationCoord)
+					double distance = CoordUtils.calcEuclideanDistance(originCoord, destinationCoord)
 							* plansCalcRoute.getModeRoutingParams().get( TransportMode.walk ).getBeelineDistanceFactor() ;
 //							* plansCalcRoute.getBeelineDistanceFactor();
 
@@ -183,11 +183,11 @@ public final class PtMatrix {
 	 * @return
 	 */
 	public double getTotalWalkTravelTime_seconds(Coord fromFacilityCoord, Coord toFacilityCoord){	
-		PtStop fromPtStop = this.ptStops.get(fromFacilityCoord.getX(), fromFacilityCoord.getY());
-		PtStop toPtStop   = this.ptStops.get(toFacilityCoord.getX(), toFacilityCoord.getY());
+		PtStop fromPtStop = this.ptStops.getClosest(fromFacilityCoord.getX(), fromFacilityCoord.getY());
+		PtStop toPtStop   = this.ptStops.getClosest(toFacilityCoord.getX(), toFacilityCoord.getY());
 
-		double walkTravelTimeFromFacility2FromPtStop = CoordUtils.calcDistance(fromFacilityCoord, fromPtStop.getCoord()) / meterPerSecWalkSpeed;
-		double walkTravelTimeToPtStop2ToFacility = CoordUtils.calcDistance(toPtStop.getCoord(), toFacilityCoord) / meterPerSecWalkSpeed;
+		double walkTravelTimeFromFacility2FromPtStop = CoordUtils.calcEuclideanDistance(fromFacilityCoord, fromPtStop.getCoord()) / meterPerSecWalkSpeed;
+		double walkTravelTimeToPtStop2ToFacility = CoordUtils.calcEuclideanDistance(toPtStop.getCoord(), toFacilityCoord) / meterPerSecWalkSpeed;
 
 		double totalWalkTravelTime = walkTravelTimeFromFacility2FromPtStop + walkTravelTimeToPtStop2ToFacility;
 		return totalWalkTravelTime;
@@ -196,8 +196,8 @@ public final class PtMatrix {
 	public double getPtTravelTime_seconds(Coord fromFacilityCoord, Coord toFacilityCoord){
 
 		// get pt stops
-		PtStop fromPtStop = this.ptStops.get(fromFacilityCoord.getX(), fromFacilityCoord.getY());
-		PtStop toPtStop   = this.ptStops.get(toFacilityCoord.getX(), toFacilityCoord.getY());
+		PtStop fromPtStop = this.ptStops.getClosest(fromFacilityCoord.getX(), fromFacilityCoord.getY());
+		PtStop toPtStop   = this.ptStops.getClosest(toFacilityCoord.getX(), toFacilityCoord.getY());
 
 		Entry entry = originDestinationTravelTimeMatrix.getEntry(fromPtStop.getId().toString(), toPtStop.getId().toString());
 		double ptTravelTime = Double.MAX_VALUE;
@@ -246,11 +246,11 @@ public final class PtMatrix {
 
 	public double getTotalWalkTravelDistance_meter(Coord fromFacilityCoord, Coord toFacilityCoord){
 
-		PtStop fromPtStop = this.ptStops.get(fromFacilityCoord.getX(), fromFacilityCoord.getY());
-		PtStop toPtStop   = this.ptStops.get(toFacilityCoord.getX(), toFacilityCoord.getY());
+		PtStop fromPtStop = this.ptStops.getClosest(fromFacilityCoord.getX(), fromFacilityCoord.getY());
+		PtStop toPtStop   = this.ptStops.getClosest(toFacilityCoord.getX(), toFacilityCoord.getY());
 
-		double walkTravelDistanceFromFacility2FromPtStop = CoordUtils.calcDistance(fromFacilityCoord, fromPtStop.getCoord());
-		double walkTravelDistanceToPtStop2ToFacility = CoordUtils.calcDistance(toPtStop.getCoord(), toFacilityCoord);
+		double walkTravelDistanceFromFacility2FromPtStop = CoordUtils.calcEuclideanDistance(fromFacilityCoord, fromPtStop.getCoord());
+		double walkTravelDistanceToPtStop2ToFacility = CoordUtils.calcEuclideanDistance(toPtStop.getCoord(), toFacilityCoord);
 
 		double totalWalkTravelDistance = walkTravelDistanceFromFacility2FromPtStop + walkTravelDistanceToPtStop2ToFacility;
 		return totalWalkTravelDistance;
@@ -259,8 +259,8 @@ public final class PtMatrix {
 
 	public double getPtTravelDistance_meter(Coord fromCoord, Coord toCoord){
 
-		PtStop fromPtStop = this.ptStops.get(fromCoord.getX(), fromCoord.getY());
-		PtStop toPtStop   = this.ptStops.get(toCoord.getX(), toCoord.getY());
+		PtStop fromPtStop = this.ptStops.getClosest(fromCoord.getX(), fromCoord.getY());
+		PtStop toPtStop   = this.ptStops.getClosest(toCoord.getX(), toCoord.getY());
 
 		Entry entry = originDestinationTravelDistanceMatrix.getEntry(fromPtStop.getId().toString(), toPtStop.getId().toString());
 		double ptTravelDistance = Double.MAX_VALUE;

@@ -10,7 +10,7 @@ import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkReaderMatsimV1;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.*;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.FacilitiesReaderMatsimV1;
@@ -35,7 +35,7 @@ public class Assignment {
 		String populationPath = args[2];
 	//	String incomeFilePath = args[3];
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		new FacilitiesReaderMatsimV1(scenario).readFile(facilitiesPath);
 		
 		PopulationImpl population = (PopulationImpl) scenario.getPopulation();
@@ -44,7 +44,7 @@ public class Assignment {
 		PopulationWriter popWriter = new PopulationWriter(population, scenario.getNetwork());
 		popWriter.startStreaming(populationPath);
 		
-		new NetworkReaderMatsimV1(scenario).parse(networkPath); 
+		new NetworkReaderMatsimV1(scenario.getNetwork()).parse(networkPath);
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		
 		NodeDistances nodeDistances = new NodeDistances(networkPath);
@@ -175,7 +175,7 @@ public class Assignment {
 		
 		/*Assign random home zone*/
 		for(Integer i=0;i<populationSize;i++){	
-			PersonImpl person = (PersonImpl) pf.createPerson(Id.create(i, Person.class));
+			Person person = pf.createPerson(Id.create(i, Person.class));
 			Plan plan = pf.createPlan();
 					
 			System.out.println("Agent: "+i+" from "+populationSize);
@@ -316,13 +316,13 @@ public class Assignment {
 			
 			double carAvailToss = generator.nextDouble();
 			if(carAvailToss<noCarPercentage){
-				person.setCarAvail("never");
+				PersonUtils.setCarAvail(person, "never");
 			}
 			else{
-				person.setCarAvail("always");
+				PersonUtils.setCarAvail(person, "always");
 			}
 			
-			person.setEmployed(true);
+			PersonUtils.setEmployed(person, true);
 		//	person.getCustomAttributes().put("household_income", facilityIncomeMap.get(homeFacilityId));
 			
 			//Add home location to the plan

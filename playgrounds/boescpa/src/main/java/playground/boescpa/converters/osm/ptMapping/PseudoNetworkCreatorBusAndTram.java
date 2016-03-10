@@ -149,9 +149,9 @@ public class PseudoNetworkCreatorBusAndTram {
         if (fromNode == toNode) {
             link.setLength(50);
         } else {
-            link.setLength(CoordUtils.calcDistance(fromNode.getCoord(), toNode.getCoord()));
+            link.setLength(CoordUtils.calcEuclideanDistance(fromNode.getCoord(), toNode.getCoord()));
         }
-        // todo-boescpa Identify transport mean and set speeds and link characteristics accordingly...
+        // TODO-boescpa Identify transport mean and set speeds and link characteristics accordingly...
         link.setFreespeed(30.0 / 3.6);
         link.setCapacity(500);
         link.setNumberOfLanes(1);

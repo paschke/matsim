@@ -47,7 +47,7 @@ import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.config.ConfigUtils;
 
@@ -99,10 +99,10 @@ public class LegTripDurationAnalyzer implements PersonDepartureEventHandler, Per
 	private List<Leg> educationFromLeg;
 	
 	public static void main(String[] args) {
-		Scenario scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		Scenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		
 		// load network
-		new MatsimNetworkReader(scenario).readFile(networkFile);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
 		
 		// load population
 		new MatsimPopulationReader(scenario).readFile(populationFile);
@@ -373,7 +373,7 @@ public class LegTripDurationAnalyzer implements PersonDepartureEventHandler, Per
 		
 		for (Leg leg : toLegsCar) {
 			toTravelTimesCar = toTravelTimesCar + leg.getTravelTime();
-			toDistancesCar = toDistancesCar + RouteUtils.calcDistance((NetworkRoute)leg.getRoute(), scenario.getNetwork());
+			toDistancesCar = toDistancesCar + RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute)leg.getRoute(), scenario.getNetwork());
 		}
 		log.info("number of " + activityType + "-to-legsCar = " + toLegsCar.size());
 		log.info("mean " + activityType + "-to-traveltimesCar = " + toTravelTimesCar / toLegsCar.size());
@@ -400,7 +400,7 @@ public class LegTripDurationAnalyzer implements PersonDepartureEventHandler, Per
 		
 		for (Leg leg : fromLegsCar) {
 			fromTravelTimesCar = fromTravelTimesCar + leg.getTravelTime();
-			fromDistancesCar = fromDistancesCar + RouteUtils.calcDistance((NetworkRoute)leg.getRoute(), scenario.getNetwork());
+			fromDistancesCar = fromDistancesCar + RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute)leg.getRoute(), scenario.getNetwork());
 		}
 		
 		log.info("number of " + activityType + "-from-legsCar = " + fromLegsCar.size());

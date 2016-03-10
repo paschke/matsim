@@ -19,8 +19,9 @@
 package org.matsim.core.controler;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility.Builder;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.costcalculators.TravelTimeAndDistanceBasedTravelDisutilityFactory;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.functions.CharyparNagelScoringFunctionFactory;
 
@@ -42,11 +43,11 @@ public class ControlerDefaults {
 	private ControlerDefaults(){} // should not be instantiated
 
 	public static ScoringFunctionFactory createDefaultScoringFunctionFactory(Scenario scenario) {
-		return new CharyparNagelScoringFunctionFactory(scenario.getConfig().planCalcScore(), scenario.getNetwork()) ;
+		return new CharyparNagelScoringFunctionFactory( scenario );
 	}
 
 	public static TravelDisutilityFactory createDefaultTravelDisutilityFactory(Scenario scenario) {
-		final TravelTimeAndDistanceBasedTravelDisutilityFactory builder = new TravelTimeAndDistanceBasedTravelDisutilityFactory();
+		final Builder builder = new Builder( TransportMode.car, scenario.getConfig().planCalcScore() );
 		builder.setSigma(0.); // tendency to set this to 3. right away (i.e. through PlansCalcRouteConfigGroup default). kai/bk, mar'15
 		return builder;
 	}

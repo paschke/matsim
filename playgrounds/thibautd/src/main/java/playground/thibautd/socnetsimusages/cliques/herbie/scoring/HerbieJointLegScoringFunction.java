@@ -22,22 +22,20 @@ package playground.thibautd.socnetsimusages.cliques.herbie.scoring;
 import herbie.running.config.HerbieConfigGroup;
 import herbie.running.pt.DistanceCalculations;
 import herbie.running.scoring.TravelScoringFunction;
-
-import java.util.TreeSet;
-
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Route;
+import org.matsim.contrib.socnetsim.jointtrips.population.JointActingTypes;
 import org.matsim.core.config.Config;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.scoring.functions.CharyparNagelLegScoring;
 import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
-
 import playground.thibautd.hitchiking.HitchHikingConstants;
-import org.matsim.contrib.socnetsim.jointtrips.population.JointActingTypes;
+
+import java.util.TreeSet;
 
 /**
  * @author thibautd
@@ -90,7 +88,7 @@ public class HerbieJointLegScoringFunction extends CharyparNagelLegScoring {
 			double distance = DistanceCalculations.getLegDistance(route, network);
 		
 			double distanceCost = 0.0;
-			TreeSet<String> travelCards = ((PersonImpl) this.plan.getPerson()).getTravelcards();
+			TreeSet<String> travelCards = PersonUtils.getTravelcards(this.plan.getPerson());
 			if (travelCards == null) {
 				distanceCost = this.ktiConfigGroup.getDistanceCostPtNoTravelCard();
 			}

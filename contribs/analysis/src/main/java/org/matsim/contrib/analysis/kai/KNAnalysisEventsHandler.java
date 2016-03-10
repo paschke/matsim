@@ -28,6 +28,7 @@ import org.matsim.api.core.v01.events.handler.*;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.events.algorithms.Vehicle2DriverEventHandler;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
@@ -54,7 +55,7 @@ public class KNAnalysisEventsHandler implements
 PersonDepartureEventHandler, PersonArrivalEventHandler, 
 PersonMoneyEventHandler, 
 LinkLeaveEventHandler, LinkEnterEventHandler, 
-PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
+PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler, VehicleEntersTrafficEventHandler, VehicleLeavesTrafficEventHandler {
 
 	private final static Logger log = Logger.getLogger(KNAnalysisEventsHandler.class);
 
@@ -65,21 +66,18 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 
 	private Scenario scenario = null ;
 	private Population population = null;
-	private final TreeMap<Id, Double> agentDepartures = new TreeMap<Id, Double>();
-	private final TreeMap<Id, Integer> agentLegs = new TreeMap<Id, Integer>();
+	private final TreeMap<Id<Person>, Double> agentDepartures = new TreeMap<>();
+	private final TreeMap<Id<Person>, Integer> agentLegs = new TreeMap<>();
 
 	// statistics types:
-	enum StatType { durations, durationsOtherBins, beelineDistances, legDistances, scores, payments } ;
+	enum StatType { durations, durationsOtherBins, beelineDistances, beelineDistancesOtherBins, legDistances, scores, payments } ;
 
 	// container that contains the statistics containers:
-	private final Map<StatType,Map<String,int[]>> statsContainer = new TreeMap<StatType,Map<String,int[]>>() ;
-	// yy should probably be "double" instead of "int" (not all data are integer counts; think of emissions).  kai, jul'11
-
-	// container that contains the data bin boundaries (arrays):
-	private final Map<StatType,double[]> dataBoundaries = new TreeMap<StatType,double[]>() ;
+	private final Map<StatType,Databins<String>> statsContainer = new TreeMap<>() ;
 
 	// container that contains the sum (to write averages):
-	private final Map<StatType,Map<String,Double>> sumsContainer = new TreeMap<StatType,Map<String,Double>>() ;
+	private final Map<StatType,DataMap<String>> sumsContainer = new TreeMap<>() ;
+	// yy for time being not fully symmetric with DatabinsMap! kai, oct'15
 
 	private double controlStatisticsSum;
 	private double controlStatisticsCnt;
@@ -88,6 +86,8 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 	// (initializing with empty set, meaning output will say no vehicles at gantries).
 	
 	private Set<Id<Link>> otherTolledLinkIds = new HashSet<Id<Link>>() ;
+
+	private Vehicle2DriverEventHandler delegate = new Vehicle2DriverEventHandler() ;
 
 	// general trip counter.  Would, in theory, not necessary to do this per StatType, but I find it too brittle 
 	// to avoid under- or over-counting with respect to loops.
@@ -140,39 +140,43 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 
 		for ( StatType type : StatType.values() ) {
 
-			// instantiate the statistics containers:
-			Map<String,int[]> legStats = new TreeMap<String,int[]>() ;
-			this.statsContainer.put( type, legStats ) ;
-
-			Map<String,Double> sums = new TreeMap<String,Double>() ;
-			this.sumsContainer.put( type, sums ) ;
-
 			// define the bin boundaries:
 			switch ( type ) {
 			case beelineDistances: {
 				double[] dataBoundariesTmp = {0., 100., 200., 500., 1000., 2000., 5000., 10000., 20000., 50000., 100000.} ;
-				dataBoundaries.put( type, dataBoundariesTmp ) ;
+				Databins<String> databins = new Databins<>( type.name(), dataBoundariesTmp ) ;
+				this.statsContainer.put( type, databins) ;
+				break; }
+			case beelineDistancesOtherBins: {
+				double[] dataBoundariesTmp = {0., 2000., 4000., 6000., 8000., 10000.} ;
+				Databins<String> databins = new Databins<>( type.name(), dataBoundariesTmp ) ;
+				this.statsContainer.put( type, databins) ;
 				break; }
 			case durations: {
 				double[] dataBoundariesTmp = {0., 300., 600., 900., 1200., 1500., 1800., 2100., 2400., 2700., 3000., 3300., 3600., 
 						3900., 4200., 4500., 4800., 5100., 5400., 5700., 6000., 6300., 6600., 6900., 7200.} ;
-				dataBoundaries.put( type, dataBoundariesTmp ) ;
+				Databins<String> databins = new Databins<>( type.name(), dataBoundariesTmp ) ;
+				this.statsContainer.put( type, databins) ;
 				break; }
 			case durationsOtherBins: {
 				double[] dataBoundariesTmp = {0., 300., 900., 1800., 2700., 3600.} ;
-				dataBoundaries.put( type, dataBoundariesTmp ) ;
+				Databins<String> databins = new Databins<>( type.name(), dataBoundariesTmp ) ;
+				this.statsContainer.put( type, databins) ;
 				break; }
 			case legDistances: {
 				double[] dataBoundariesTmp = {0., 1000, 3000, 10000, 30000, 10000, 300000, 1000.*1000. } ;
-				dataBoundaries.put( type, dataBoundariesTmp ) ;
+				Databins<String> databins = new Databins<>( type.name(), dataBoundariesTmp ) ;
+				this.statsContainer.put( type, databins) ;
 				break; }
 			case scores:{
 				double[] dataBoundariesTmp = {Double.NEGATIVE_INFINITY} ; // yy ??
-				dataBoundaries.put( type, dataBoundariesTmp ) ;
+				Databins<String> databins = new Databins<>( type.name(), dataBoundariesTmp ) ;
+				this.statsContainer.put( type, databins) ;
 				break; }
 			case payments:{
 				double[] dataBoundariesTmp = {Double.NEGATIVE_INFINITY } ; // yy ??
-				dataBoundaries.put( type, dataBoundariesTmp ) ;
+				Databins<String> databins = new Databins<>( type.name(), dataBoundariesTmp ) ;
+				this.statsContainer.put( type, databins) ;
 				break; }
 			default:
 				throw new RuntimeException("statistics container for type "+type.toString()+" not initialized.") ;
@@ -183,17 +187,6 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 		reset(-1) ;
 	}
 
-	private int getIndex( StatType type, final double dblVal) {
-		double[] dataBoundariesTmp = dataBoundaries.get(type) ;
-		int ii = dataBoundariesTmp.length-1 ;
-		for ( ; ii>=0 ; ii-- ) {
-			if ( dataBoundariesTmp[ii] <= dblVal ) 
-				return ii ;
-		}
-		log.warn("leg statistics contains value that smaller than the smallest category; adding it to smallest category" ) ;
-		log.warn("statType: " + type + "; val: " + dblVal ) ;
-		return 0 ;
-	}
 
 	@Override
 	public void handleEvent(final PersonDepartureEvent event) {
@@ -258,7 +251,7 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 					break;
 				case beelineDistances:
 					if ( fromAct.getCoord()!=null && toAct.getCoord()!=null ) {
-						item = CoordUtils.calcDistance(fromAct.getCoord(), toAct.getCoord()) ;
+						item = CoordUtils.calcEuclideanDistance(fromAct.getCoord(), toAct.getCoord()) ;
 					} else {
 						if ( noCoordCnt < 1 ) {
 							noCoordCnt ++ ;
@@ -266,12 +259,25 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 						}
 						Link fromLink = scenario.getNetwork().getLinks().get( fromAct.getLinkId() ) ;
 						Link   toLink = scenario.getNetwork().getLinks().get(   toAct.getLinkId() ) ;
-						item = CoordUtils.calcDistance( fromLink.getCoord(), toLink.getCoord() ) ; 
+						item = CoordUtils.calcEuclideanDistance( fromLink.getCoord(), toLink.getCoord() ) ; 
+					}
+					break;
+				case beelineDistancesOtherBins:
+					if ( fromAct.getCoord()!=null && toAct.getCoord()!=null ) {
+						item = CoordUtils.calcEuclideanDistance(fromAct.getCoord(), toAct.getCoord()) ;
+					} else {
+						if ( noCoordCnt < 1 ) {
+							noCoordCnt ++ ;
+							log.warn("either fromAct or to Act has no Coord; using link coordinates as substitutes.\n" + Gbl.ONLYONCE ) ;
+						}
+						Link fromLink = scenario.getNetwork().getLinks().get( fromAct.getLinkId() ) ;
+						Link   toLink = scenario.getNetwork().getLinks().get(   toAct.getLinkId() ) ;
+						item = CoordUtils.calcEuclideanDistance( fromLink.getCoord(), toLink.getCoord() ) ; 
 					}
 					break;
 				case legDistances:
 					if ( leg.getRoute() instanceof NetworkRoute ) {
-						item = RouteUtils.calcDistance( ((NetworkRoute)leg.getRoute()), this.scenario.getNetwork() ) ;
+						item = RouteUtils.calcDistanceExcludingStartEndLink( ((NetworkRoute)leg.getRoute()), this.scenario.getNetwork() ) ;
 					} else if ( leg.getRoute()!=null && !Double.isNaN( leg.getRoute().getDistance() ) )  {
 						item = leg.getRoute().getDistance() ;
 					} else {
@@ -302,7 +308,7 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 	private String getSubpopName(Person person) {
 		return "yy_" + getSubpopName( person.getId(), this.population.getPersonAttributes(), this.scenario.getConfig().plans().getSubpopulationAttributeName() ) ;
 	}
-	public static final String getSubpopName( Id personId, ObjectAttributes personAttributes, String subpopAttrName ) {
+	public static final String getSubpopName( Id<Person> personId, ObjectAttributes personAttributes, String subpopAttrName ) {
 		String subpop = (String) personAttributes.getAttribute( personId.toString(), subpopAttrName ) ;
 		return "subpop_" + subpop;
 	}
@@ -311,38 +317,28 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 		// ... go through all legTypes to which the leg belongs ...
 		for ( String legType : legTypes ) {
 
-			// ... get correct statistics array by statType and legType ...
-			int[] stats = this.statsContainer.get(statType).get(legType);
-
-			// ... if that statistics array does not exist yet, initialize it ...
-			if (stats == null) {
-				Integer len = this.dataBoundaries.get(statType).length ;
-				stats = new int[len];
-				for (int i = 0; i < len; i++) {
-					stats[i] = 0;
-				}
-				this.statsContainer.get(statType).put(legType, stats);
-
-				// ... also initialize the sums container ...
-				this.sumsContainer.get(statType).put(legType, 0.) ;
-			}
-
 			// ... finally add the "item" to the correct bin in the container:
-			stats[getIndex(statType,item)]++;
+			int idx = this.statsContainer.get(statType).getIndex(item) ;
+			this.statsContainer.get(statType).inc( legType, idx ) ;
 
-			double newItem = this.sumsContainer.get(statType).get(legType) + item ;
-			this.sumsContainer.get(statType).put( legType, newItem ) ;
+			// also add it to the sums container:
+			this.sumsContainer.get(statType).addValue( legType, item ) ;
 
 		}
 	}
 
 	@Override
 	public void reset(final int iteration) {
+		delegate.reset(iteration);
+		
 		this.agentDepartures.clear();
 		this.agentLegs.clear();
 
 		for ( StatType type : StatType.values() ) {
 			this.statsContainer.get(type).clear() ;
+			if ( this.sumsContainer.get(type)==null ) {
+				this.sumsContainer.put( type, new DataMap<String>() ) ;
+			}
 			this.sumsContainer.get(type).clear() ;
 		}
 
@@ -475,8 +471,8 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 
 
 		// write link statistics:
-		for ( Entry<Id, Double> entry : this.linkCnts.entrySet() ) {
-			final Id linkId = entry.getKey();
+		for ( Entry<Id<Link>, Double> entry : this.linkCnts.entrySet() ) {
+			final Id<Link> linkId = entry.getKey();
 			linkAttribs.putAttribute(linkId.toString(), CNT, entry.getValue().toString() ) ;
 			linkAttribs.putAttribute(linkId.toString(), TTIME_SUM, this.linkTtimesSums.get(linkId).toString() ) ;
 		}
@@ -507,16 +503,16 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 	private void writeStatsHorizontal(StatType statType, final java.io.Writer out ) throws UncheckedIOException {
 		try {
 			boolean first = true;
-			for (Map.Entry<String, int[]> entry : this.statsContainer.get(statType).entrySet()) {
+			for (Map.Entry<String, double[]> entry : this.statsContainer.get(statType).entrySet()) {
 				String legType = entry.getKey();
-				int[] counts = entry.getValue();
+				double[] counts = entry.getValue();
 
 				// header line etc:
 				if (first) {
 					first = false;
 					out.write(statType.toString());
 					for (int i = 0; i < counts.length; i++) {
-						out.write("\t" + this.dataBoundaries.get(statType)[i] + "+" ) ;
+						out.write("\t" + this.statsContainer.get(statType).getDataBoundaries()[i] + "+" ) ;
 					}
 					out.write("\t|\t average \t|\t cnt \t | \t sum\n");
 				}
@@ -564,7 +560,7 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 		}
 	}
 
-	private Map<Id,Double> vehicleEnterTimes = new HashMap<Id,Double>() ;
+	private Map<Id<Vehicle>,Double> vehicleEnterTimes = new HashMap<>() ;
 
 	private Map<Id<Vehicle>,Double> vehicleGantryCounts = new HashMap<Id<Vehicle>,Double>() ;
 
@@ -582,19 +578,19 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 		}
 		
 		if ( this.otherTolledLinkIds.contains( event.getLinkId() ) ) {
-			add( event.getPersonId(), 1., CERTAIN_LINKS_CNT );
+			add( delegate.getDriverOfVehicle(event.getVehicleId()), 1., CERTAIN_LINKS_CNT );
 		}
 		
 	}
 
-	private Map<Id,Double> linkTtimesSums = new HashMap<Id,Double>() ;
-	private Map<Id,Double> linkCnts = new HashMap<Id,Double>() ;
+	private Map<Id<Link>,Double> linkTtimesSums = new HashMap<>() ;
+	private Map<Id<Link>,Double> linkCnts = new HashMap<>() ;
 
 	@Override
 	public void handleEvent(LinkLeaveEvent event) {
 		Double enterTime = vehicleEnterTimes.get( event.getVehicleId() ) ;
 		if ( enterTime != null && enterTime < 9.*3600. ) {
-			final Id linkId = event.getLinkId();
+			final Id<Link> linkId = event.getLinkId();
 			final Double sumSoFar = linkTtimesSums.get( linkId );
 			if ( sumSoFar == null ) {
 				linkTtimesSums.put( linkId, event.getTime() - enterTime ) ;
@@ -624,6 +620,16 @@ PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler {
 				Logger.getLogger(this.getClass()).warn( Gbl.ONLYONCE ) ;
 			}
 		}
+	}
+
+	@Override
+	public void handleEvent(VehicleLeavesTrafficEvent event) {
+		delegate.handleEvent(event);
+	}
+
+	@Override
+	public void handleEvent(VehicleEntersTrafficEvent event) {
+		delegate.handleEvent(event);
 	}
 
 }

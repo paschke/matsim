@@ -19,15 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.analysis.spacetimeprismjoinabletrips;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -36,8 +27,16 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.utils.collections.QuadTree;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * A structure which organizes trip {@link Record}s to make computation of
@@ -240,7 +239,7 @@ public class TripsPrism {
 			Record passengerRecord = iterator.next();
 
 			Coord passengerOrigin = getOriginLink( passengerRecord ).getCoord();
-			remainingDistance -= CoordUtils.calcDistance( passengerOrigin , driverOrigin );
+			remainingDistance -= CoordUtils.calcEuclideanDistance( passengerOrigin , driverOrigin );
 
 			if (remainingDistance < 0) {
 				iterator.remove();
@@ -248,14 +247,14 @@ public class TripsPrism {
 			}
 
 			Coord passengerDestination = getDestinationLink( passengerRecord ).getCoord();
-			remainingDistance -= CoordUtils.calcDistance( passengerDestination , passengerOrigin );
+			remainingDistance -= CoordUtils.calcEuclideanDistance( passengerDestination , passengerOrigin );
 
 			if (remainingDistance < 0) {
 				iterator.remove();
 				continue;
 			}
 
-			remainingDistance -= CoordUtils.calcDistance( passengerDestination , driverDestination );
+			remainingDistance -= CoordUtils.calcEuclideanDistance( passengerDestination , driverDestination );
 
 			if (remainingDistance < 0) {
 				iterator.remove();
@@ -416,9 +415,7 @@ public class TripsPrism {
 	private static Coord getCenter(
 			final Coord coord1,
 			final Coord coord2) {
-		return new CoordImpl(
-				(coord1.getX() + coord2.getX()) / 2,
-				(coord1.getY() + coord2.getY()) / 2);
+		return new Coord((coord1.getX() + coord2.getX()) / 2, (coord1.getY() + coord2.getY()) / 2);
 	}
 
 	private Collection<Record> getSpaceTimeBall(
@@ -432,7 +429,7 @@ public class TripsPrism {
 			log.trace( "the quad tree contains "+records.size()+" records" );
 		}
 
-		Collection<Record> spaceRestricted = records.get( center.getX() , center.getY(), radius );
+		Collection<Record> spaceRestricted = records.getDisk(center.getX(), center.getY(), radius);
 
 		if (log.isTraceEnabled()) {
 			log.trace( "the space ball contains "+spaceRestricted.size()+" records" );

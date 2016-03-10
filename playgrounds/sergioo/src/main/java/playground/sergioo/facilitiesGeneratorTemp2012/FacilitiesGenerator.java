@@ -16,7 +16,6 @@ import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.facilities.ActivityFacilitiesImpl;
@@ -80,7 +79,7 @@ public class FacilitiesGenerator {
 		CoordinateTransformation coordinateTransformation = TransformationFactory.getCoordinateTransformation(TransformationFactory.WGS84, TransformationFactory.WGS84_UTM48N);
 		ActivityFacilitiesImpl facilities = (ActivityFacilitiesImpl) FacilitiesUtils.createActivityFacilities();
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.loadConfig(args[1]));
-		MatsimNetworkReader matsimNetworkReader = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader matsimNetworkReader = new MatsimNetworkReader(scenario.getNetwork());
 		matsimNetworkReader.readFile(args[2]);
 		DataBaseAdmin dataBaseBuildings  = new DataBaseAdmin(new File("./data/facilities/DataBase.properties"));
 		Map<String, Id<ActivityFacility>> postCodes = new HashMap<String, Id<ActivityFacility>>();
@@ -92,7 +91,7 @@ public class FacilitiesGenerator {
 		int numFacNoActivities = 0;
 		while(resultFacilities.next()) {
 			ActivityFacilityImpl facility;
-			Coord center = new CoordImpl(resultFacilities.getDouble(2), resultFacilities.getDouble(3));
+			Coord center = new Coord(resultFacilities.getDouble(2), resultFacilities.getDouble(3));
 			boolean newFacility = false;
 			if(!postCodes.containsKey(resultFacilities.getString(5))) {
 				if(!centers.containsKey(center)) {
@@ -113,7 +112,7 @@ public class FacilitiesGenerator {
 				String activityType = resultBDTypeXActivityType.getString(2);
 				if(((PlanCalcScoreConfigGroup)scenario.getConfig().getModule(PlanCalcScoreConfigGroup.GROUP_NAME)).getActivityTypes().contains(activityType))
 					if(!facility.getActivityOptions().containsKey(activityType))
-						facility.createActivityOption(activityType);
+						facility.createAndAddActivityOption(activityType);
 			}
 			resultBDTypeXActivityType.close();
 			if(facility.getActivityOptions().size()==0) {

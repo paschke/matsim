@@ -22,9 +22,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationImpl;
-import org.matsim.core.population.routes.GenericRoute;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.population.algorithms.PersonAlgorithm;
 import org.matsim.pt.PtConstants;
 import org.matsim.pt.transitSchedule.api.TransitLine;
@@ -98,7 +96,7 @@ public class BackwardsWindow extends LayersWindow implements PersonAlgorithm {
 		String startStop = null;
 		for(PlanElement planElement:person.getSelectedPlan().getPlanElements()) {
 			if(planElement instanceof Leg && ((Leg)planElement).getMode().equals("pt")) {
-				String[] parts = ((GenericRoute)((Leg)planElement).getRoute()).getRouteDescription().split("===");
+				String[] parts = (((Leg)planElement).getRoute()).getRouteDescription().split("===");
 				if(parts[2].equals(args[3]) && sameDirection(args[3], parts[3], args[4])) {
 					if(startStop==null) {
 						startStop = parts[1];
@@ -150,7 +148,7 @@ public class BackwardsWindow extends LayersWindow implements PersonAlgorithm {
 	
 	public static void main(String[] args) throws IOException {
 		final Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new MatsimNetworkReader(scenario).readFile(args[0]);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(args[0]);
 		scenario.getConfig().transit().setUseTransit(true);
 		new TransitScheduleReader(scenario).readFile(args[1]);
 		TransitRoute routeA = scenario.getTransitSchedule().getTransitLines().get(Id.create("EW", TransitLine.class)).getRoutes().get(Id.create("EW_weeksatday_1", TransitRoute.class));
@@ -180,7 +178,7 @@ public class BackwardsWindow extends LayersWindow implements PersonAlgorithm {
 				addLayer(new Layer(stationsPainterF));
 				addLayer(new Layer(stationsPainterG));
 				addLayer(new Layer(stationsPainterH));
-				addLayer(new Layer(new CircleLegendPainter(Color.LIGHT_GRAY, scale, new double[]{1000,500,200,100,50}, 2000, new CoordImpl(376844, 139837))));
+				addLayer(new Layer(new CircleLegendPainter(Color.LIGHT_GRAY, scale, new double[]{1000,500,200,100,50}, 2000, new Coord(376844, 139837))));
 				Collection<double[]> bounds = new ArrayList<double[]>();
 				bounds.add(new double[]{346153, 162947});
 				bounds.add(new double[]{391844, 136837});

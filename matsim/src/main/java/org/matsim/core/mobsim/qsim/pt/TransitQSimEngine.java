@@ -29,7 +29,6 @@ import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.PersonStuckEvent;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Leg;
@@ -45,6 +44,8 @@ import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.Vehicles;
+
+import javax.inject.Inject;
 
 /**
  * @author mrieser
@@ -85,6 +86,7 @@ public class TransitQSimEngine implements  DepartureHandler, MobsimEngine, Agent
 		transitDriverFactory = new DefaultTransitDriverAgentFactory(internalInterface, agentTracker);
 	}
 
+	@Inject
 	public TransitQSimEngine(QSim queueSimulation) {
 		this.qSim = queueSimulation;
 		this.schedule = queueSimulation.getScenario().getTransitSchedule();
@@ -115,7 +117,7 @@ public class TransitQSimEngine implements  DepartureHandler, MobsimEngine, Agent
 		}
 	}
 
-	private Collection<MobsimAgent> createVehiclesAndDriversWithUmlaeufe(TransitStopAgentTracker thisAgentTracker) {
+	private Collection<MobsimAgent> createVehiclesAndDriversWithUmlaeufe() {
 		Scenario scenario = this.qSim.getScenario();
 		Vehicles vehicles = scenario.getTransitVehicles();
 		Collection<MobsimAgent> drivers = new ArrayList<>();
@@ -131,7 +133,7 @@ public class TransitQSimEngine implements  DepartureHandler, MobsimEngine, Agent
 		return drivers;
 	}
 
-	private UmlaufCache getOrCreateUmlaufCache(final Scenario scenario) {
+	private static UmlaufCache getOrCreateUmlaufCache(final Scenario scenario) {
 		UmlaufCache umlaufCache;
 
 		ReconstructingUmlaufBuilder reconstructingUmlaufBuilder =
@@ -195,6 +197,7 @@ public class TransitQSimEngine implements  DepartureHandler, MobsimEngine, Agent
 		return agentTracker;
 	}
 
+	@Inject
 	public void setTransitStopHandlerFactory(final TransitStopHandlerFactory stopHandlerFactory) {
 		this.stopHandlerFactory = stopHandlerFactory;
 	}
@@ -210,7 +213,7 @@ public class TransitQSimEngine implements  DepartureHandler, MobsimEngine, Agent
 
 	@Override
 	public void insertAgentsIntoMobsim() {
-		ptDrivers = createVehiclesAndDriversWithUmlaeufe(this.agentTracker);
+		ptDrivers = createVehiclesAndDriversWithUmlaeufe();
 	}
 
 	public Collection<MobsimAgent> getPtDrivers() {

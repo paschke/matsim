@@ -19,13 +19,16 @@
  * *********************************************************************** */
 package playground.thibautd.initialdemandgeneration.socnetgensimulated.framework;
 
-import java.util.Random;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import playground.ivt.utils.SoftCache;
 
-import playground.thibautd.utils.SoftCache;
+import java.util.Random;
 
 /**
  * @author thibautd
  */
+@Singleton
 public class TieUtility {
 	private final DeterministicPart deterministicPart;
 	private final ErrorTerm errorTerm;
@@ -38,6 +41,13 @@ public class TieUtility {
 	 * to create "tie" objects
 	 */
 	private final SoftCache< Integer , Double >  cache;
+
+	@Inject
+	public TieUtility(
+			final DeterministicPart deterministicPart,
+			final ErrorTerm errorTerm ) {
+		this ( deterministicPart , errorTerm , false );
+	}
 
 	public TieUtility(
 			final DeterministicPart deterministicPart,
@@ -67,11 +77,11 @@ public class TieUtility {
 		return sampledError;
 	}
 
-	public static interface DeterministicPart {
+	public interface DeterministicPart {
 		public double calcDeterministicPart( int ego , int alter );
 	}
 
-	public static interface ErrorTerm {
+	public interface ErrorTerm {
 		public double calcError( final int seed );
 	}
 

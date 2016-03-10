@@ -30,6 +30,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.core.gbl.Gbl;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.qsim.ActivityEndRescheduler;
@@ -37,7 +38,7 @@ import org.matsim.core.mobsim.qsim.InternalInterface;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.router.TripRouter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.withinday.replanning.replanners.interfaces.WithinDayDuringLegReplanner;
 import org.matsim.withinday.utils.EditRoutes;
@@ -138,7 +139,7 @@ public class GPSNIReplanner extends WithinDayDuringLegReplanner {
 				/*
 				 * move the parking activity after this leg
 				 */
-				ActivityFacility facility = ((ScenarioImpl) scenario).getActivityFacilities().getFacilities()
+				ActivityFacility facility = ((MutableScenario) scenario).getActivityFacilities().getFacilities()
 						.get(parkingFacilityId);
 				activity.setCoord(facility.getCoord());
 				activity.setLinkId(linkId);
@@ -185,12 +186,14 @@ public class GPSNIReplanner extends WithinDayDuringLegReplanner {
 
 				// update agent's route
 				route.setLinkIds(startLink, links, endLink);
+				
+				throw new RuntimeException( Gbl.PROBLEM_WITH_ACCESS_EGRESS ) ;
 
-				// update agent's route
-				this.editRoutes.relocateCurrentLegRoute(leg, plan.getPerson(), 
-						this.withinDayAgentUtils.getCurrentRouteLinkIdIndex(withinDayAgent), endLink, time, scenario.getNetwork(), tripRouter);			
-
-				updateNextLeg = true;
+//				// update agent's route
+//				this.editRoutes.relocateCurrentLegRoute(leg, plan.getPerson(), 
+//						this.withinDayAgentUtils.getCurrentRouteLinkIdIndex(withinDayAgent), endLink, time, scenario.getNetwork(), tripRouter);			
+//
+//				updateNextLeg = true;
 			}
 
 			// adapt next walk leg.

@@ -26,11 +26,11 @@ import java.util.Stack;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.network.NetworkImpl;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.misc.Time;
 import org.xml.sax.Attributes;
@@ -140,7 +140,7 @@ public class ITSUMONetworkReader {
 			} else if (lname.equals("network_name")) {
 
 			} else if (lname.equals("node")) {
-				ITSUMONetworkReader.this.network.createAndAddNode(Id.create(this.nodeId, Node.class), new CoordImpl(this.xCoord, this.yCoord));
+				ITSUMONetworkReader.this.network.createAndAddNode(Id.create(this.nodeId, Node.class), new Coord(Double.parseDouble(this.xCoord), Double.parseDouble(this.yCoord)));
 			} else if (lname.equals("node_id")) {
 				this.nodeId = content.trim();
 			} else if (lname.equals("x_coord")) {
@@ -150,7 +150,7 @@ public class ITSUMONetworkReader {
 			} else if (lname.equals("streets")) {
 
 			} else if (lname.equals("laneset")) {
-				double length = CoordUtils.calcDistance(ITSUMONetworkReader.this.network.getNodes().get(Id.create(this.lanesetFrom, Node.class)).getCoord(), ITSUMONetworkReader.this.network.getNodes().get(Id.create(this.lanesetTo, Node.class)).getCoord());
+				double length = CoordUtils.calcEuclideanDistance(ITSUMONetworkReader.this.network.getNodes().get(Id.create(this.lanesetFrom, Node.class)).getCoord(), ITSUMONetworkReader.this.network.getNodes().get(Id.create(this.lanesetTo, Node.class)).getCoord());
 				double capacity = 3600.0; // TODO calculate capacity from speed
 				ITSUMONetworkReader.this.network.createAndAddLink(Id.create(this.lanesetId, Link.class), ITSUMONetworkReader.this.network.getNodes().get(Id.create(this.lanesetFrom, Node.class)), ITSUMONetworkReader.this.network.getNodes().get(Id.create(this.lanesetTo, Node.class)),
 						length, this.laneSpeed / this.lanesCount, capacity, this.lanesCount);

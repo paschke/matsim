@@ -31,7 +31,6 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.population.PopulationWriter;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.ShapeFileReader;
@@ -297,13 +296,13 @@ public class SantiagoPopulationCreator {
 		Activity candidatePersonFromActivity = (Activity) candidatePerson.getSelectedPlan().getPlanElements().get(0);
 		Activity candidatePersonToActivity = (Activity) candidatePerson.getSelectedPlan().getPlanElements().get(2);
 		
-		double distanceA = CoordUtils.calcDistance(personToActivity.getCoord(), candidatePersonFromActivity.getCoord());
+		double distanceA = CoordUtils.calcEuclideanDistance(personToActivity.getCoord(), candidatePersonFromActivity.getCoord());
 		if (distanceA > DISTANCE_THRESHOLD) {
 			// those two are too fare away - abort
 			return false;
 		}
 		
-		double distanceB = CoordUtils.calcDistance(personFromActivity.getCoord(), candidatePersonToActivity.getCoord());
+		double distanceB = CoordUtils.calcEuclideanDistance(personFromActivity.getCoord(), candidatePersonToActivity.getCoord());
 		if (distanceB > DISTANCE_THRESHOLD) {
 			// those two are too fare away - abort
 			return false;
@@ -343,7 +342,7 @@ public class SantiagoPopulationCreator {
 			double y = geometry.getEnvelopeInternal().getMinY() + random.nextDouble()	* heightOfTheGeometry;
 			
 			candidatePoint = MGC.xy2Point(x, y);
-			coordinate = new CoordImpl(candidatePoint.getX(), candidatePoint.getY());
+			coordinate = new Coord(candidatePoint.getX(), candidatePoint.getY());
 		} while (!geometry.contains(candidatePoint));
 
 		return coordinate;

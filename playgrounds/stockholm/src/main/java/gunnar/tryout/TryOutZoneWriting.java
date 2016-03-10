@@ -1,5 +1,7 @@
 package gunnar.tryout;
 
+import gunnar.ihop2.regent.demandreading.Zone;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,7 +16,6 @@ import org.matsim.matrices.Matrix;
 
 import patryk.popgen2.PopulationParser;
 import patryk.popgen2.SelectZones;
-import patryk.popgen2.Zone;
 
 public class TryOutZoneWriting {
 
@@ -28,7 +29,7 @@ public class TryOutZoneWriting {
 
 		final Scenario scenario = ScenarioUtils.createScenario(ConfigUtils
 				.createConfig());
-		new MatsimNetworkReader(scenario).readFile(networkFile);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
 
 		final ArrayList<String> coveredZones;
 		{

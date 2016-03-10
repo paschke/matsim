@@ -20,6 +20,7 @@
 
 package org.matsim.core.events;
 
+import java.io.InputStream;
 import java.util.Locale;
 import java.util.Stack;
 
@@ -58,13 +59,17 @@ public class MatsimEventsReader implements MatsimSomeReader {
 	 */
 	public void readFile(final String filename) {
 		String lcFilename = filename.toLowerCase(Locale.ROOT);
-		if (lcFilename.endsWith(".txt") || lcFilename.endsWith(".txt.gz")) {
-			new EventsReaderTXTv1(this.events).readFile(filename);
-		} else if (lcFilename.endsWith(".xml") || lcFilename.endsWith(".xml.gz")) {
+		if (lcFilename.endsWith(".xml") || lcFilename.endsWith(".xml.gz")) {
 			new XmlEventsReader(this.events).readFile(filename);
+		} else if (lcFilename.endsWith(".txt") || lcFilename.endsWith(".txt.gz")) {
+			throw new RuntimeException("text events are no longer supported. Please use MATSim 0.6.1 or earlier to read text events.");
 		} else {
 			throw new IllegalArgumentException("Cannot recognize the format of the events-file " + filename);
 		}
+	}
+
+	public void readStream(final InputStream stream) {
+		new XmlEventsReader(this.events).parse(stream);
 	}
 
 	private static class XmlEventsReader extends MatsimXmlParser {

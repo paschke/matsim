@@ -8,7 +8,7 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.PlanImpl;
@@ -36,7 +36,7 @@ public class GravityModel extends RetailerModelImpl
   private ArrayList<Integer> incumbentSolution;
   private ArrayList<Double> incumbentFitness = new ArrayList<>();
 
-  public GravityModel(Controler controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities)
+  public GravityModel(MatsimServices controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities)
   {
     this.controler = controler;
     log.info("Controler" + this.controler);
@@ -45,7 +45,7 @@ public class GravityModel extends RetailerModelImpl
     this.shops = findScenarioShops(this.controlerFacilities.getFacilities().values());
 
       for (Person p : controler.getScenario().getPopulation().getPersons().values()) {
-      PersonImpl pi = (PersonImpl)p;
+      Person pi = p;
       this.persons.put(pi.getId(), pi);
     }
   }
@@ -63,8 +63,8 @@ public class GravityModel extends RetailerModelImpl
 
     Gbl.printMemoryUsage();
 
-    for (PersonImpl pi : this.persons.values()) {
-      PersonRetailersImpl pr = new PersonRetailersImpl(pi);
+    for (Person pi : this.persons.values()) {
+      PersonRetailersImpl pr = new PersonRetailersImpl((PersonImpl) pi);
       this.retailersPersons.put(pr.getId(), pr);
     }
   }
@@ -112,12 +112,12 @@ public class GravityModel extends RetailerModelImpl
                   dist = 10.0D;
                 }
               }
-              else if (CoordUtils.calcDistance(s.getCoord(), ((PlanImpl)pr.getSelectedPlan()).getFirstActivity().getCoord()) == 0.0D) {
+              else if (CoordUtils.calcEuclideanDistance(s.getCoord(), ((PlanImpl)pr.getSelectedPlan()).getFirstActivity().getCoord()) == 0.0D) {
                 dist = 10.0D;
               }
               else
               {
-                dist = CoordUtils.calcDistance(s.getCoord(), ((PlanImpl)pr.getSelectedPlan()).getFirstActivity().getCoord());
+                dist = CoordUtils.calcEuclideanDistance(s.getCoord(), ((PlanImpl)pr.getSelectedPlan()).getFirstActivity().getCoord());
               }
               ++count;
             }
@@ -210,12 +210,12 @@ public class GravityModel extends RetailerModelImpl
                     dist = 10.0D;
                   }
                 }
-                else if (CoordUtils.calcDistance(s.getCoord(), ((PlanImpl)pr.getSelectedPlan()).getFirstActivity().getCoord()) == 0.0D) {
+                else if (CoordUtils.calcEuclideanDistance(s.getCoord(), ((PlanImpl)pr.getSelectedPlan()).getFirstActivity().getCoord()) == 0.0D) {
                   dist = 10.0D;
                 }
                 else
                 {
-                  dist = CoordUtils.calcDistance(s.getCoord(), ((PlanImpl)pr.getSelectedPlan()).getFirstActivity().getCoord());
+                  dist = CoordUtils.calcEuclideanDistance(s.getCoord(), ((PlanImpl)pr.getSelectedPlan()).getFirstActivity().getCoord());
                 }
                 ++count;
               }
@@ -248,7 +248,7 @@ public class GravityModel extends RetailerModelImpl
     double miny = (1.0D / 0.0D);
     double maxx = (-1.0D / 0.0D);
     double maxy = (-1.0D / 0.0D);
-    for (PersonImpl p : this.persons.values()) {
+    for (Person p : this.persons.values()) {
       if (((PlanImpl)p.getSelectedPlan()).getFirstActivity().getCoord().getX() < minx) minx = ((PlanImpl)p.getSelectedPlan()).getFirstActivity().getCoord().getX();
       if (((PlanImpl)p.getSelectedPlan()).getFirstActivity().getCoord().getY() < miny) miny = ((PlanImpl)p.getSelectedPlan()).getFirstActivity().getCoord().getY();
       if (((PlanImpl)p.getSelectedPlan()).getFirstActivity().getCoord().getX() > maxx) maxx = ((PlanImpl)p.getSelectedPlan()).getFirstActivity().getCoord().getX();
@@ -281,7 +281,7 @@ public class GravityModel extends RetailerModelImpl
         double y1 = miny + j * y_width;
         double y2 = y1 + y_width;
         RetailZone rz = new RetailZone(id, Double.valueOf(x1), Double.valueOf(y1), Double.valueOf(x2), Double.valueOf(y2));
-        for (PersonImpl p : this.persons.values()) {
+        for (Person p : this.persons.values()) {
           c = ((ActivityFacility)this.controlerFacilities.getFacilities().get(((PlanImpl)p.getSelectedPlan()).getFirstActivity().getFacilityId())).getCoord();
           if ((c.getX() < x2) && (c.getX() >= x1) && (c.getY() < y2) && (c.getY() >= y1)) {
             rz.addPersonToQuadTree(c, p);

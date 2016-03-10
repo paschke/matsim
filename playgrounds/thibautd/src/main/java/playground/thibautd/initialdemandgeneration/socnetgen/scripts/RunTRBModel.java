@@ -19,25 +19,21 @@
  * *********************************************************************** */
 package playground.thibautd.initialdemandgeneration.socnetgen.scripts;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Stack;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.socnetsim.framework.population.SocialNetworkWriter;
+import org.matsim.contrib.socnetsim.utils.ObjectPool;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigWriter;
-import org.matsim.core.config.ConfigReader;
 import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ConfigReader;
+import org.matsim.core.config.ConfigWriter;
 import org.matsim.core.config.ReflectiveConfigGroup;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.core.utils.misc.Counter;
 import org.xml.sax.Attributes;
-
 import playground.thibautd.initialdemandgeneration.socnetgen.framework.Agent;
 import playground.thibautd.initialdemandgeneration.socnetgen.framework.LockedSocialNetwork;
 import playground.thibautd.initialdemandgeneration.socnetgen.framework.ModelIterator;
@@ -47,9 +43,11 @@ import playground.thibautd.initialdemandgeneration.socnetgen.framework.SocialNet
 import playground.thibautd.initialdemandgeneration.socnetgen.framework.SocialPopulation;
 import playground.thibautd.initialdemandgeneration.socnetgen.framework.ThresholdFunction;
 import playground.thibautd.initialdemandgeneration.socnetgen.framework.UtilityFunction;
-import org.matsim.contrib.socnetsim.framework.population.SocialNetworkWriter;
-import playground.thibautd.utils.MoreIOUtils;
-import org.matsim.contrib.socnetsim.utils.ObjectPool;
+import playground.ivt.utils.MoreIOUtils;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Stack;
 
 /**
  * @author thibautd
@@ -90,7 +88,7 @@ public class RunTRBModel {
 				// increase distance by 1 (normally meter) to avoid linking with all agents
 				// living in the same place.
 				// TODO: test sensitivity of the results to this
-				return pars.getB_logDist() * Math.log( CoordUtils.calcDistance( ego.getCoord(), alter.getCoord() ) + 1 )
+				return pars.getB_logDist() * Math.log( CoordUtils.calcEuclideanDistance( ego.getCoord(), alter.getCoord() ) + 1 )
 						+ pars.getB_sameGender() * dummy( ego.isMale() == alter.isMale() )
 						+ pars.getB_ageDiff0() * dummy( ageClassDifference == 0 )
 						+ pars.getB_ageDiff2() * dummy( ageClassDifference == 2 )
@@ -185,7 +183,7 @@ public class RunTRBModel {
 				if ( name.equals( "act" ) && agentWithoutCoord != null ) {
 					final double x = Double.parseDouble( atts.getValue( "x" ) );
 					final double y = Double.parseDouble( atts.getValue( "y" ) );
-					agentWithoutCoord.setCoord( coordPool.getPooledInstance( new CoordImpl( x , y ) ) );
+					agentWithoutCoord.setCoord( coordPool.getPooledInstance(new Coord(x, y)) );
 					agentWithoutCoord = null;
 				}
 

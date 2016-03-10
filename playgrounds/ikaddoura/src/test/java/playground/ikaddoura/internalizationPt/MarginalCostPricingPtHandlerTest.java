@@ -52,9 +52,8 @@ import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteFactory;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.pt.transitSchedule.api.Departure;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
@@ -116,7 +115,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestInVehicleDelay01(scenario);
 		fillScheduleTestInVehicleDelay01(scenario);
@@ -220,7 +219,7 @@ public class MarginalCostPricingPtHandlerTest  {
 	wParams.setTypicalDuration(3600.);
 	config.planCalcScore().addActivityParams(wParams);
 	
-	ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+	MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 	
 	setPopulationTestInVehicleDelay02(scenario);
 	fillScheduleTestInVehicleDelay02(scenario);
@@ -340,7 +339,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 		
 		setPopulationTestInVehicleDelay03(scenario);
 		fillScheduleTestInVehicleDelay03(scenario);
@@ -499,7 +498,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 		
 		setPopulationTestWaitingDelay01(scenario);
 		fillScheduleTestWaitingDelay01(scenario);
@@ -598,7 +597,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestWaitingDelay02(scenario);
 		fillScheduleTestWaitingDelay02(scenario);
@@ -699,7 +698,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestWaitingDelay03(scenario);
 		fillScheduleTestWaitingDelay03(scenario);
@@ -807,7 +806,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 			
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestWaitingDelay03b(scenario);
 		fillScheduleTestWaitingDelay03b(scenario);
@@ -908,7 +907,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestWaitingDelay04(scenario);
 		fillScheduleTestWaitingDelay04(scenario);
@@ -1029,7 +1028,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestWaitingDelay05(scenario);
 		fillScheduleTestWaitingDelay05(scenario);
@@ -1150,7 +1149,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestWaitingDelay06(scenario);
 		fillScheduleTestWaitingDelay06(scenario);
@@ -1269,7 +1268,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestCapacityDelay01(scenario);
 		fillScheduleTestCapacityDelay01(scenario);
@@ -1340,7 +1339,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestCapacityDelay02(scenario);
 		fillScheduleTestCapacityDelay02(scenario);
@@ -1408,7 +1407,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestCapacityDelay03(scenario);
 		fillScheduleTestCapacityDelay03(scenario);
@@ -1488,7 +1487,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestCapacityDelay04(scenario);
 		fillScheduleTestCapacityDelay04(scenario);
@@ -1565,7 +1564,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		wParams.setTypicalDuration(3600.);
 		config.planCalcScore().addActivityParams(wParams);
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		setPopulationTestCapacityDelay05(scenario);
 		fillScheduleTestCapacityDelay05(scenario);
@@ -1653,14 +1652,14 @@ public class MarginalCostPricingPtHandlerTest  {
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		network.setEffectiveCellSize(7.5);
 		network.setCapacityPeriod(3600.);
-		
-		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new CoordImpl (0., 0.));
-		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new CoordImpl (500., 0.));
-		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new CoordImpl (1000., 0.));
-		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new CoordImpl (1500., 0.));
-		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new CoordImpl (2000., 0.));
-		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new CoordImpl (2500., 0.));
-		Node node6 = network.getFactory().createNode(Id.create("6", Node.class), new CoordImpl (3000., 0.));
+
+		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new Coord(0., 0.));
+		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new Coord(500., 0.));
+		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new Coord(1000., 0.));
+		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new Coord(1500., 0.));
+		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new Coord(2000., 0.));
+		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new Coord(2500., 0.));
+		Node node6 = network.getFactory().createNode(Id.create("6", Node.class), new Coord(3000., 0.));
 		
 		Link link1 = network.getFactory().createLink(Id.create("1", Link.class), node0, node1);
 		Link link2 = network.getFactory().createLink(Id.create("2", Link.class), node1, node2);
@@ -1731,14 +1730,14 @@ public class MarginalCostPricingPtHandlerTest  {
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		network.setEffectiveCellSize(7.5);
 		network.setCapacityPeriod(3600.);
-		
-		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new CoordImpl (0., 0.));
-		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new CoordImpl (500., 0.));
-		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new CoordImpl (1000., 0.));
-		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new CoordImpl (1500., 0.));
-		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new CoordImpl (2000., 0.));
-		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new CoordImpl (2500., 0.));
-		Node node6 = network.getFactory().createNode(Id.create("6", Node.class), new CoordImpl (3000., 0.));
+
+		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new Coord(0., 0.));
+		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new Coord(500., 0.));
+		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new Coord(1000., 0.));
+		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new Coord(1500., 0.));
+		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new Coord(2000., 0.));
+		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new Coord(2500., 0.));
+		Node node6 = network.getFactory().createNode(Id.create("6", Node.class), new Coord(3000., 0.));
 		
 		Link link1 = network.getFactory().createLink(Id.create("1", Link.class), node0, node1);
 		Link link2 = network.getFactory().createLink(Id.create("2", Link.class), node1, node2);
@@ -1857,13 +1856,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -2010,7 +2009,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillScheduleTestInVehicleDelay01(ScenarioImpl scenario) {
+	private void fillScheduleTestInVehicleDelay01(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -2027,18 +2026,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -2102,7 +2101,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestInVehicleDelay01(ScenarioImpl scenario) {
+	private void fillVehicleTestInVehicleDelay01(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -2131,13 +2130,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -2209,7 +2208,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 		
-	private void fillScheduleTestInVehicleDelay02(ScenarioImpl scenario) {
+	private void fillScheduleTestInVehicleDelay02(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -2226,18 +2225,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -2301,7 +2300,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestInVehicleDelay02(ScenarioImpl scenario) {
+	private void fillVehicleTestInVehicleDelay02(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 	
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -2332,13 +2331,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -2524,7 +2523,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 
-	private void fillScheduleTestInVehicleDelay03(ScenarioImpl scenario) {
+	private void fillScheduleTestInVehicleDelay03(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -2541,18 +2540,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -2616,7 +2615,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestInVehicleDelay03(ScenarioImpl scenario) {
+	private void fillVehicleTestInVehicleDelay03(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -2646,13 +2645,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -2799,7 +2798,7 @@ public class MarginalCostPricingPtHandlerTest  {
 	
 	}
 	
-	private void fillScheduleTestWaitingDelay01(ScenarioImpl scenario) {
+	private void fillScheduleTestWaitingDelay01(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -2816,18 +2815,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -2891,7 +2890,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestWaitingDelay01(ScenarioImpl scenario) {
+	private void fillVehicleTestWaitingDelay01(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -2921,13 +2920,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -3074,7 +3073,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillScheduleTestWaitingDelay02(ScenarioImpl scenario) {
+	private void fillScheduleTestWaitingDelay02(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -3091,18 +3090,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -3166,7 +3165,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestWaitingDelay02(ScenarioImpl scenario) {
+	private void fillVehicleTestWaitingDelay02(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -3196,13 +3195,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -3349,7 +3348,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillScheduleTestWaitingDelay03(ScenarioImpl scenario) {
+	private void fillScheduleTestWaitingDelay03(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -3366,18 +3365,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -3448,7 +3447,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestWaitingDelay03(ScenarioImpl scenario) {
+	private void fillVehicleTestWaitingDelay03(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -3482,13 +3481,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -3635,7 +3634,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillScheduleTestWaitingDelay03b(ScenarioImpl scenario) {
+	private void fillScheduleTestWaitingDelay03b(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -3652,18 +3651,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -3734,7 +3733,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestWaitingDelay03b(ScenarioImpl scenario) {
+	private void fillVehicleTestWaitingDelay03b(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -3768,13 +3767,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -3934,7 +3933,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillScheduleTestWaitingDelay04(ScenarioImpl scenario) {
+	private void fillScheduleTestWaitingDelay04(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -3951,18 +3950,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -4026,7 +4025,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestWaitingDelay04(ScenarioImpl scenario) {
+	private void fillVehicleTestWaitingDelay04(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -4056,13 +4055,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (499.0 , 0.0);
-		Coord coord2 = new CoordImpl (999.0 , 0.0);
-		Coord coord3 = new CoordImpl (1499.0 , 0.0);
-		Coord coord4 = new CoordImpl (1999.0 , 0.0);
-		Coord coord5 = new CoordImpl (2499.0 , 0.0);
-		Coord coord6 = new CoordImpl (2999.0 , 0.0);
+
+		Coord coord1 = new Coord(499.0, 0.0);
+		Coord coord2 = new Coord(999.0, 0.0);
+		Coord coord3 = new Coord(1499.0, 0.0);
+		Coord coord4 = new Coord(1999.0, 0.0);
+		Coord coord5 = new Coord(2499.0, 0.0);
+		Coord coord6 = new Coord(2999.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -4222,7 +4221,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillScheduleTestWaitingDelay05(ScenarioImpl scenario) {
+	private void fillScheduleTestWaitingDelay05(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -4239,18 +4238,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -4314,7 +4313,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestWaitingDelay05(ScenarioImpl scenario) {
+	private void fillVehicleTestWaitingDelay05(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -4348,19 +4347,19 @@ public class MarginalCostPricingPtHandlerTest  {
 		//The network, coordinates and activities are adjusted here
 		//for simulating the outward journey and return journey
 		//and the operation over several trips of a car
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
-		Coord coord1back = new CoordImpl (500.0 , 0.0);
-		Coord coord2back = new CoordImpl (1000.0 , 0.0);
-		Coord coord3back = new CoordImpl (1500.0 , 0.0);
-		Coord coord4back = new CoordImpl (2000.0 , 0.0);
-		Coord coord5back = new CoordImpl (2500.0 , 0.0);
-		Coord coord6back = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
+		Coord coord1back = new Coord(500.0, 0.0);
+		Coord coord2back = new Coord(1000.0, 0.0);
+		Coord coord3back = new Coord(1500.0, 0.0);
+		Coord coord4back = new Coord(2000.0, 0.0);
+		Coord coord5back = new Coord(2500.0, 0.0);
+		Coord coord6back = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -4533,7 +4532,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillScheduleTestWaitingDelay06(ScenarioImpl scenario) {
+	private void fillScheduleTestWaitingDelay06(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -4564,32 +4563,32 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility9;
 		TransitStopFacility StopFacility10;
 		TransitStopFacility StopFacility11;
-		TransitStopFacility StopFacility12;	
-		
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility12;
+
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
-		
-		StopFacility7 = sf.createTransitStopFacility(Stop7, new CoordImpl (2501., 0.), true);
+
+		StopFacility7 = sf.createTransitStopFacility(Stop7, new Coord(2501., 0.), true);
 		StopFacility7.setLinkId(linkId7);
-		StopFacility8 = sf.createTransitStopFacility(Stop8, new CoordImpl (2001., 0.), true);
+		StopFacility8 = sf.createTransitStopFacility(Stop8, new Coord(2001., 0.), true);
 		StopFacility8.setLinkId(linkId8);
-		StopFacility9 = sf.createTransitStopFacility(Stop9, new CoordImpl (1501., 0.), true);
+		StopFacility9 = sf.createTransitStopFacility(Stop9, new Coord(1501., 0.), true);
 		StopFacility9.setLinkId(linkId9);
-		StopFacility10 = sf.createTransitStopFacility(Stop10, new CoordImpl (1001., 0.), true);
+		StopFacility10 = sf.createTransitStopFacility(Stop10, new Coord(1001., 0.), true);
 		StopFacility10.setLinkId(linkId10);
-		StopFacility11 = sf.createTransitStopFacility(Stop11, new CoordImpl (501., 0.), true);
+		StopFacility11 = sf.createTransitStopFacility(Stop11, new Coord(501., 0.), true);
 		StopFacility11.setLinkId(linkId11);
-		StopFacility12 = sf.createTransitStopFacility(Stop12, new CoordImpl (1., 0.), true);
+		StopFacility12 = sf.createTransitStopFacility(Stop12, new Coord(1., 0.), true);
 		StopFacility12.setLinkId(linkId12);
 		
 		TransitLine TransitLine1 = null;
@@ -4714,7 +4713,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestWaitingDelay06(ScenarioImpl scenario) {
+	private void fillVehicleTestWaitingDelay06(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -4752,13 +4751,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -4918,7 +4917,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 
-	private void fillScheduleTestCapacityDelay01(ScenarioImpl scenario) {
+	private void fillScheduleTestCapacityDelay01(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -4935,18 +4934,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -5024,7 +5023,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestCapacityDelay01(ScenarioImpl scenario) {
+	private void fillVehicleTestCapacityDelay01(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -5062,13 +5061,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -5228,7 +5227,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillScheduleTestCapacityDelay02(ScenarioImpl scenario) {
+	private void fillScheduleTestCapacityDelay02(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -5245,18 +5244,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -5334,7 +5333,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestCapacityDelay02(ScenarioImpl scenario) {
+	private void fillVehicleTestCapacityDelay02(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -5372,13 +5371,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -5564,7 +5563,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 
-	private void fillScheduleTestCapacityDelay03(ScenarioImpl scenario) {
+	private void fillScheduleTestCapacityDelay03(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -5581,18 +5580,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -5670,7 +5669,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestCapacityDelay03(ScenarioImpl scenario) {
+	private void fillVehicleTestCapacityDelay03(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -5708,13 +5707,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -5887,7 +5886,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 
-	private void fillScheduleTestCapacityDelay04(ScenarioImpl scenario) {
+	private void fillScheduleTestCapacityDelay04(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -5904,18 +5903,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -5993,7 +5992,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestCapacityDelay04(ScenarioImpl scenario) {
+	private void fillVehicleTestCapacityDelay04(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);
@@ -6031,13 +6030,13 @@ public class MarginalCostPricingPtHandlerTest  {
 		Population population = scenario.getPopulation();
         PopulationFactoryImpl popFactory = (PopulationFactoryImpl) scenario.getPopulation().getFactory();
 		LinkNetworkRouteFactory routeFactory = new LinkNetworkRouteFactory();
-		
-		Coord coord1 = new CoordImpl (500.0 , 0.0);
-		Coord coord2 = new CoordImpl (1000.0 , 0.0);
-		Coord coord3 = new CoordImpl (1500.0 , 0.0);
-		Coord coord4 = new CoordImpl (2000.0 , 0.0);
-		Coord coord5 = new CoordImpl (2500.0 , 0.0);
-		Coord coord6 = new CoordImpl (3000.0 , 0.0);
+
+		Coord coord1 = new Coord(500.0, 0.0);
+		Coord coord2 = new Coord(1000.0, 0.0);
+		Coord coord3 = new Coord(1500.0, 0.0);
+		Coord coord4 = new Coord(2000.0, 0.0);
+		Coord coord5 = new Coord(2500.0, 0.0);
+		Coord coord6 = new Coord(3000.0, 0.0);
 		
 		Activity lastActLink2 = popFactory.createActivityFromCoord("w", coord2);
 		Activity lastActLink3 = popFactory.createActivityFromCoord("w", coord3);
@@ -6223,7 +6222,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 
-	private void fillScheduleTestCapacityDelay05(ScenarioImpl scenario) {
+	private void fillScheduleTestCapacityDelay05(MutableScenario scenario) {
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		
 		TransitScheduleFactory sf = schedule.getFactory();
@@ -6240,18 +6239,18 @@ public class MarginalCostPricingPtHandlerTest  {
 		TransitStopFacility StopFacility3;
 		TransitStopFacility StopFacility4;
 		TransitStopFacility StopFacility5;
-		TransitStopFacility StopFacility6;	
-		StopFacility1 = sf.createTransitStopFacility(Stop1, new CoordImpl (500., 0.), true);
+		TransitStopFacility StopFacility6;
+		StopFacility1 = sf.createTransitStopFacility(Stop1, new Coord(500., 0.), true);
 		StopFacility1.setLinkId(linkId1);
-		StopFacility2 = sf.createTransitStopFacility(Stop2, new CoordImpl (1000., 0.), true);
+		StopFacility2 = sf.createTransitStopFacility(Stop2, new Coord(1000., 0.), true);
 		StopFacility2.setLinkId(linkId2);
-		StopFacility3 = sf.createTransitStopFacility(Stop3, new CoordImpl (1500., 0.), true);
+		StopFacility3 = sf.createTransitStopFacility(Stop3, new Coord(1500., 0.), true);
 		StopFacility3.setLinkId(linkId3);
-		StopFacility4 = sf.createTransitStopFacility(Stop4, new CoordImpl (2000., 0.), true);
+		StopFacility4 = sf.createTransitStopFacility(Stop4, new Coord(2000., 0.), true);
 		StopFacility4.setLinkId(linkId4);
-		StopFacility5 = sf.createTransitStopFacility(Stop5, new CoordImpl (2500., 0.), true);
+		StopFacility5 = sf.createTransitStopFacility(Stop5, new Coord(2500., 0.), true);
 		StopFacility5.setLinkId(linkId5);
-		StopFacility6 = sf.createTransitStopFacility(Stop6, new CoordImpl (3000., 0.), true);
+		StopFacility6 = sf.createTransitStopFacility(Stop6, new Coord(3000., 0.), true);
 		StopFacility6.setLinkId(linkId6);
 		
 		TransitLine TransitLine1 = null;
@@ -6329,7 +6328,7 @@ public class MarginalCostPricingPtHandlerTest  {
 		
 	}
 	
-	private void fillVehicleTestCapacityDelay05(ScenarioImpl scenario) {
+	private void fillVehicleTestCapacityDelay05(MutableScenario scenario) {
 		Vehicles veh = scenario.getTransitVehicles();
 
 		Id<VehicleType> vehTypeId1 = Id.create("type_1", VehicleType.class);

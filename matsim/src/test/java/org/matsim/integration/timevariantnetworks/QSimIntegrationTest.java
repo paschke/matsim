@@ -20,14 +20,20 @@
 
 package org.matsim.integration.timevariantnetworks;
 
-import junit.framework.Assert;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.Assert;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
 import org.matsim.api.core.v01.events.LinkLeaveEvent;
+import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
 import org.matsim.api.core.v01.events.PersonStuckEvent;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
 import org.matsim.api.core.v01.events.handler.LinkLeaveEventHandler;
+import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonStuckEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
@@ -44,18 +50,18 @@ import org.matsim.core.network.NetworkChangeEvent.ChangeValue;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.LegImpl;
 import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PlanImpl;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.testcases.MatsimTestCase;
 import org.matsim.testcases.utils.EventsLogger;
+import org.matsim.vehicles.Vehicle;
 
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Tests that the QSim takes a TimeVariant Network into account.
@@ -67,7 +73,7 @@ public class QSimIntegrationTest extends MatsimTestCase {
 	public void testFreespeed() {
 		Config config = loadConfig(null);
 		config.network().setTimeVariantNetwork(true);
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		NetworkImpl network = createNetwork(scenario);
 		Link link1 = network.getLinks().get(Id.create("1", Link.class));
@@ -82,14 +88,14 @@ public class QSimIntegrationTest extends MatsimTestCase {
 
 		// create a population
 		Population plans = scenario.getPopulation();
-		PersonImpl person1 = createPersons(7*3600, link1, link3, network, 1).get(0);
-		PersonImpl person2 = createPersons(9*3600, link1, link3, network, 1).get(0);
+		Person person1 = createPersons(7*3600, link1, link3, network, 1).get(0);
+		Person person2 = createPersons(9*3600, link1, link3, network, 1).get(0);
 		plans.addPerson(person1);
 		plans.addPerson(person2);
 
 		// run the simulation with the timevariant network and the two persons
 		EventsManager events = EventsUtils.createEventsManager();
-		TestTravelTimeCalculator ttcalc = new TestTravelTimeCalculator(person1, person2, link2.getId());
+		TestTravelTimeCalculator ttcalc = new TestTravelTimeCalculator(person1.getId(), person2.getId(), link2.getId());
 		events.addHandler(ttcalc);
 
 		Mobsim qsim = QSimUtils.createDefaultQSim(scenario, events);
@@ -112,7 +118,7 @@ public class QSimIntegrationTest extends MatsimTestCase {
 
 		Config config = loadConfig(null);
 		config.network().setTimeVariantNetwork(true);
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		NetworkImpl network = createNetwork(scenario);
 		Link link1 = network.getLinks().get(Id.create("1", Link.class));
@@ -136,23 +142,23 @@ public class QSimIntegrationTest extends MatsimTestCase {
 		 * Create two waves of persons, each counting 10.
 		 */
 		Population plans = scenario.getPopulation();
-		List<PersonImpl> persons1 = createPersons(0, link1, link3, network, personsPerWave);
-		for(PersonImpl p : persons1) {
+		List<Person> persons1 = createPersons(0, link1, link3, network, personsPerWave);
+		for(Person p : persons1) {
 			plans.addPerson(p);
 		}
-		PersonImpl person1 = persons1.get(personsPerWave - 1);
+		Person person1 = persons1.get(personsPerWave - 1);
 
-		List<PersonImpl> persons2 = createPersons(3600, link1, link3, network, personsPerWave);
-		for(PersonImpl p : persons2) {
+		List<Person> persons2 = createPersons(3600, link1, link3, network, personsPerWave);
+		for(Person p : persons2) {
 			plans.addPerson(p);
 		}
-		PersonImpl person2 = persons2.get(personsPerWave - 1);
+		Person person2 = persons2.get(personsPerWave - 1);
 		/*
 		 * Run the simulation with the time-variant network and the two waves of
 		 * persons. Observe the last person of each wave.
 		 */
 		EventsManager events = EventsUtils.createEventsManager();
-		TestTravelTimeCalculator ttcalc = new TestTravelTimeCalculator(person1, person2, link2.getId());
+		TestTravelTimeCalculator ttcalc = new TestTravelTimeCalculator(person1.getId(), person2.getId(), link2.getId());
 		events.addHandler(ttcalc);
 		Mobsim qsim = QSimUtils.createDefaultQSim(scenario, events);
         qsim.run();
@@ -180,7 +186,7 @@ public class QSimIntegrationTest extends MatsimTestCase {
 		config.qsim().setStartTime(0.0);
 		final double simEndTime = 7200.0;
 		config.qsim().setEndTime(simEndTime);
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		NetworkImpl network = createNetwork(scenario);
 		final Id<Link> id1 = Id.create("1", Link.class);
@@ -201,9 +207,9 @@ public class QSimIntegrationTest extends MatsimTestCase {
 		 * Create two waves of persons, each counting 10.
 		 */
 		Population plans = scenario.getPopulation();
-		List<PersonImpl> persons1 = createPersons(0, link1, link3, network, 1);
+		List<Person> persons1 = createPersons(0, link1, link3, network, 1);
 		final Id<Person> personId = persons1.get(0).getId();
-		for(PersonImpl p : persons1) {
+		for(Person p : persons1) {
 			plans.addPerson(p);
 		}
 
@@ -220,7 +226,7 @@ public class QSimIntegrationTest extends MatsimTestCase {
 			@Override
 			public void handleEvent(LinkEnterEvent event) {
 				if (id2.equals(event.getLinkId()))
-					Assert.assertEquals(1.0, event.getTime());
+					Assert.assertEquals(1.0, event.getTime(), MatsimTestCase.EPSILON);
 				if (id3.equals(event.getLinkId()))
 					Assert.fail("Link 3 should never be reached as capacity of link 2 is set to 0");
 			}
@@ -233,7 +239,7 @@ public class QSimIntegrationTest extends MatsimTestCase {
 			@Override
 			public void handleEvent(PersonStuckEvent event) {
 				Assert.assertEquals(id2, event.getLinkId());
-				Assert.assertEquals(simEndTime, event.getTime());
+				Assert.assertEquals(simEndTime, event.getTime(), MatsimTestCase.EPSILON);
 				Assert.assertEquals(personId, event.getPersonId());
 			}
 		});
@@ -254,18 +260,18 @@ public class QSimIntegrationTest extends MatsimTestCase {
 	 * @return a network.
 	 * @author illenberger
 	 */
-	private NetworkImpl createNetwork(ScenarioImpl scenario) {
+	private NetworkImpl createNetwork(MutableScenario scenario) {
 		// create a network
 		NetworkFactoryImpl nf = (NetworkFactoryImpl) scenario.getNetwork().getFactory();
-		nf.setLinkFactory(new TimeVariantLinkFactory());
+		nf.setLinkFactory(new VariableIntervalTimeVariantLinkFactory());
 		final NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		network.setCapacityPeriod(3600.0);
 
 		// the network has 4 nodes and 3 links, each link by default 100 long and freespeed = 10 --> freespeed travel time = 10.0
-		Node node1 = network.createAndAddNode(Id.create("1", Node.class), new CoordImpl(0, 0));
-		Node node2 = network.createAndAddNode(Id.create("2", Node.class), new CoordImpl(100, 0));
-		Node node3 = network.createAndAddNode(Id.create("3", Node.class), new CoordImpl(200, 0));
-		Node node4 = network.createAndAddNode(Id.create("4", Node.class), new CoordImpl(300, 0));
+		Node node1 = network.createAndAddNode(Id.create("1", Node.class), new Coord((double) 0, (double) 0));
+		Node node2 = network.createAndAddNode(Id.create("2", Node.class), new Coord((double) 100, (double) 0));
+		Node node3 = network.createAndAddNode(Id.create("3", Node.class), new Coord((double) 200, (double) 0));
+		Node node4 = network.createAndAddNode(Id.create("4", Node.class), new Coord((double) 300, (double) 0));
 		network.createAndAddLink(Id.create("1", Link.class), node1, node2, 100, 10, 3600, 1);
 		network.createAndAddLink(Id.create("2", Link.class), node2, node3, 100, 10, 3600, 1);
 		network.createAndAddLink(Id.create("3", Link.class), node3, node4, 100, 10, 3600, 1);
@@ -284,13 +290,13 @@ public class QSimIntegrationTest extends MatsimTestCase {
 	 * @return a list of persons where the ordering corresponds to the departure times.
 	 * @author illenberger
 	 */
-	private List<PersonImpl> createPersons(final double depTime, final Link depLink, final Link destLink, final NetworkImpl network,
+	private List<Person> createPersons(final double depTime, final Link depLink, final Link destLink, final NetworkImpl network,
 			final int count) {
 		double departureTime = depTime;
-		List<PersonImpl> persons = new ArrayList<PersonImpl>(count);
+		List<Person> persons = new ArrayList<Person>(count);
 		for(int i = 0; i < count; i++) {
-			PersonImpl person = new PersonImpl(Id.create(i + (int)departureTime, Person.class));
-			PlanImpl plan1 = person.createAndAddPlan(true);
+			Person person = PopulationUtils.createPerson(Id.create(i + (int) departureTime, Person.class));
+			PlanImpl plan1 = PersonUtils.createAndAddPlan(person, true);
 			ActivityImpl a1 = plan1.createAndAddActivity("h", depLink.getId());
 			a1.setEndTime(departureTime);
 			LegImpl leg1 = plan1.createAndAddLeg(TransportMode.car);
@@ -312,19 +318,21 @@ public class QSimIntegrationTest extends MatsimTestCase {
 	 *
 	 * @author mrieser
 	 */
-	private static class TestTravelTimeCalculator implements LinkEnterEventHandler, LinkLeaveEventHandler {
+	private static class TestTravelTimeCalculator implements PersonEntersVehicleEventHandler, LinkEnterEventHandler, LinkLeaveEventHandler {
 
-		private final PersonImpl person1;
-		private final PersonImpl person2;
+		private final Id<Person> personId1;
+		private final Id<Person> personId2;
 		private final Id<Link> linkId;
+		private Id<Vehicle> vehicleId1;
+		private Id<Vehicle> vehicleId2;
 		protected double person1enterTime = Time.UNDEFINED_TIME;
 		protected double person1leaveTime = Time.UNDEFINED_TIME;
 		protected double person2enterTime = Time.UNDEFINED_TIME;
 		protected double person2leaveTime = Time.UNDEFINED_TIME;
 
-		protected TestTravelTimeCalculator(final PersonImpl person1, final PersonImpl person2, final Id<Link> linkId) {
-			this.person1 = person1;
-			this.person2 = person2;
+		protected TestTravelTimeCalculator(final Id<Person> personId1, final Id<Person> personId2, final Id<Link> linkId) {
+			this.personId1 = personId1;
+			this.personId2 = personId2;
 			this.linkId = linkId;
 		}
 
@@ -333,9 +341,9 @@ public class QSimIntegrationTest extends MatsimTestCase {
 			if (!event.getLinkId().equals(this.linkId)) {
 				return;
 			}
-			if (event.getPersonId().equals(this.person1.getId())) {
+			if (event.getVehicleId().equals(this.vehicleId1)) {
 				this.person1enterTime = event.getTime();
-			} else if (event.getPersonId().equals(this.person2.getId())) {
+			} else if (event.getVehicleId().equals(this.vehicleId2)) {
 				this.person2enterTime = event.getTime();
 			}
 		}
@@ -345,9 +353,9 @@ public class QSimIntegrationTest extends MatsimTestCase {
 			if (!event.getLinkId().equals(this.linkId)) {
 				return;
 			}
-			if (event.getPersonId().equals(this.person1.getId())) {
+			if (event.getVehicleId().equals(this.vehicleId1)) {
 				this.person1leaveTime = event.getTime();
-			} else if (event.getPersonId().equals(this.person2.getId())) {
+			} else if (event.getVehicleId().equals(this.vehicleId2)) {
 				this.person2leaveTime = event.getTime();
 			}
 		}
@@ -355,6 +363,15 @@ public class QSimIntegrationTest extends MatsimTestCase {
 		@Override
 		public void reset(final int iteration) {
 			// nothing to do
+		}
+
+		@Override
+		public void handleEvent(PersonEntersVehicleEvent event) {
+			if (event.getPersonId().equals(personId1)){
+				vehicleId1 = event.getVehicleId();
+			} else if (event.getPersonId().equals(personId2)){
+				vehicleId2 = event.getVehicleId();
+			}
 		}
 
 	}

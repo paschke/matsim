@@ -27,6 +27,7 @@ import org.matsim.api.core.v01.*;
 import org.matsim.contrib.dvrp.data.*;
 import org.matsim.contrib.dvrp.data.file.VehicleWriter;
 import org.matsim.contrib.util.random.WeightedRandomSelection;
+import org.matsim.contrib.zone.Zone;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -35,7 +36,6 @@ import org.matsim.matrices.*;
 
 import playground.michalm.berlin.BerlinZoneUtils;
 import playground.michalm.util.matrices.MatrixUtils;
-import playground.michalm.zone.Zone;
 
 
 public class BerlinTaxiVehicleCreatorV3
@@ -104,7 +104,7 @@ public class BerlinTaxiVehicleCreatorV3
     private void prepareNetwork(String networkFile, String zoneShpFile, String zoneXmlFile)
     {
         scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-        new MatsimNetworkReader(scenario).readFile(networkFile);
+        new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
         zones = BerlinZoneUtils.readZones(zoneXmlFile, zoneShpFile);
     }
 

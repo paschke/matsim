@@ -22,22 +22,26 @@ package org.matsim.pt.routes;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.core.population.routes.GenericRouteImpl;
+import org.matsim.core.population.routes.AbstractRoute;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
 
-public class ExperimentalTransitRoute extends GenericRouteImpl {
+public class ExperimentalTransitRoute extends AbstractRoute {
 
 	private final static String SEPARATOR = "===";
 	private final static String IDENTIFIER_1 = "PT1" + SEPARATOR;
+
+	/*package*/ final static String ROUTE_TYPE = "experimentalPt1";
 
 	private Id<TransitStopFacility> accessStopId = null;
 	private Id<TransitStopFacility> egressStopId = null;
 	private Id<TransitLine> lineId = null;
 	private Id<TransitRoute> routeId = null;
 	private String description = null;
+	private String routeDescription;
+	
 
 	/*package*/ ExperimentalTransitRoute(final Id<Link> startLinkId, final Id<Link> endLinkId) {
 		super(startLinkId, endLinkId);
@@ -80,8 +84,9 @@ public class ExperimentalTransitRoute extends GenericRouteImpl {
 	}
 
 	@Override
-	public void setRouteDescription(final Id<Link> startLinkId, final String routeDescription, final Id<Link> endLinkId) {
-		super.setRouteDescription(startLinkId, routeDescription, endLinkId);
+	public void setRouteDescription(final String routeDescription) {
+//		super.setRouteDescription(routeDescription);
+		this.routeDescription = routeDescription ;
 		if (routeDescription.startsWith(IDENTIFIER_1)) {
 			String[] parts = routeDescription.split(SEPARATOR, 6);//StringUtils.explode(routeDescription, '\t', 6);
 			this.accessStopId = Id.create(parts[1], TransitStopFacility.class);
@@ -103,7 +108,8 @@ public class ExperimentalTransitRoute extends GenericRouteImpl {
 	@Override
 	public String getRouteDescription() {
 		if (this.accessStopId == null) {
-			return super.getRouteDescription();
+//			return super.getRouteDescription();
+			return this.routeDescription ;
 		}
 		String str = IDENTIFIER_1 + this.accessStopId.toString() + SEPARATOR + this.lineId.toString() + SEPARATOR +
 				this.routeId.toString() + SEPARATOR + this.egressStopId.toString();
@@ -115,7 +121,7 @@ public class ExperimentalTransitRoute extends GenericRouteImpl {
 
 	@Override
 	public String getRouteType() {
-		return "experimentalPt1";
+		return ROUTE_TYPE;
 	}
 	
 	@Override

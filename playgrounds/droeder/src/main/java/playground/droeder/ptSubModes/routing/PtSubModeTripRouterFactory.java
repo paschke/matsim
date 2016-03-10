@@ -27,16 +27,12 @@ import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.ControlerConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.population.routes.ModeRouteFactory;
-import org.matsim.core.router.RoutingContext;
-import org.matsim.core.router.TransitRouterWrapper;
-import org.matsim.core.router.TripRouter;
-import org.matsim.core.router.TripRouterFactory;
+import org.matsim.core.router.*;
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.old.DefaultRoutingModules;
 import org.matsim.core.router.util.*;
 import org.matsim.pt.router.TransitRouter;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
@@ -45,7 +41,7 @@ import org.matsim.pt.transitSchedule.api.TransitSchedule;
  * @author droeder
  *
  */
-public class PtSubModeTripRouterFactory implements TripRouterFactory{
+public class PtSubModeTripRouterFactory implements javax.inject.Provider<TripRouter>{
 
 
 
@@ -63,14 +59,14 @@ public class PtSubModeTripRouterFactory implements TripRouterFactory{
 	private Provider<TransitRouter> transitRouterFactory;
 	private TransitSchedule transitSchedule;
 
-	private Controler controler;
+	private MatsimServices controler;
 
 	/**
-	 * based on {@link org.matsim.core.router.TripRouterProviderImpl}. Own Implementation is just necessary to add pt-submodes.
+	 * based on {@link TripRouterFactoryBuilderWithDefaults.TripRouterProviderImpl}. Own Implementation is just necessary to add pt-submodes.
 	 * @param controler
 	 * @param transitRouterFactory 
 	 */
-	public PtSubModeTripRouterFactory(final Controler controler, Provider<TransitRouter> transitRouterFactory) {
+	public PtSubModeTripRouterFactory(final MatsimServices controler, Provider<TransitRouter> transitRouterFactory) {
 		this.controler = controler;
 		this.transitRouterFactory = transitRouterFactory;
 //		this.config = controler.getScenario().getConfig();
@@ -85,7 +81,7 @@ public class PtSubModeTripRouterFactory implements TripRouterFactory{
 	}
 	
 	@Override
-	public TripRouter instantiateAndConfigureTripRouter(RoutingContext iterationContext) {
+	public TripRouter get() {
 		
 		this.config = controler.getScenario().getConfig();
 		this.network = controler.getScenario().getNetwork();
@@ -108,8 +104,7 @@ public class PtSubModeTripRouterFactory implements TripRouterFactory{
 		PlansCalcRouteConfigGroup routeConfigGroup = config.plansCalcRoute();
 		TravelDisutility travelCost =
 			travelDisutilityFactory.createTravelDisutility(
-					travelTime,
-					config.planCalcScore() );
+					travelTime );
 
 		LeastCostPathCalculator routeAlgo =
 			leastCostPathAlgorithmFactory.createPathCalculator(
@@ -144,7 +139,7 @@ public class PtSubModeTripRouterFactory implements TripRouterFactory{
 		for ( String mainMode : routeConfigGroup.getNetworkModes() ) {
 			tripRouter.setRoutingModule(
 					mainMode,
-					DefaultRoutingModules.createNetworkRouter(mainMode, populationFactory,
+					DefaultRoutingModules.createPureNetworkRouter(mainMode, populationFactory,
 						network,
 						routeAlgo ));
 		}

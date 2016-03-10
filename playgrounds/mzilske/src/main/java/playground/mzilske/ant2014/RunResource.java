@@ -35,7 +35,7 @@ public class RunResource {
 	
 	public Scenario getConfigAndNetwork() {
 		Scenario baseScenario = ScenarioUtils.createScenario(getOutputConfig());
-		new MatsimNetworkReader(baseScenario).readFile(wd + "/" + runPrefix() + "output_network.xml.gz");
+		new MatsimNetworkReader(baseScenario.getNetwork()).readFile(wd + "/" + runPrefix() + "output_network.xml.gz");
 		return baseScenario;
 	}
 	
@@ -44,7 +44,7 @@ public class RunResource {
 		new MatsimPopulationReader(scenario).readFile(wd + "/" + runPrefix() + "output_plans.xml.gz");
 		if (scenario.getConfig().transit().isUseTransit()) {
 			new TransitScheduleReader(scenario).readFile(wd + "/" + runPrefix() + "output_transitSchedule.xml.gz");
-			new VehicleReaderV1(scenario.getTransitVehicles()).readFile(wd + "/" + runPrefix() + "output_vehicles.xml.gz");
+			new VehicleReaderV1(scenario.getTransitVehicles()).readFile(wd + "/" + runPrefix() + "output_transitVehicles.xml.gz");
 		}
 		return scenario;
 	}

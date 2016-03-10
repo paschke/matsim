@@ -8,16 +8,16 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.FacilitiesReaderMatsimV1;
 
 public class CarsharingStationDistance {
 	public void run(String plansFilePath, String networkFilePath, String facilitiesfilePath, String outputFilePath) {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		PopulationReader populationReader = new MatsimPopulationReader(scenario);
-		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 		networkReader.readFile(networkFilePath);
 		new FacilitiesReaderMatsimV1(scenario).readFile(facilitiesfilePath);
 		populationReader.readFile(plansFilePath);
@@ -34,8 +34,8 @@ public class CarsharingStationDistance {
 					
 				if (pe instanceof Activity) 
 					if (((Activity) pe).getType().equals( "carsharingInteraction" ) && leg.getMode().equals( "carsharingwalk" )) {
-						if (CoordUtils.calcDistance(scenario.getActivityFacilities().getFacilities().get(a.getFacilityId()).getCoord(), scenario.getNetwork().getLinks().get(((Activity) pe).getLinkId()).getCoord()) < 2000) {
-							bla[(int)CoordUtils.calcDistance(scenario.getActivityFacilities().getFacilities().get(a.getFacilityId()).getCoord(), scenario.getNetwork().getLinks().get(((Activity) pe).getLinkId()).getCoord())/100]++;
+						if (CoordUtils.calcEuclideanDistance(scenario.getActivityFacilities().getFacilities().get(a.getFacilityId()).getCoord(), scenario.getNetwork().getLinks().get(((Activity) pe).getLinkId()).getCoord()) < 2000) {
+							bla[(int)CoordUtils.calcEuclideanDistance(scenario.getActivityFacilities().getFacilities().get(a.getFacilityId()).getCoord(), scenario.getNetwork().getLinks().get(((Activity) pe).getLinkId()).getCoord())/100]++;
 							count++;
 						}
 						else count1++;

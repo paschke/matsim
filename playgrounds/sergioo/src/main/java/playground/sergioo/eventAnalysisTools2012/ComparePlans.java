@@ -18,7 +18,6 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.NetworkReaderMatsimV1;
 import org.matsim.core.population.MatsimPopulationReader;
-import org.matsim.core.population.routes.GenericRoute;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -32,7 +31,7 @@ public class ComparePlans {
 	//Constructors
 	public ComparePlans(String networkFile, String plansFile, String outFile) throws Exception {
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new NetworkReaderMatsimV1(scenario).parse(networkFile);
+		new NetworkReaderMatsimV1(scenario.getNetwork()).parse(networkFile);
 		new MatsimPopulationReader(scenario).parse(plansFile);
 		writeModeChoice(scenario.getPopulation(), outFile, scenario.getNetwork());
 	}
@@ -74,7 +73,7 @@ public class ComparePlans {
 				PlanElement planElement1 = plan1.getPlanElements().get(p1), planElement2 = plan2.getPlanElements().get(p2);
 				if(planElement1 instanceof Leg && planElement2 instanceof Leg) {
 					if(((Leg)planElement1).getMode().equals("car") && ((Leg)planElement2).getMode().equals("transit_walk")) {
-						String line = personId+s+l+s+((Leg)planElement1).getTravelTime()+s+RouteUtils.calcDistance(((NetworkRoute)((Leg)planElement1).getRoute()), network);
+						String line = personId+s+l+s+((Leg)planElement1).getTravelTime()+s+RouteUtils.calcDistanceExcludingStartEndLink(((NetworkRoute)((Leg)planElement1).getRoute()), network);
 						double time=0, distance=0, fare=0, numTransfers=0, walk=0;
 						while(!(planElement2 instanceof Activity) || ((Activity)planElement2).getType().equals("pt interaction")) {
 							if(planElement2 instanceof Leg) {
@@ -91,7 +90,7 @@ public class ComparePlans {
 						writer.println(line);
 					}
 					else if(((Leg)planElement2).getMode().equals("car") && ((Leg)planElement1).getMode().equals("transit_walk")) {
-						String line = personId+s+l+s+((Leg)planElement2).getTravelTime()+s+RouteUtils.calcDistance(((NetworkRoute)((Leg)planElement2).getRoute()), network);
+						String line = personId+s+l+s+((Leg)planElement2).getTravelTime()+s+RouteUtils.calcDistanceExcludingStartEndLink(((NetworkRoute)((Leg)planElement2).getRoute()), network);
 						double time=0, distance=0, fare=0, numTransfers=0, walk=0;
 						while(!(planElement1 instanceof Activity) || ((Activity)planElement1).getType().equals("pt interaction")) {
 							if(planElement1 instanceof Leg) {
@@ -140,11 +139,11 @@ public class ComparePlans {
 	private void writePlans(PrintWriter writer, Id<Person> personId, Plan plan1, Plan plan2) {
 		String plan = personId+"("+plan1.getScore()+"): ";
 		for(PlanElement planElement:plan1.getPlanElements())
-			plan+=(planElement instanceof Activity?((Activity)planElement).getType(): ((Leg)planElement).getMode()+(((Leg)planElement).getMode().equals("pt")?"("+((GenericRoute)((Leg)planElement).getRoute()).getRouteDescription()+")":""))+"   ";
+			plan+=(planElement instanceof Activity?((Activity)planElement).getType(): ((Leg)planElement).getMode()+(((Leg)planElement).getMode().equals("pt")?"("+(((Leg)planElement).getRoute()).getRouteDescription()+")":""))+"   ";
 		writer.println(plan);
 		plan = personId+"("+plan2.getScore()+"): ";
 		for(PlanElement planElement:plan2.getPlanElements())
-			plan+=(planElement instanceof Activity?((Activity)planElement).getType(): ((Leg)planElement).getMode()+(((Leg)planElement).getMode().equals("pt")?"("+((GenericRoute)((Leg)planElement).getRoute()).getRouteDescription()+")":""))+"   ";
+			plan+=(planElement instanceof Activity?((Activity)planElement).getType(): ((Leg)planElement).getMode()+(((Leg)planElement).getMode().equals("pt")?"("+(((Leg)planElement).getRoute()).getRouteDescription()+")":""))+"   ";
 		writer.println(plan);
 	}
 	private boolean sameChainDifferentMode(Plan plan1, Plan plan2) {

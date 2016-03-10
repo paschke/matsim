@@ -3,6 +3,7 @@ package playground.wrashid.PSF.singleAgent;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
 import org.matsim.testcases.MatsimTestCase;
 import playground.wrashid.PSF.ParametersPSF;
@@ -28,11 +29,12 @@ public class BasicTest extends MatsimTestCase {
 	protected void setUp() throws Exception {
 		super.setUp();
 		Config config = loadConfig("test/input/playground/wrashid/PSF/singleAgent/config.xml");
+		ConfigUtils.addOrGetModule(config, ParametersPSF.PSF_MODULE, ParametersPSF.class);
 
 		controler = new Controler(config);
-        controler.getConfig().controler().setCreateGraphs(false);
+		controler.getConfig().controler().setCreateGraphs(false);
 
-        controler.addControlerListener(new AddEnergyScoreListener());
+		controler.addControlerListener(new AddEnergyScoreListener());
 	}
 
 	/*
@@ -64,11 +66,11 @@ public class BasicTest extends MatsimTestCase {
 		assertEquals(22989, chargeLogOfAgentOne.getStartChargingTime(),  1);
 		// yy for some unknown reason, this assertion
 		// * works on the build server
-		// * works one only this test or only this test class or only this test package is run locally on my machine
+		// * works when only this test or only this test class or only this test package is run locally on my machine
 		// * fails when I run all wrashid tests locally on my machine.  It is far off then: 2700 instead of 22989. 
 		// kai, may'15
-		
-		
+
+
 		assertEquals(23104, chargeLogOfAgentOne.getEndChargingTime(),  1);
 
 		chargeLogOfAgentOne = chargingTimesOfAgentOne.getChargingTimes().get(1);

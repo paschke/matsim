@@ -35,17 +35,24 @@ public class CachedEpisode extends CachedElement implements Episode {
 
     private final List<Segment> legs;
 
-    public CachedEpisode(Episode delegate) {
+    private final CachedPerson person;
+
+    public CachedEpisode(Episode delegate, CachedPerson person) {
         super(delegate);
+        this.person = person;
 
         activities = new ArrayList<>(delegate.getActivities().size());
         for(Segment activity : delegate.getActivities()) {
-            activities.add(new CachedSegment(activity));
+            CachedSegment s = new CachedSegment(activity);
+            s.setEpisode(this, false);
+            activities.add(s);
         }
 
         legs = new ArrayList<>(delegate.getLegs().size());
         for(Segment leg : delegate.getLegs()) {
-            legs.add(new CachedSegment(leg));
+            CachedSegment s = new CachedSegment(leg);
+            s.setEpisode(this, true);
+            legs.add(s);
         }
     }
 
@@ -74,6 +81,16 @@ public class CachedEpisode extends CachedElement implements Episode {
     }
 
     @Override
+    public void insertActivity(Segment activity, int index) {
+        throw new UnsupportedOperationException("Structural modification not allowed.");
+    }
+
+    @Override
+    public void insertLeg(Segment leg, int index) {
+        throw new UnsupportedOperationException("Structural modification not allowed.");
+    }
+
+    @Override
     public void removeActivity(Segment activity) {
         throw new UnsupportedOperationException("Structural modification not allowed.");
     }
@@ -85,7 +102,8 @@ public class CachedEpisode extends CachedElement implements Episode {
 
     @Override
     public Person getPerson() {
-        throw new UnsupportedOperationException("Navigation not supported.");
+        return person;
+//        throw new UnsupportedOperationException("Navigation not supported.");
 //        return ((Episode)getDelegate()).getPerson();
     }
 }

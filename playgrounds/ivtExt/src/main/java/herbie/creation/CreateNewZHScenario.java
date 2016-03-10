@@ -20,25 +20,24 @@
 package herbie.creation;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.contrib.analysis.filters.population.PersonIntersectAreaFilter;
 import org.matsim.contrib.locationchoice.utils.ActTypeConverter;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.ConfigReader;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.*;
 import org.matsim.core.population.PopulationWriter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.QuadTree;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.FacilitiesReaderMatsimV1;
 import org.matsim.population.algorithms.XY2Links;
-
 import utils.BuildTrees;
 
 import java.io.File;
@@ -49,7 +48,7 @@ import java.util.Vector;
 
 public class CreateNewZHScenario {
 	private final static Logger log = Logger.getLogger(CreateNewZHScenario.class);
-	private ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+	private MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 	private String outputFolder;
 	private String networkfilePath;
 	private String facilitiesfilePath;
@@ -93,7 +92,7 @@ public class CreateNewZHScenario {
 		this.readConfig(configFile);
 		
 		log.info("\tReading network, facilities and plans .............................");
-		new MatsimNetworkReader(scenario).readFile(networkfilePath);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkfilePath);
 		new FacilitiesReaderMatsimV1(scenario).readFile(facilitiesfilePath);
 		MatsimPopulationReader populationReader = new MatsimPopulationReader(this.scenario);
 		populationReader.readFile(plansV2filePath);
@@ -123,10 +122,10 @@ public class CreateNewZHScenario {
 	// read cross-border plans and add them to the scenario
 	// the cross border facilities are already integrated in the facilities
 	private void addSpecialPlans2Population(String plansFilePath, String type) {
-		ScenarioImpl sTmp = (ScenarioImpl) ScenarioUtils.createScenario(
+		MutableScenario sTmp = (MutableScenario) ScenarioUtils.createScenario(
 				ConfigUtils.createConfig());
 		
-		new MatsimNetworkReader(sTmp).readFile(networkfilePath);
+		new MatsimNetworkReader(sTmp.getNetwork()).readFile(networkfilePath);
 		MatsimPopulationReader populationReader = new MatsimPopulationReader(sTmp);
 		populationReader.readFile(plansFilePath);
 		
@@ -187,7 +186,7 @@ public class CreateNewZHScenario {
 						QuadTree<ActivityFacility> facQuadTree = trees.get(act.getType());
 						
 						// get closest facility.
-						ActivityFacility facility = facQuadTree.get(act.getCoord().getX(), act.getCoord().getY());
+						ActivityFacility facility = facQuadTree.getClosest(act.getCoord().getX(), act.getCoord().getY());
 						act.setFacilityId(facility.getId());
 					}
 				}
@@ -197,7 +196,7 @@ public class CreateNewZHScenario {
 	// mapping the activities to this.network
 	// the normal plans v2 are already mapped
 	private void map2Network(Population population) {
-		XY2Links mapper = new XY2Links(this.scenario.getNetwork());
+		XY2Links mapper = new XY2Links(this.scenario.getNetwork(), null);
 		for (Person p : population.getPersons().values()){
 			mapper.run(p);
 		}
@@ -227,7 +226,7 @@ public class CreateNewZHScenario {
 	private List<Id> dilutedZH(Population population) {
 		log.info("\tCutting scenario ...................................");
 		double aoiRadius = 30000.0;
-		final CoordImpl aoiCenter = new CoordImpl(683518.0,246836.0);
+		final Coord aoiCenter = new Coord(683518.0, 246836.0);
 		
 		List<Id> persons2remove = new Vector<Id>();
 		
@@ -254,8 +253,9 @@ public class CreateNewZHScenario {
 						
 						// activity is not first or last activity
 						if (cnt > 0 && cnt < plan.getPlanElements().size() -1) {
-							double duration = ((PersonImpl)p).getDesires().getActivityDuration(act.getType());
-							act.setEndTime(act.getStartTime() + duration);
+							throw new RuntimeException( "desires do not exist anymore" );
+							//double duration = ((PersonImpl)p).getDesires().getActivityDuration(act.getType());
+							//act.setEndTime(act.getStartTime() + duration);
 						}
 						else if (cnt == 0) {
 							act.setStartTime(0.0);
@@ -288,8 +288,8 @@ public class CreateNewZHScenario {
 							duration = Double.parseDouble(act.getType().substring(1)) * 3600.0;
 						}
 						act.setType(v2Type);
-						((PersonImpl)p).createDesires(v2Type);
-						((PersonImpl)p).getDesires().putActivityDuration(v2Type, duration);
+						//((PersonImpl)p).createDesires(v2Type);
+						//((PersonImpl)p).getDesires().putActivityDuration(v2Type, duration);
 					}
 					//reset route
 					if (pe instanceof Leg) {

@@ -25,31 +25,31 @@ import org.matsim.api.core.v01.Coord;
 public abstract class CoordUtils {
 	
 	public static Coord createCoord( final double xx, final double yy ) {
-		return new CoordImpl( xx, yy ) ;
+		return new Coord(xx, yy);
 	}
 	
 	public static Coord plus ( Coord coord1, Coord coord2 ) {
 		double xx = coord1.getX() + coord2.getX();
 		double yy = coord1.getY() + coord2.getY();
-		return new CoordImpl( xx, yy ) ;
+		return new Coord(xx, yy);
 	}
 	
 	public static Coord minus ( Coord coord1, Coord coord2 ) {
 		double xx = coord1.getX() - coord2.getX();
 		double yy = coord1.getY() - coord2.getY();
-		return new CoordImpl( xx, yy ) ;
+		return new Coord(xx, yy);
 	}
 	
 	public static Coord scalarMult( double alpha, Coord coord ) {
 		double xx = alpha * coord.getX() ;
 		double yy = alpha * coord.getY() ;
-		return new CoordImpl( xx, yy ) ;
+		return new Coord(xx, yy);
 	}
 	
 	public static Coord getCenter( Coord coord1, Coord coord2 ) {
 		double xx = 0.5*( coord1.getX() + coord2.getX() ) ;
 		double yy = 0.5*( coord1.getY() + coord2.getY() ) ;
-		return new CoordImpl( xx, yy ) ;
+		return new Coord(xx, yy);
 	}
 	
 	public static double length( Coord coord1 ) {
@@ -57,7 +57,8 @@ public abstract class CoordUtils {
 	}
 	
 	public static Coord rotateToRight( Coord coord1 ) {
-		return new CoordImpl( coord1.getY(), -coord1.getX() ) ;
+		final double y = -coord1.getX();
+		return new Coord(coord1.getY(), y);
 	}
 	
 	public static Coord getCenterWOffset( Coord coord1, Coord coord2 ) {
@@ -67,7 +68,7 @@ public abstract class CoordUtils {
 		return centerWOffset ;
 	}
 
-	public static double calcDistance(Coord coord, Coord other) {
+	public static double calcEuclideanDistance(Coord coord, Coord other) {
 		//depending on the coordinate system that is used, determining the
 		//distance based on the euclidean distance will lead to wrong results.
 		//however, if the distance is not to large (<1km) this will be a usable distance estimation.
@@ -117,7 +118,7 @@ public abstract class CoordUtils {
 	
 		if ((lineDX == 0.0) && (lineDY == 0.0)) {
 			// the line segment is a point without dimension
-			return calcDistance(lineFrom, point);
+			return calcEuclideanDistance(lineFrom, point);
 		}
 	
 		double u = ((point.getX() - lineFrom.getX())*lineDX + (point.getY() - lineFrom.getY())*lineDY) /
@@ -125,13 +126,13 @@ public abstract class CoordUtils {
 	
 		if (u <= 0) {
 			// (x | y) is not on the line segment, but before lineFrom
-			return calcDistance(lineFrom, point);
+			return calcEuclideanDistance(lineFrom, point);
 		}
 		if (u >= 1) {
 			// (x | y) is not on the line segment, but after lineTo
-			return calcDistance(lineTo, point);
+			return calcEuclideanDistance(lineTo, point);
 		}
-		return calcDistance(new CoordImpl(lineFrom.getX() + u*lineDX, lineFrom.getY() + u*lineDY), point);
+		return calcEuclideanDistance(new Coord(lineFrom.getX() + u * lineDX, lineFrom.getY() + u * lineDY), point);
 	}
 
 }

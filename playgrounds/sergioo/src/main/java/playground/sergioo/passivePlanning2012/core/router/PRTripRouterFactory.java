@@ -7,22 +7,31 @@ import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.router.*;
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility;
-import org.matsim.core.router.old.DefaultRoutingModules;
+import org.matsim.core.router.DefaultRoutingModules;
+import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
+import org.matsim.core.router.util.TravelDisutility;
+import org.matsim.core.router.util.TravelTime;
 import org.matsim.pt.router.TransitRouter;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
-import java.util.Collections;
+import java.util.Map;
 
-public class PRTripRouterFactory implements TripRouterFactory {
+public class PRTripRouterFactory implements Provider<TripRouter> {
 
     private static Logger log = Logger.getLogger(PRTripRouterFactory.class);
 
     private final LeastCostPathCalculatorFactory leastCostPathCalculatorFactory;
     private final Provider<TransitRouter> transitRouterFactory;
     private final Scenario scenario;
+
+    @Inject
+    Map<String, TravelTime> travelTimes;
+
+    @Inject
+    Map<String, TravelDisutilityFactory> travelDisutilityFactories;
 
     @Inject
     public PRTripRouterFactory(Scenario scenario, LeastCostPathCalculatorFactory leastCostPathCalculatorFactory, com.google.inject.Provider<TransitRouter> transitRouterFactory) {
@@ -32,16 +41,19 @@ public class PRTripRouterFactory implements TripRouterFactory {
     }
     
     @Override
-    public TripRouter instantiateAndConfigureTripRouter(RoutingContext routingContext) {
+    public TripRouter get() {
     	TripRouter tripRouter = new TripRouter();
 
         PlansCalcRouteConfigGroup routeConfigGroup = scenario.getConfig().plansCalcRoute();
 
+        TravelTime travelTime = travelTimes.get("car");
+        TravelDisutility travelDisutility = travelDisutilityFactories.get("car").createTravelDisutility(travelTimes.get("car"));
+
         LeastCostPathCalculator routeAlgo =
                 leastCostPathCalculatorFactory.createPathCalculator(
                         scenario.getNetwork(),
-                        routingContext.getTravelDisutility(),
-                        routingContext.getTravelTime());
+                        travelDisutility,
+                        travelTime);
 
         FreespeedTravelTimeAndDisutility ptTimeCostCalc =
                 new FreespeedTravelTimeAndDisutility(-1.0, 0.0, 0.0);
@@ -52,24 +64,6 @@ public class PRTripRouterFactory implements TripRouterFactory {
                         ptTimeCostCalc);
 
         final boolean networkIsMultimodal = NetworkUtils.isMultimodal(scenario.getNetwork());
-		if ( networkIsMultimodal ) {
-            // note: LinkImpl has a default allowed mode of "car" so that all links
-            // of a monomodal network are actually restricted to car, making the check
-            // of multimodality unecessary from a behavioral point of view.
-            // However, checking the mode restriction for each link is expensive,
-            // so it is not worth doing it if it is not necessary. (td, oct. 2012)
-            if (routeAlgo instanceof IntermodalLeastCostPathCalculator) {
-                ((IntermodalLeastCostPathCalculator) routeAlgo).setModeRestriction(
-                        Collections.singleton(TransportMode.car));
-                ((IntermodalLeastCostPathCalculator) routeAlgoPtFreeFlow).setModeRestriction(
-                        Collections.singleton( TransportMode.car ));
-            }
-            else {
-                // this is impossible to reach when using the algorithms of org.matsim.*
-                // (all implement IntermodalLeastCostPathCalculator)
-                log.warn( "network is multimodal but least cost path algorithm is not an instance of IntermodalLeastCostPathCalculator!" );
-            }
-        }
 
         for (String mode : routeConfigGroup.getTeleportedModeFreespeedFactors().keySet()) {
             final RoutingModule routingModule = DefaultRoutingModules.createPseudoTransitRouter(mode, scenario.getPopulation().getFactory(), 
@@ -91,7 +85,7 @@ public class PRTripRouterFactory implements TripRouterFactory {
         }
 
         for ( String mode : routeConfigGroup.getNetworkModes() ) {
-            final RoutingModule routingModule = DefaultRoutingModules.createNetworkRouter(mode, scenario.getPopulation().getFactory(), 
+            final RoutingModule routingModule = DefaultRoutingModules.createPureNetworkRouter(mode, scenario.getPopulation().getFactory(), 
 			        scenario.getNetwork(), routeAlgo);
 			final RoutingModule result = tripRouter.setRoutingModule( mode, routingModule);
 

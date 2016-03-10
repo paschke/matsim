@@ -1,5 +1,6 @@
 package playground.pieter.router.costcalculators;
 
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
@@ -19,8 +20,8 @@ class CapacityFavoringStochasticCostCalculator implements TravelDisutility {
 			PlanCalcScoreConfigGroup cnScoringGroup) {
 		this.timeCalculator = timeCalculator ;
 		
-		Builder builder = new RandomizingTimeDistanceTravelDisutility.Builder() ;
-		this.delegate = builder.createTravelDisutility(timeCalculator, cnScoringGroup) ; 
+		Builder builder = new RandomizingTimeDistanceTravelDisutility.Builder( TransportMode.car, cnScoringGroup );
+		this.delegate = builder.createTravelDisutility(timeCalculator) ; 
 		
 	}
 	@Override

@@ -35,7 +35,6 @@ import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.network.algorithms.NetworkCleaner;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.transformations.WGS84toCH1903LV03;
 import org.matsim.core.utils.io.IOUtils;
@@ -76,7 +75,7 @@ public class BenchmarkV2 {
 	}
 
 	public void loadNetwork() {
-		new MatsimNetworkReader(this.scenario).readFile("network.xml.gz");
+		new MatsimNetworkReader(this.scenario.getNetwork()).readFile("network.xml.gz");
 	}
 
 	public void createPopulation(final int count, final String outputDir) {
@@ -86,9 +85,7 @@ public class BenchmarkV2 {
 		for (int i = 0; i < count; i++) {
 			Person p = pf.createPerson(Id.create(i, Person.class));
 			Link homeRegionLink = links[r.nextInt(links.length)];
-			Coord homeCoord = new CoordImpl(
-					(homeRegionLink.getToNode().getCoord().getX() + homeRegionLink.getFromNode().getCoord().getX()) / 2 + r.nextInt(1000) - 500,
-					(homeRegionLink.getToNode().getCoord().getY() + homeRegionLink.getFromNode().getCoord().getY()) / 2 + r.nextInt(1000) - 500);
+			Coord homeCoord = new Coord((homeRegionLink.getToNode().getCoord().getX() + homeRegionLink.getFromNode().getCoord().getX()) / 2 + r.nextInt(1000) - 500, (homeRegionLink.getToNode().getCoord().getY() + homeRegionLink.getFromNode().getCoord().getY()) / 2 + r.nextInt(1000) - 500);
 
 			double rangeMedian = 0;
 			boolean medianAccepted = false;
@@ -112,10 +109,8 @@ public class BenchmarkV2 {
 			while (!linkIsInRange && counter < 100000) {
 				counter++;
 				workRegionLink = links[r.nextInt(links.length)];
-				workCoord = new CoordImpl(
-						(workRegionLink.getToNode().getCoord().getX() + workRegionLink.getFromNode().getCoord().getX()) / 2 + r.nextInt(1000) - 500,
-						(workRegionLink.getToNode().getCoord().getY() + workRegionLink.getFromNode().getCoord().getY()) / 2 + r.nextInt(1000) - 500);
-				double dist = CoordUtils.calcDistance(homeCoord, workCoord);
+				workCoord = new Coord((workRegionLink.getToNode().getCoord().getX() + workRegionLink.getFromNode().getCoord().getX()) / 2 + r.nextInt(1000) - 500, (workRegionLink.getToNode().getCoord().getY() + workRegionLink.getFromNode().getCoord().getY()) / 2 + r.nextInt(1000) - 500);
+				double dist = CoordUtils.calcEuclideanDistance(homeCoord, workCoord);
 				if (dist >= lowerRange && dist <= upperRange) {
 					linkIsInRange = true;
 				}

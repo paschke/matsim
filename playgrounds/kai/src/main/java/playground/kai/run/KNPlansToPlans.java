@@ -19,18 +19,12 @@
 
 package playground.kai.run;
 
-import java.util.List;
-
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.TransportMode;
-import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 
 /**
@@ -38,11 +32,27 @@ import org.matsim.core.scenario.ScenarioUtils;
  */
 class KNPlansToPlans {
 
-	static void run(final String[] args) {
+	void run(final String[] args) {
+		String inputPopFilename = null ;
+		String outputPopFilename = null ;
+		String netFilename = null ;
+				
+		if ( args!=null ) {
+			if ( !(args.length==2 || args.length==3) ) {
+				System.err.println( "Usage: cmd inputPop.xml.gz outputPop.xml.gz [network.xml.gz]");
+			} else {
+				inputPopFilename = args[0] ;
+				outputPopFilename = args[1] ;
+				if ( args.length==3 ) {
+					netFilename = args[2] ;
+				}
+			}
+		}
+		
 		
 		Config config = ConfigUtils.createConfig() ;
-		config.plans().setInputFile( "/Users/nagel/kairuns/new-gauteng/output_base_vot110_3/100.plans.xml.gz") ;
-		config.network().setInputFile( "/Users/nagel/kairuns/new-gauteng/3sep-wo-toll-vot110_3-output/output_network.xml.gz") ;
+		config.network().setInputFile( netFilename ) ;
+		config.plans().setInputFile( inputPopFilename ) ;
 
 		Scenario sc = ScenarioUtils.loadScenario(config) ;
 		
@@ -60,16 +70,16 @@ class KNPlansToPlans {
 
 		Population newPop = ScenarioUtils.createScenario(ConfigUtils.createConfig()).getPopulation() ;
 		for ( Person person : pop.getPersons().values() ) {
-			Plan plan = person.getSelectedPlan() ;
-			List<Leg> legs = PopulationUtils.getLegs(plan) ;
-			boolean accept = true ;
-//			for ( Leg leg : legs ) {
-//				if ( leg.getMode().equals( TransportMode.car ) ) {
-//					accept = false ;
-//				}
-//			}
-			if ( Math.random() < 0.9 ) accept = false ;
-			if ( accept ) {
+//			Plan plan = person.getSelectedPlan() ;
+//			List<Leg> legs = PopulationUtils.getLegs(plan) ;
+//			boolean accept = true ;
+////			for ( Leg leg : legs ) {
+////				if ( leg.getMode().equals( TransportMode.car ) ) {
+////					accept = false ;
+////				}
+////			}
+//			if ( Math.random() < 0.9 ) accept = false ;
+			if ( Math.random() < 0.1 ) {
 				System.out.println("adding person...");
 				newPop.addPerson(person);
 			}
@@ -77,7 +87,7 @@ class KNPlansToPlans {
 		
 
 		PopulationWriter popwriter = new PopulationWriter(newPop,sc.getNetwork()) ;
-		popwriter.write("/Users/nagel/kw/pop.xml.gz") ;
+		popwriter.write( outputPopFilename ) ;
 
 		System.out.println("done.");
 	}

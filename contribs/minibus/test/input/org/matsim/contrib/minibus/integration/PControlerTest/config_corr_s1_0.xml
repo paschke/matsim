@@ -141,26 +141,6 @@
 
 <!-- ====================================================================== -->
 
-	<module name="bvgScoring">
-		<param name="offsetCar" value="-7.0" />
-		<param name="offsetPt" value="-1.0" />
-		<param name="offsetRide" value="-0.0" />
-		<param name="offsetBike" value="-4.0" />
-		<param name="offsetWalk" value="-0.0" />
-		
-		<param name="betaOffsetCar" value="1.0" />
-		<param name="betaOffsetPt" value="1.0" />
-		<param name="betaOffsetRide" value="1.0" />
-		<param name="betaOffsetBike" value="1.0" />
-		<param name="betaOffsetWalk" value="1.0" />
-		
-		<param name="monetaryDistanceCostRateRide" value="0.0" />
-		<param name="monetaryDistanceCostRateBike" value="0.0" />
-		<param name="monetaryDistanceCostRateWalk" value="0.0" />
-	</module>
-	
-<!-- ====================================================================== -->
-
 	<module name="transitRouter">
 		<param name="searchRadius" value="500" />
 		<param name="extensionRadius" value="200" />
@@ -193,10 +173,10 @@
 		<param name="marginalUtlOfDistanceWalk" value="0.0" />
 
 		<!-- [unit_of_money/m] conversion of car distance into money -->
-		<param name="monetaryDistanceCostRateCar" value="0.0" />
+		<param name="monetaryDistanceRateCar" value="0.0" />
 
 		<!-- [unit_of_money/m] conversion of pt distance into money -->
-		<param name="monetaryDistanceCostRatePt" value="0.0" />
+		<param name="monetaryDistanceRatePt" value="0.0" />
 
 		<!-- [utils/hr] marginal utility of doing an activity.  normally positive.  also the opportunity cost of time if agent is doing nothing. -->
 		<param name="performing" value="6.0" />

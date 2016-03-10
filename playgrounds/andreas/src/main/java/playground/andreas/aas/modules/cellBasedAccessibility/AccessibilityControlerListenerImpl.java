@@ -10,8 +10,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.facilities.ActivityFacilitiesImpl;
 import org.matsim.utils.leastcostpathtree.LeastCostPathTree;
 
@@ -109,7 +108,7 @@ public class AccessibilityControlerListenerImpl{
 	 * setting parameter for accessibility calculation
 	 * @param scenario
 	 */
-	protected void initAccessibilityParameter(ScenarioImpl scenario){
+	protected void initAccessibilityParameter(MutableScenario scenario){
 		
 		AccessibilityParameterConfigModule module = ConfigurationModule.getAccessibilityParameterConfigModule(scenario);
 		
@@ -227,7 +226,7 @@ public class AccessibilityControlerListenerImpl{
 			
 			Point point = measurePoint.getGeometry().getCentroid();
 			// get coordinate from origin (start point)
-			Coord coordFromZone = new CoordImpl( point.getX(), point.getY());
+			Coord coordFromZone = new Coord(point.getX(), point.getY());
 			assert( coordFromZone!=null );
 			
 			// from here: accessibility computation for current starting point ("fromNode")

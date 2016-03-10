@@ -36,7 +36,7 @@ public class FreeFloatingVehiclesLocation {
 	    
 	    for(FreeFloatingStation f: stations) {  
 	    	
-	    	vehicleLocationQuadTree.put(f.getLink().getCoord().getX(), f.getLink().getCoord().getY(), f);
+	    	vehicleLocationQuadTree.put(f.getCoord().getX(), f.getCoord().getY(), f);
 	    }
 	   
 	  }	
@@ -47,73 +47,72 @@ public class FreeFloatingVehiclesLocation {
 	}
 	
 	public void addVehicle(Link link, String id) {
-		Collection<FreeFloatingStation> stations = vehicleLocationQuadTree.get(link.getCoord().getX(), link.getCoord().getY(), 0);
-
+		
+		Collection<FreeFloatingStation> stations = vehicleLocationQuadTree.getDisk(link.getCoord().getX(), link.getCoord().getY(), 0.0);
+		
 		if (stations.isEmpty()) {
 			ArrayList<String> vehIDs = new ArrayList<String>();
 			vehIDs.add(id);
-			FreeFloatingStation station = new FreeFloatingStation(link, 1, vehIDs);		
-			vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), station);
-			log.info("added all new ff station at link " + link.getId() + ", containing ids " + station.getIDs().toString() + " to quadTree");
-
-			return;
-		} else {
-			for (FreeFloatingStation station : stations) {
-				if (station.getLink().getId().toString().equals(link.getId().toString())) {
-					ArrayList<String> vehicleIDs = new ArrayList<String>();
-					for (String vehicleId : station.getIDs()) {
-						vehicleIDs.add(vehicleId);
+			
+			FreeFloatingStation fNew = new FreeFloatingStation(link, 1, vehIDs);		
+			
+			vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), fNew);
+			
+		}
+		else {
+			
+			for(FreeFloatingStation ffStation: stations) {
+				
+				if (ffStation.getLinkId().toString().equals(link.getId().toString())) {
+					
+					ArrayList<String> vehIDs = ffStation.getIDs();
+					ArrayList<String> newvehIDs = new ArrayList<String>();
+					for (String s : vehIDs) {
+						newvehIDs.add(s);
 					}
-					vehicleIDs.add(id);
-					FreeFloatingStation newStation = new FreeFloatingStation(link, station.getNumberOfVehicles() + 1, vehicleIDs);		
-					boolean removeSuccess = vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), station);
-					boolean addSuccess = vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), newStation);
-
-					if (removeSuccess) {
-						log.info("removed ff station at link " + station.getLink().getId() + ", containing ids " + station.getIDs().toString() + " from quadTree");
-					} else {
-						log.info("could not remove ff station at link " + station.getLink().getId() + ", containing ids " + station.getIDs().toString() + " from quadTree");
-					}
-
-					if (addSuccess) {
-						log.info("added replacement ff station at link " + link.getId() + ", containing ids " + vehicleIDs.toString() + " to quadTree");
-					} else {
-						log.info("could not add replacement ff station at link " + link.getId() + ", containing ids " + vehicleIDs.toString() + " to quadTree");
-					}
-
+					newvehIDs.add(id);
+					FreeFloatingStation fNew = new FreeFloatingStation(link, ffStation.getNumberOfVehicles() + 1, newvehIDs);		
+					
+					vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), ffStation);
+					
+					vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), fNew);
+					
 					return;
+					
 				}
-
-				log.info("found an ff station (at link " + station.getLink().getId() + " containing " + station.getIDs().toString() + "), but do not like it!");
-				log.info(station.getLink().getId().toString() + " does not look like " + link.getId().toString() + " to me!");
+				
 			}
-
-			ArrayList<String> vehicleIDs = new ArrayList<String>();
-			vehicleIDs.add(id);
-			FreeFloatingStation newStation = new FreeFloatingStation(link, 1, vehicleIDs);		
-			vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), newStation);
-			log.info("added new ff station at link " + link.getId() + ", containing ids " + newStation.getIDs().toString() + " to quadTree");
-		} 
+			
+			ArrayList<String> vehIDs = new ArrayList<String>();
+			
+			vehIDs.add(id);
+			
+			FreeFloatingStation fNew = new FreeFloatingStation(link, 1, vehIDs);		
+			
+			vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), fNew);
+			
+			
+		}
+		
+		
+		
 	}
 	
 	public void removeVehicle(Link link, String id) {
-		Collection<FreeFloatingStation> stations = vehicleLocationQuadTree.get(link.getCoord().getX(), link.getCoord().getY(), 0);
-
-		for (FreeFloatingStation station : stations) {
-			if (station.getIDs().contains(id)) {
-				if (station.getNumberOfVehicles() == 1) {
-					vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), station);
-
-					return;
-				} else {
-					ArrayList<String> vehicleIDs = new ArrayList<String>(station.getIDs());
-					vehicleIDs.remove(id);
-					FreeFloatingStation newStation = new FreeFloatingStation(link, vehicleIDs.size(), vehicleIDs);
-
-					vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), station);
-					vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), newStation);
-
-					return;
+		
+		FreeFloatingStation f = vehicleLocationQuadTree.getClosest(link.getCoord().getX(), link.getCoord().getY());
+		
+		if ( f.getLinkId().toString().equals(link.getId().toString())) {
+			
+			if (f.getNumberOfVehicles() == 1)
+				vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), f);
+			
+			
+			else {
+				ArrayList<String> vehIDs = f.getIDs();
+				ArrayList<String> newvehIDs = new ArrayList<String>();
+				for (String s : vehIDs) {
+					newvehIDs.add(s);
 				}
 			}
 		}

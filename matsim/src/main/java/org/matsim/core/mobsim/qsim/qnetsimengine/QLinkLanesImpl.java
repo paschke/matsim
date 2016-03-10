@@ -33,7 +33,7 @@ import java.util.Stack;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
-import org.matsim.api.core.v01.events.Wait2LinkEvent;
+import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.api.experimental.events.LaneEnterEvent;
 import org.matsim.core.api.experimental.events.LaneLeaveEvent;
@@ -218,6 +218,7 @@ public final class QLinkLanesImpl extends AbstractQLink {
 		}
 	}
 
+	@Override
 	List<QLaneI> getToNodeQueueLanes() {
 		return this.toNodeLaneQueues;
 	}
@@ -237,7 +238,7 @@ public final class QLinkLanesImpl extends AbstractQLink {
 				.getMobsim()
 				.getEventsManager()
 				.processEvent(
-						new LaneEnterEvent(now, veh.getDriver().getId(), this.getLink().getId(),
+						new LaneEnterEvent(now, veh.getId(), this.getLink().getId(),
 								((QueueWithBuffer) this.firstLaneQueue).getId()));
 
 		veh.setCurrentLink(this.getLink());
@@ -245,8 +246,7 @@ public final class QLinkLanesImpl extends AbstractQLink {
 				.getMobsim()
 				.getEventsManager()
 				.processEvent(
-						new LinkEnterEvent(now, veh.getDriver().getId(), this.getLink().getId(),
-								veh.getId()));
+						new LinkEnterEvent(now, veh.getId(), this.getLink().getId()));
 	}
 
 	@Override
@@ -330,14 +330,14 @@ public final class QLinkLanesImpl extends AbstractQLink {
 							.getMobsim()
 							.getEventsManager()
 							.processEvent(
-									new LaneLeaveEvent(now, veh.getDriver().getId(), this.getLink()
+									new LaneLeaveEvent(now, veh.getId(), this.getLink()
 											.getId(), ((QueueWithBuffer) queue).getId()));
 					nextQueue.addFromUpstream(veh);
 					this.network.simEngine
 							.getMobsim()
 							.getEventsManager()
 							.processEvent(
-									new LaneEnterEvent(now, veh.getDriver().getId(), this.getLink()
+									new LaneEnterEvent(now, veh.getId(), this.getLink()
 											.getId(), ((QueueWithBuffer) nextQueue).getId()));
 				} else {
 					break;
@@ -395,8 +395,8 @@ public final class QLinkLanesImpl extends AbstractQLink {
 					.getMobsim()
 					.getEventsManager()
 					.processEvent(
-							new Wait2LinkEvent(now, veh.getDriver().getId(),
-									this.getLink().getId(), veh.getId()));
+							new VehicleEntersTrafficEvent(now, veh.getDriver().getId(),
+									this.getLink().getId(), veh.getId(), veh.getDriver().getMode(), 1.0));
 
 			if (this.transitQLink.addTransitToStopQueue(now, veh, this.getLink().getId())) {
 				continue;
@@ -424,11 +424,6 @@ public final class QLinkLanesImpl extends AbstractQLink {
 			}
 		}
 		return true;
-	}
-
-	@Override
-	QVehicle popFirstVehicle() {
-		throw new UnsupportedOperationException("Method should not be called on this instance");
 	}
 
 	@Override
@@ -543,7 +538,7 @@ public final class QLinkLanesImpl extends AbstractQLink {
 				visLink = visModelBuilder.createVisLinkLanes(transformation, QLinkLanesImpl.this,
 						nodeOffset, lanes);
 				SnapshotLinkWidthCalculator linkWidthCalculator = QLinkLanesImpl.this.network
-						.getLinkWidthCalculator();
+						.getLinkWidthCalculatorForVis();
 				visModelBuilder.recalculatePositions(visLink, linkWidthCalculator);
 			}
 		}
@@ -582,30 +577,6 @@ public final class QLinkLanesImpl extends AbstractQLink {
 
 			return positions;
 		}
-	}
-
-	// The following contains a number of methods that are defined in the upstream interfaces but
-	// not needed here.
-	// In principle, one would need two separate interfaces, one for the "QLane" and one for the
-	// "QLink". They would be
-	// combined into the QLinkImpl, whereas for QLane and QLinkLanesImpl they would be separate.
-	// Can't do this with
-	// abstract classes (no multiple inheritance), but we need to use them because we do not want
-	// _public_ interfaces here.
-
-	@Override
-	double getLastMovementTimeOfFirstVehicle() {
-		throw new UnsupportedOperationException("Method should not be called on this instance");
-	}
-
-	@Override
-	QVehicle getFirstVehicle() {
-		throw new UnsupportedOperationException("Method should not be called on this instance");
-	}
-
-	@Override
-	boolean hasGreenForToLink(Id<Link> toLinkId) {
-		throw new UnsupportedOperationException("Method should not be called on this instance");
 	}
 
 }

@@ -22,9 +22,8 @@ package org.matsim.core.mobsim.qsim.qnetsimengine;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
-
+import playground.gregor.TransportMode;
 import playground.gregor.casim.simulation.CANetsimEngine;
-import playground.gregor.sim2d_v4.scenario.TransportMode;
 
 
 
@@ -44,13 +43,13 @@ public final class HybridQSimCANetworkFactory implements NetsimNetworkFactory {
 	}
 
 	@Override
-	public QLinkInternalI createNetsimLink(final Link link, final QNetwork network, final QNode toQueueNode) {
+	public QLinkI createNetsimLink(final Link link, final QNetwork network, final QNode toQueueNode) {
 		boolean sim2DQTransitionLink = false;
 		boolean qSim2DTransitionLink = link.getAllowedModes().contains(TransportMode.walkca);
 
 		
 		
-		QLinkInternalI qLink = null;
+		QLinkI qLink = null;
 		if (qSim2DTransitionLink) {
 			qLink = new CALink(link,1);
 		} else {

@@ -20,6 +20,8 @@
 
 package org.matsim.roadpricing;
 
+import java.util.Map;
+
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -27,19 +29,15 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.mobsim.framework.Mobsim;
 import org.matsim.core.mobsim.qsim.QSimUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.scoring.EventsToScore;
 import org.matsim.core.scoring.functions.CharyparNagelScoringFunctionFactory;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.testcases.MatsimTestCase;
-
-import java.util.Map;
 
 /**
  * Tests that {@link CalcPaidToll} calculates the correct tolls
@@ -61,8 +59,8 @@ public class CalcPaidTollTest extends MatsimTestCase {
 		Id<Person> id4 = Id.create("4", Person.class);
 		Id<Person> id5 = Id.create("5", Person.class);
 
-		Map<Id<Person>, ? extends Person> referencePopulation = Fixture.createReferencePopulation1(config.planCalcScore()).getPersons();
-		Map<Id<Person>, ? extends Person> population = runTollSimulation(tollFile, "distance", config.planCalcScore()).getPersons();
+		Map<Id<Person>, ? extends Person> referencePopulation = Fixture.createReferencePopulation1( config ).getPersons();
+		Map<Id<Person>, ? extends Person> population = runTollSimulation(tollFile, "distance", config ).getPersons();
 
 		compareScores(
 				referencePopulation.get(id1).getPlans().get(0).getScore().doubleValue(),
@@ -99,8 +97,8 @@ public class CalcPaidTollTest extends MatsimTestCase {
 		Id<Person> id8 = Id.create("8", Person.class);
 		Id<Person> id10 = Id.create("10", Person.class);
 
-		Map<Id<Person>, ? extends Person> referencePopulation = Fixture.createReferencePopulation1(config.planCalcScore()).getPersons();
-		Map<Id<Person>, ? extends Person> population = runTollSimulation(tollFile, "area", config.planCalcScore()).getPersons();
+		Map<Id<Person>, ? extends Person> referencePopulation = Fixture.createReferencePopulation1( config ).getPersons();
+		Map<Id<Person>, ? extends Person> population = runTollSimulation(tollFile, "area", config ).getPersons();
 
 		compareScores(
 				referencePopulation.get(id1).getPlans().get(0).getScore().doubleValue(),
@@ -148,8 +146,8 @@ public class CalcPaidTollTest extends MatsimTestCase {
 		Id<Person> id7 = Id.create("7", Person.class);
 		Id<Person> id8 = Id.create("8", Person.class);
 
-		Map<Id<Person>, ? extends Person> referencePopulation = Fixture.createReferencePopulation1(config.planCalcScore()).getPersons();
-		Map<Id<Person>, ? extends Person> population = runTollSimulation(tollFile, "cordon", config.planCalcScore()).getPersons();
+		Map<Id<Person>, ? extends Person> referencePopulation = Fixture.createReferencePopulation1( config ).getPersons();
+		Map<Id<Person>, ? extends Person> population = runTollSimulation(tollFile, "cordon", config ).getPersons();
 
 		compareScores(
 				referencePopulation.get(id1).getPlans().get(0).getScore().doubleValue(),
@@ -188,8 +186,8 @@ public class CalcPaidTollTest extends MatsimTestCase {
 		assertEquals(expectedToll, scoreWithoutToll - scoreWithToll, 1e-8);
 	}
 
-	private Population runTollSimulation(final String tollFile, final String tollType, final PlanCalcScoreConfigGroup config) {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+	private Population runTollSimulation(final String tollFile, final String tollType, final Config config) {
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario( config );
 		Fixture.createNetwork1(scenario);
 //        ConfigUtils.addOrGetModule(scenario.getConfig(), RoadPricingConfigGroup.GROUP_NAME, RoadPricingConfigGroup.class).setUseRoadpricing(true);
         RoadPricingSchemeImpl scheme = new RoadPricingSchemeImpl();
@@ -199,16 +197,15 @@ public class CalcPaidTollTest extends MatsimTestCase {
 		assertEquals(tollType, scheme.getType());
 
 		Fixture.createPopulation1(scenario);
-		runTollSimulation(scenario, scheme, config);
+		runTollSimulation(scenario, scheme);
 		return scenario.getPopulation();
 	}
 
-	private void runTollSimulation(final Scenario scenario, final RoadPricingScheme toll, final PlanCalcScoreConfigGroup config) {
+	private void runTollSimulation(final Scenario scenario, final RoadPricingScheme toll) {
 		EventsManager events = EventsUtils.createEventsManager();
 		CalcPaidToll paidToll = new CalcPaidToll(scenario.getNetwork(), toll);
 		events.addHandler(paidToll);
-		EventsToScore scoring = new EventsToScore(scenario, new CharyparNagelScoringFunctionFactory(config, scenario.getNetwork()));
-		events.addHandler(scoring);
+		EventsToScore scoring = EventsToScore.createWithScoreUpdating(scenario, new CharyparNagelScoringFunctionFactory(scenario), events);
 
 		Mobsim sim = QSimUtils.createDefaultQSim(scenario, events);
 		sim.run();

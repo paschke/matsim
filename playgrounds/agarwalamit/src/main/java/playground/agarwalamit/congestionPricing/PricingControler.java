@@ -22,7 +22,7 @@ import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
-import org.matsim.contrib.otfvis.OTFVisModule;
+import org.matsim.contrib.otfvis.OTFVisFileWriterModule;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
@@ -32,14 +32,15 @@ import org.matsim.core.replanning.PlanStrategyImpl.Builder;
 import org.matsim.core.replanning.modules.ReRoute;
 import org.matsim.core.replanning.modules.SubtourModeChoice;
 import org.matsim.core.replanning.selectors.RandomPlanSelector;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.router.TripRouter;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.vis.otfvis.OTFFileWriterFactory;
-import playground.ikaddoura.analysis.welfare.WelfareAnalysisControlerListener;
+
+import com.google.inject.Provider;
+
 import playground.vsp.congestion.controler.MarginalCongestionPricingContolerListener;
 import playground.vsp.congestion.handlers.CongestionHandlerImplV3;
 import playground.vsp.congestion.handlers.CongestionHandlerImplV4;
-import playground.vsp.congestion.handlers.CongestionHandlerImplV6;
 import playground.vsp.congestion.handlers.TollHandler;
 import playground.vsp.congestion.routing.TollDisutilityCalculatorFactory;
 
@@ -47,7 +48,7 @@ import playground.vsp.congestion.routing.TollDisutilityCalculatorFactory;
  * @author amit
  */
 
-public class PricingControler {
+class PricingControler {
 	
 	private static boolean usingMunich = false;
 
@@ -80,11 +81,11 @@ public class PricingControler {
 		final Controler controler = new Controler(sc);
 		controler.getConfig().controler().setOverwriteFileSetting(
 				OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
-		controler.setDumpDataAtEnd(true);
-		controler.addOverridingModule(new OTFVisModule());
+		controler.getConfig().controler().setDumpDataAtEnd(true);
+		controler.addOverridingModule(new OTFVisFileWriterModule());
 		
 		TollHandler tollHandler = new TollHandler(sc);
-		final TollDisutilityCalculatorFactory fact = new TollDisutilityCalculatorFactory(tollHandler);
+		final TollDisutilityCalculatorFactory fact = new TollDisutilityCalculatorFactory(tollHandler, controler.getConfig().planCalcScore());
 		
 		switch (congestionPricing) {
 		case "implV3":
@@ -92,10 +93,10 @@ public class PricingControler {
 			controler.addOverridingModule(new AbstractModule() {
 				@Override
 				public void install() {
-					bindTravelDisutilityFactory().toInstance(fact);
+					bindCarTravelDisutilityFactory().toInstance(fact);
 				}
 			});
-			controler.addControlerListener(new MarginalCongestionPricingContolerListener(sc, tollHandler, new CongestionHandlerImplV3(controler.getEvents(), (ScenarioImpl) sc)));
+			controler.addControlerListener(new MarginalCongestionPricingContolerListener(sc, tollHandler, new CongestionHandlerImplV3(controler.getEvents(), (MutableScenario) sc)));
 			Logger.getLogger(PricingControler.class).info("Using congestion pricing implementation version 3.");
 		}
 		break;
@@ -104,7 +105,7 @@ public class PricingControler {
 				controler.addOverridingModule(new AbstractModule() {
 					@Override
 					public void install() {
-						bindTravelDisutilityFactory().toInstance(fact);
+						bindCarTravelDisutilityFactory().toInstance(fact);
 					}
 				});
 				controler.addControlerListener(new MarginalCongestionPricingContolerListener(sc, tollHandler, new CongestionHandlerImplV4(controler.getEvents(), sc)));
@@ -112,28 +113,27 @@ public class PricingControler {
 			}
 		break;
 		case "implV6":
-		{
-			controler.addOverridingModule(new AbstractModule() {
-				@Override
-				public void install() {
-					bindTravelDisutilityFactory().toInstance(fact);
-				}
-			});
-			controler.addControlerListener(new MarginalCongestionPricingContolerListener(sc, tollHandler, new CongestionHandlerImplV6(controler.getEvents(), sc)));
-			Logger.getLogger(PricingControler.class).info("Using congestion pricing implementation version 6.");
-		}
+//		{
+//			controler.addOverridingModule(new AbstractModule() {
+//				@Override
+//				public void install() {
+//					bindCarTravelDisutilityFactory().toInstance(fact);
+//				}
+//			});
+//			services.addControlerListener(new MarginalCongestionPricingContolerListener(sc, tollHandler, new CongestionHandlerImplV6(services.getEvents(), sc)));
+//			Logger.getLogger(PricingControler.class).info("Using congestion pricing implementation version 6.");
+//		}
 		break;
 		case "none":
 		default:
 			Logger.getLogger(PricingControler.class).info("Congestion pricing implementation does not match. No pricing implementation is introduced.");
 		}
 		
-		controler.addControlerListener(new WelfareAnalysisControlerListener((ScenarioImpl) controler.getScenario()));
-		
 		if(usingMunich){
 			controler.addOverridingModule(new AbstractModule() {
 				@Override
 				public void install() {
+					final Provider<TripRouter> tripRouterProvider = binder().getProvider(TripRouter.class);
 					addPlanStrategyBinding("SubtourModeChoice_".concat("COMMUTER_REV_COMMUTER")).toProvider(new javax.inject.Provider<PlanStrategy>() {
 						String[] availableModes = {"car", "pt_COMMUTER_REV_COMMUTER"};
 						String[] chainBasedModes = {"car", "bike"};
@@ -141,8 +141,8 @@ public class PricingControler {
 						@Override
 						public PlanStrategy get() {
 							final Builder builder = new Builder(new RandomPlanSelector<Plan, Person>());
-							builder.addStrategyModule(new SubtourModeChoice(controler.getConfig().global().getNumberOfThreads(), availableModes, chainBasedModes, false));
-							builder.addStrategyModule(new ReRoute(controler.getScenario()));
+							builder.addStrategyModule(new SubtourModeChoice(controler.getConfig().global().getNumberOfThreads(), availableModes, chainBasedModes, false, tripRouterProvider));
+							builder.addStrategyModule(new ReRoute(controler.getScenario(), tripRouterProvider));
 							return builder.build();
 						}
 					});
@@ -153,12 +153,13 @@ public class PricingControler {
 			controler.addOverridingModule(new AbstractModule() {
 				@Override
 				public void install() {
+					final Provider<TripRouter> tripRouterProvider = binder().getProvider(TripRouter.class);
 					addPlanStrategyBinding("ReRoute_".concat("COMMUTER_REV_COMMUTER")).toProvider(new javax.inject.Provider<PlanStrategy>() {
 
 						@Override
 						public PlanStrategy get() {
 							final Builder builder = new Builder(new RandomPlanSelector<Plan, Person>());
-							builder.addStrategyModule(new ReRoute(controler.getScenario()));
+							builder.addStrategyModule(new ReRoute(controler.getScenario(), tripRouterProvider));
 							return builder.build();
 						}
 					});

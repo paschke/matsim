@@ -19,27 +19,32 @@
  * *********************************************************************** */
 package org.matsim.core.scenario;
 
-import java.io.File;
-
+import com.google.inject.Inject;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkChangeEventsParser;
 import org.matsim.core.network.NetworkImpl;
-import org.matsim.core.network.TimeVariantLinkFactory;
+import org.matsim.core.network.VariableIntervalTimeVariantLinkFactory;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationImpl;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.io.MatsimFileTypeGuesser;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.facilities.MatsimFacilitiesReader;
 import org.matsim.households.HouseholdsReaderV10;
 import org.matsim.lanes.data.v20.LaneDefinitionsReader;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
+import org.matsim.utils.objectattributes.AttributeConverter;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
 import org.matsim.vehicles.VehicleReaderV1;
+
+import java.io.File;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Loads elements of Scenario from file. Non standardized elements
@@ -54,81 +59,44 @@ import org.matsim.vehicles.VehicleReaderV1;
  * <li> Given what we have now, does it make sense to leave this class public?  yy kai, mar'11
  * </ul>
  *
- * @see org.matsim.core.scenario.ScenarioImpl
+ * @see org.matsim.core.scenario.MutableScenario
  *
  * @author dgrether
  */
-public class ScenarioLoaderImpl {
+// deliberately non-public.  Use method in ScenarioUtils.
+class ScenarioLoaderImpl {
 
 	private static final Logger log = Logger.getLogger(ScenarioLoaderImpl.class);
 
-
-	static Scenario loadScenario(Config config) {
-		// deliberately non-public.  Use method in ScenarioUtils.
-		ScenarioLoaderImpl scenarioLoader = new ScenarioLoaderImpl(config);
-		Scenario scenario = scenarioLoader.loadScenario();
-		return scenario;
-	}
-
-	static void loadScenario(Scenario scenario) {
-		// deliberately non-public.  Use method in ScenarioUtils.
-		ScenarioLoaderImpl scenarioLoader = new ScenarioLoaderImpl(scenario);
-		scenarioLoader.loadScenario();
-	}
-
-	/**
-	 * @deprecated  This used to be a constructor with a global side effect, which is absolutely evil.
-	 *				Please just load the Scenario with ScenarioUtils.loadScenario instead.
-	 */
-	@Deprecated
-	public static ScenarioLoaderImpl createScenarioLoaderImplAndResetRandomSeed(String configFilename) {
-		Config config = ConfigUtils.loadConfig(configFilename);
-		MatsimRandom.reset(config.global().getRandomSeed());
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
-		return new ScenarioLoaderImpl(scenario);
-	}
-
 	private final Config config;
 
-	private final ScenarioImpl scenario;
+	private final MutableScenario scenario;
 
-	/**
-	 * yy Does it make sense to leave this constructor public?  kai, mar'11
-	 */
-	@Deprecated // please use the static calls in ScenarioUtils instead
-	public ScenarioLoaderImpl(Config config) {
+	private Map<Class<?>, AttributeConverter<?>> attributeConverters = Collections.emptyMap();
+
+	@Inject
+	public void setAttributeConverters(Map<Class<?>, AttributeConverter<?>> attributeConverters) {
+		log.debug( "setting "+attributeConverters );
+		this.attributeConverters = attributeConverters;
+	}
+
+	ScenarioLoaderImpl(Config config) {
 		this.config = config;
-		this.scenario = (ScenarioImpl) ScenarioUtils.createScenario(this.config);
+		this.scenario = (MutableScenario) ScenarioUtils.createScenario(this.config);
 	}
 
-	/**
-	 * yy Does it make sense to leave this constructor public?  kai, mar'11
-	 */
-	@Deprecated // please use the static calls in ScenarioUtils instead
-	public ScenarioLoaderImpl(Scenario scenario) {
-		this.scenario = (ScenarioImpl) scenario;
+	ScenarioLoaderImpl(Scenario scenario) {
+		this.scenario = (MutableScenario) scenario;
 		this.config = this.scenario.getConfig();
-	}
-
-
-	/**
-	 * @deprecated  Please use the static calls in ScenarioUtils instead.
-	 *
-	 */
-	@Deprecated
-	public Scenario getScenario() {
-		return this.scenario;
 	}
 
 	/**
 	 * Loads all mandatory Scenario elements and
 	 * if activated in config's scenario module/group
 	 * optional elements.
-	 * @deprecated  Please use the static calls in ScenarioUtils instead.
 	 * @return the Scenario
 	 */
-	@Deprecated
-	public Scenario loadScenario() {
+	Scenario loadScenario() {
 		String currentDir = new File("tmp").getAbsolutePath();
 		currentDir = currentDir.substring(0, currentDir.length() - 3);
 		log.info("loading scenario from base directory: " + currentDir);
@@ -149,23 +117,32 @@ public class ScenarioLoaderImpl {
 
 	/**
 	 * Loads the network into the scenario of this class
-	 *
-	 * @deprecated  Please use the static calls in ScenarioUtils to load a scenario.
-	 * 				If you want only a network, use the MatsimNetworkReader directly.
-	 *
 	 */
-	@Deprecated
-	public void loadNetwork() {
-		String networkFileName = null;
+	private void loadNetwork() {
 		if ((this.config.network() != null) && (this.config.network().getInputFile() != null)) {
-			networkFileName = this.config.network().getInputFile();
+			final String networkFileName = this.config.network().getInputFile();
+
 			log.info("loading network from " + networkFileName);
+
 			NetworkImpl network = (NetworkImpl) this.scenario.getNetwork();
+
 			if (this.config.network().isTimeVariantNetwork()) {
 				log.info("use TimeVariantLinks in NetworkFactory.");
-				network.getFactory().setLinkFactory(new TimeVariantLinkFactory());
+				network.getFactory().setLinkFactory(new VariableIntervalTimeVariantLinkFactory());
 			}
-			new MatsimNetworkReader(this.scenario).parse(networkFileName);
+
+			if ( config.network().getInputCRS() == null ) {
+				new MatsimNetworkReader(this.scenario.getNetwork()).parse(networkFileName);
+			}
+			else {
+				log.info( "re-projecting network from "+config.network().getInputCRS()+" to "+config.global().getCoordinateSystem()+" for import" );
+				final CoordinateTransformation transformation =
+						TransformationFactory.getCoordinateTransformation(
+								config.network().getInputCRS(),
+								config.global().getCoordinateSystem() );
+				new MatsimNetworkReader( transformation , this.scenario.getNetwork() ).parse( networkFileName );
+			}
+
 			if ((this.config.network().getChangeEventsInputFile() != null) && this.config.network().isTimeVariantNetwork()) {
 				log.info("loading network change events from " + this.config.network().getChangeEventsInputFile());
 				NetworkChangeEventsParser parser = new NetworkChangeEventsParser(network);
@@ -175,17 +152,27 @@ public class ScenarioLoaderImpl {
 		}
 	}
 
-	/**
-	 * @deprecated  Please use the static calls in ScenarioUtils to load a scenario.
-	 * 				If you want only Facilities, use the MatsimFacilitiesReader directly.
-	 *
-	 */
-	@Deprecated
-	public void loadActivityFacilities() {
+	private void loadActivityFacilities() {
 		if ((this.config.facilities() != null) && (this.config.facilities().getInputFile() != null)) {
 			String facilitiesFileName = this.config.facilities().getInputFile();
 			log.info("loading facilities from " + facilitiesFileName);
-			new MatsimFacilitiesReader(this.scenario).parse(facilitiesFileName);
+
+			final String inputCRS = config.facilities().getInputCRS();
+			final String internalCRS = config.global().getCoordinateSystem();
+
+			if ( inputCRS == null ) {
+				new MatsimFacilitiesReader(this.scenario).parse(facilitiesFileName);
+			}
+			else {
+				log.info( "re-projecting facilities from "+inputCRS+" to "+internalCRS+" for import" );
+
+				final CoordinateTransformation transformation =
+						TransformationFactory.getCoordinateTransformation(
+								inputCRS,
+								internalCRS );
+
+				new MatsimFacilitiesReader(transformation , this.scenario).parse(facilitiesFileName);
+			}
 			log.info("loaded " + this.scenario.getActivityFacilities().getFacilities().size() + " facilities from " + facilitiesFileName);
 		}
 		else {
@@ -194,24 +181,36 @@ public class ScenarioLoaderImpl {
 		if ((this.config.facilities() != null) && (this.config.facilities().getInputFacilitiesAttributesFile() != null)) {
 			String facilitiesAttributesFileName = this.config.facilities().getInputFacilitiesAttributesFile();
 			log.info("loading facility attributes from " + facilitiesAttributesFileName);
-			new ObjectAttributesXmlReader(this.scenario.getActivityFacilities().getFacilityAttributes()).parse(facilitiesAttributesFileName);
+			ObjectAttributesXmlReader reader = new ObjectAttributesXmlReader(this.scenario.getActivityFacilities().getFacilityAttributes());
+			reader.putAttributeConverters( attributeConverters );
+			reader.parse(facilitiesAttributesFileName);
 		}
 		else {
 			log.info("no facility-attributes file set in config, not loading any facility attributes");
 		}
 	}
 
-	/**
-	 * @deprecated  Please use the static calls in ScenarioUtils to load a scenario.
-	 * 				If you want only a Population, use the MatsimPopulationReader directly.
-	 *
-	 */
-	@Deprecated
-	public void loadPopulation() {
+	private void loadPopulation() {
 		if ((this.config.plans() != null) && (this.config.plans().getInputFile() != null)) {
 			String populationFileName = this.config.plans().getInputFile();
 			log.info("loading population from " + populationFileName);
-			new MatsimPopulationReader(this.scenario).parse(populationFileName);
+
+			if ( config.plans().getInputCRS() == null ) {
+				new MatsimPopulationReader(this.scenario).parse(populationFileName);
+			}
+			else {
+				final String inputCRS = config.plans().getInputCRS();
+				final String internalCRS = config.global().getCoordinateSystem();
+
+				log.info( "re-projecting population from "+inputCRS+" to "+internalCRS+" for import" );
+
+				final CoordinateTransformation transformation =
+						TransformationFactory.getCoordinateTransformation(
+								inputCRS,
+								internalCRS );
+
+				new MatsimPopulationReader(transformation , this.scenario).parse(populationFileName);
+			}
 
 			if (this.scenario.getPopulation() instanceof PopulationImpl) {
 				((PopulationImpl)this.scenario.getPopulation()).printPlansCount();
@@ -223,7 +222,9 @@ public class ScenarioLoaderImpl {
 		if ((this.config.plans() != null) && (this.config.plans().getInputPersonAttributeFile() != null)) {
 			String personAttributesFileName = this.config.plans().getInputPersonAttributeFile();
 			log.info("loading person attributes from " + personAttributesFileName);
-			new ObjectAttributesXmlReader(this.scenario.getPopulation().getPersonAttributes()).parse(personAttributesFileName);
+			ObjectAttributesXmlReader reader = new ObjectAttributesXmlReader(this.scenario.getPopulation().getPersonAttributes());
+			reader.putAttributeConverters( attributeConverters );
+			reader.parse(personAttributesFileName);
 		}
 		else {
 			log.info("no person-attributes file set in config, not loading any person attributes");
@@ -233,7 +234,6 @@ public class ScenarioLoaderImpl {
 	private void loadHouseholds() {
 		final String householdsFile = this.config.households().getInputFile();
 		if ( (this.config.households() != null) && (householdsFile != null) ) {
-			this.scenario.createHouseholdsContainer() ;
 			log.info("loading households from " + householdsFile);
 			new HouseholdsReaderV10(this.scenario.getHouseholds()).parse(householdsFile);
 			log.info("households loaded.");
@@ -242,14 +242,11 @@ public class ScenarioLoaderImpl {
 			log.info("no households file set in config, not loading households");
 		}
 		if ((this.config.households() != null) && (this.config.households().getInputHouseholdAttributesFile() != null)) {
-
-			this.scenario.createHouseholdsContainer() ;
-			// (there was a test that implied that loading hh attributes without ever loading hhs themselves would be a valid operation. 
-			// The hh container was originally instantiated by the useHouseholds switch, but that is gone now. kai, jul'15)
-			
 			String householdAttributesFileName = this.config.households().getInputHouseholdAttributesFile();
 			log.info("loading household attributes from " + householdAttributesFileName);
-			new ObjectAttributesXmlReader(this.scenario.getHouseholds().getHouseholdAttributes()).parse(householdAttributesFileName);
+			ObjectAttributesXmlReader reader = new ObjectAttributesXmlReader(this.scenario.getHouseholds().getHouseholdAttributes());
+			reader.putAttributeConverters( attributeConverters );
+			reader.parse(householdAttributesFileName);
 		}
 		else {
 			log.info("no household-attributes file set in config, not loading any household attributes");
@@ -258,32 +255,50 @@ public class ScenarioLoaderImpl {
 
 	private void loadTransit() throws UncheckedIOException {
 		final String transitScheduleFile = this.config.transit().getTransitScheduleFile();
+
 		if ( transitScheduleFile != null ) {
-			this.scenario.createTransitScheduleContainer() ;
-			new TransitScheduleReader(this.scenario).readFile(transitScheduleFile);
+			final String inputCRS = config.transit().getInputScheduleCRS();
+			final String internalCRS = config.global().getCoordinateSystem();
+
+			if ( inputCRS == null ) {
+				new TransitScheduleReader(this.scenario).readFile(transitScheduleFile);
+			}
+			else {
+				log.info( "re-projecting transit schedule from "+inputCRS+" to "+internalCRS+" for import" );
+
+				final CoordinateTransformation transformation =
+						TransformationFactory.getCoordinateTransformation(
+								inputCRS,
+								internalCRS );
+
+				new TransitScheduleReader( transformation , this.scenario).readFile(transitScheduleFile);
+			}
 		}
 		else {
 			log.info("no transit schedule file set in config, not loading any transit schedule");
 		}
+
 		if ( this.config.transit().getTransitLinesAttributesFile() != null ) {
-			this.scenario.createTransitScheduleContainer() ;
 			String transitLinesAttributesFileName = this.config.transit().getTransitLinesAttributesFile();
 			log.info("loading transit lines attributes from " + transitLinesAttributesFileName);
-			new ObjectAttributesXmlReader(this.scenario.getTransitSchedule().getTransitLinesAttributes()).parse(transitLinesAttributesFileName);
+			ObjectAttributesXmlReader reader = new ObjectAttributesXmlReader(this.scenario.getTransitSchedule().getTransitLinesAttributes());
+			reader.putAttributeConverters( attributeConverters );
+			reader.parse(transitLinesAttributesFileName);
 		}
+
 		if ( this.config.transit().getTransitStopsAttributesFile() != null ) {
-			this.scenario.createTransitScheduleContainer() ;
 			String transitStopsAttributesFileName = this.config.transit().getTransitStopsAttributesFile();
 			log.info("loading transit stop facilities attributes from " + transitStopsAttributesFileName);
-			new ObjectAttributesXmlReader(this.scenario.getTransitSchedule().getTransitStopsAttributes()).parse(transitStopsAttributesFileName);
+			ObjectAttributesXmlReader reader = new ObjectAttributesXmlReader(this.scenario.getTransitSchedule().getTransitStopsAttributes());
+			reader.putAttributeConverters( attributeConverters );
+			reader.parse(transitStopsAttributesFileName);
 		}
 	}
 
 	private void loadTransitVehicles() throws UncheckedIOException {
 		final String vehiclesFile = this.config.transit().getVehiclesFile();
 		if ( vehiclesFile != null ) {
-			log.info("loading transit vehicles from " + vehiclesFile );
-			this.scenario.createTransitVehicleContainer() ;
+			log.info("loading transit vehicles from " + vehiclesFile);
 			new VehicleReaderV1(this.scenario.getTransitVehicles()).readFile(vehiclesFile);
 		}
 		else {
@@ -294,7 +309,6 @@ public class ScenarioLoaderImpl {
 		final String vehiclesFile = this.config.vehicles().getVehiclesFile();
 		if ( vehiclesFile != null ) {
 			log.info("loading vehicles from " + vehiclesFile );
-			this.scenario.createVehicleContainer() ;
 			new VehicleReaderV1(this.scenario.getVehicles()).readFile(vehiclesFile);
 		} 
 		else {
@@ -315,7 +329,6 @@ public class ScenarioLoaderImpl {
 						+ "LaneDefinitonsV11ToV20Converter manually in the preprocessing phase.");
 				throw new UncheckedIOException("Wrong lane file format: " + fileTypeGuesser.getSystemId());
 			}
-			this.scenario.createLanesContainer() ;
 			LaneDefinitionsReader reader = new LaneDefinitionsReader(this.scenario);
 			reader.readFile(filename);
 		}

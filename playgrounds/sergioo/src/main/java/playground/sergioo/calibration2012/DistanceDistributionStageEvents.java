@@ -162,7 +162,7 @@ public class DistanceDistributionStageEvents implements TransitDriverStartsEvent
 		if(event.getVehicleId().toString().startsWith("tr"))
 			ptVehicles.get(event.getVehicleId()).in = true;
 		else
-			chains.get(event.getPersonId()).in = true;
+			chains.get(event.getDriverId()).in = true;
 	}
 	@Override
 	public void handleEvent(LinkLeaveEvent event) {
@@ -173,10 +173,10 @@ public class DistanceDistributionStageEvents implements TransitDriverStartsEvent
 			vehicle.incDistance(network.getLinks().get(event.getLinkId()).getLength());
 		}
 		else  {
-			TravellerChain chain = chains.get(event.getPersonId());
+			TravellerChain chain = chains.get(event.getDriverId());
 			if(chain == null) {
 				chain = new TravellerChain();
-				chains.put(event.getPersonId(), chain);
+				chains.put(event.getDriverId(), chain);
 				chain.modes.add("car");
 				chain.distances.add(0.0);
 			}
@@ -213,7 +213,7 @@ public class DistanceDistributionStageEvents implements TransitDriverStartsEvent
 			chain.in = true;
 		acts.put(event.getPersonId(), acts.get(event.getPersonId())==null?1:acts.get(event.getPersonId())+1);
 		if(chain.modes.get(chain.modes.size()-1).equals("walk")) {
-			Double distance = CoordUtils.calcDistance(locations.get(event.getPersonId()), network.getLinks().get(event.getLinkId()).getCoord());
+			Double distance = CoordUtils.calcEuclideanDistance(locations.get(event.getPersonId()), network.getLinks().get(event.getLinkId()).getCoord());
 			if(chain.modes.size() == chain.distances.size()) {
 				if(event.getActType().equals(PtConstants.TRANSIT_ACTIVITY_TYPE))
 					chain.modes.set(chain.modes.size()-1, "transit_walk");
@@ -321,7 +321,7 @@ public class DistanceDistributionStageEvents implements TransitDriverStartsEvent
 	public static void main(String[] args) throws IOException {
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		scenario.getConfig().transit().setUseTransit(true);
-		new MatsimNetworkReader(scenario).parse(args[0]);
+		new MatsimNetworkReader(scenario.getNetwork()).parse(args[0]);
 		new TransitScheduleReader(scenario).readFile(args[1]);
 		int lastIteration = new Integer(args[2]);
 		int iterationsInterval = new Integer(args[3]);

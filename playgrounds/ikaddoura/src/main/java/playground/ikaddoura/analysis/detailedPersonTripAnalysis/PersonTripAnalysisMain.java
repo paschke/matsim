@@ -31,29 +31,26 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.noise.events.NoiseEventsReader;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
-import org.matsim.core.scenario.ScenarioImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 
 import playground.ikaddoura.analysis.detailedPersonTripAnalysis.handler.BasicPersonTripAnalysisHandler;
 import playground.ikaddoura.analysis.detailedPersonTripAnalysis.handler.CongestionAnalysisHandler;
 import playground.ikaddoura.analysis.detailedPersonTripAnalysis.handler.NoiseAnalysisHandler;
 import playground.ikaddoura.analysis.vtts.VTTSHandler;
-import playground.ikaddoura.integrationCN.CNEventsReader;
-import playground.ikaddoura.noise2.events.NoiseEventsReader;
 import playground.vsp.congestion.events.CongestionEventsReader;
 
 /*
  * 
  * Provides the following analysis: 
  * 
- * TODO
- * aggregated information: total travel time, total congestion cost, total noise damages, total travel related user benefits, total toll revenues, system welfare
+ * aggregated results: number of trips, number of stuck trips, travel time, travel distance, caused/affected congestion, caused/affected noise cost, toll payments, user benefits, welfare
  * 
  * trip-based information
  * person ; trip no.; leg mode ; stuckAbort (trip) ; VTTS (trip) ; departure time (trip) ; trip arrival time (trip) ; travel time (trip) ; travel distance (trip) ; toll payment (trip) ; caused noise cost (trip) ; caused congestion (trip) ; affected congestion (trip)
@@ -71,39 +68,56 @@ import playground.vsp.congestion.events.CongestionEventsReader;
 public class PersonTripAnalysisMain {
 	private static final Logger log = Logger.getLogger(PersonTripAnalysisMain.class);
 
-	private static String networkFile;
-	private static String configFile;
-	private static String outputPath;
-	private static String populationFile;
-
-	private static String eventsFile;
-	
-	private static String noiseEventsFile;
-	private static String congestionEventsFile;
-	
+	private String runDirectory;
+			
 	public static void main(String[] args) {
+			
+		log.info("Searching for run-directory in args at index 0...");
+		String runDirectory;
 		
 		if (args.length > 0) {
-			throw new RuntimeException("Aborting...");
+			runDirectory = args[0];
+			log.info("Run-directory found at index 0.");
 			
-		} else {			
-			networkFile = "/Users/ihab/Documents/workspace/runs-svn/berlin_equal_vs_different_VTTS/output/internalization_differentVTTS/output_network.xml.gz";
-			configFile = "/Users/ihab/Documents/workspace/runs-svn/berlin_equal_vs_different_VTTS/output/internalization_differentVTTS/output_config.xml";
+		} else {
 			
-			eventsFile = "/Users/ihab/Documents/workspace/runs-svn/berlin_internalization_noise_averageVSmarginal/output/int_1_marginalCost/ITERS/it.100/100.events.xml.gz";
-			outputPath = "/Users/ihab/Documents/workspace/runs-svn/berlin_internalization_noise_averageVSmarginal/output/int_1_marginalCost/ITERS/it.100/detailedAnalysis/";
-			populationFile = "/Users/ihab/Documents/workspace/runs-svn/berlin_equal_vs_different_VTTS/output/internalization_differentVTTS/output_plans.xml.gz";
-			
-			noiseEventsFile = null;
-			congestionEventsFile = "/Users/ihab/Documents/workspace/runs-svn/berlin_equal_vs_different_VTTS/output/internalization_differentVTTS/ITERS/it.100/100.events.xml.gz";
-
+			String id = "cn4";
+			String baiscDirectoryPath = "../../../runs-svn/cn2/500iterations/output/";
+						
+			runDirectory = baiscDirectoryPath + id + "/";
+			log.info("Could not find run-directory in args. Using the directory " + runDirectory);
 		}
 		
-		PersonTripAnalysisMain analysis = new PersonTripAnalysisMain();
+		PersonTripAnalysisMain analysis = new PersonTripAnalysisMain(runDirectory);
 		analysis.run();
 	}
+	
+	public PersonTripAnalysisMain(String runDirectory) {
+		
+		if (!runDirectory.endsWith("/")) runDirectory = runDirectory + "/";
+		
+		this.runDirectory = runDirectory;
+	}
 
-	private void run() {
+	public void run() {
+					
+		String networkFile = runDirectory + "output_network.xml.gz";
+		String configFile = runDirectory + "output_config.xml.gz";
+		String populationFile = runDirectory + "output_plans.xml.gz";
+
+		Config config = ConfigUtils.loadConfig(configFile);	
+		config.plans().setInputFile(populationFile);
+		config.network().setInputFile(networkFile);
+		
+		int finalIteration = config.controler().getLastIteration();
+		String eventsFile = runDirectory + "ITERS/it." + finalIteration + "/" + finalIteration + ".events.xml.gz";
+		String outputPath = runDirectory + "ITERS/it." + finalIteration + "/detailedAnalysis/";
+		
+		String noiseEventsFile = runDirectory + "ITERS/it." + finalIteration + "/" + finalIteration + ".events.xml.gz";
+//		String noiseEventsFile = runDirectory + "noiseAnalysis/analysis_it.100/100.events_NoiseImmission_Offline.xml.gz";
+		String congestionEventsFile = runDirectory + "ITERS/it." + finalIteration + "/" + finalIteration + ".events.xml.gz";
+		
+		Scenario scenario = ScenarioUtils.loadScenario(config);
 		
 		File folder = new File(outputPath);			
 		folder.mkdirs();
@@ -114,13 +128,6 @@ public class PersonTripAnalysisMain {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-				
-		Config config = ConfigUtils.loadConfig(configFile);	
-//		config.plans().setInputFile(populationFile);
-		config.plans().setInputFile(null);
-		config.network().setInputFile(networkFile);
-		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.loadScenario(config);
 		
 		// standard events analysis
 		
@@ -170,7 +177,7 @@ public class PersonTripAnalysisMain {
 		}	
 		
 		// noise events analysis
-		
+	
 		if (noiseHandler.isCaughtNoiseEvent()) {
 			log.info("Noise events have already been analyzed based on the standard events file.");
 		} else {
@@ -186,36 +193,25 @@ public class PersonTripAnalysisMain {
 		// print the results
 		
 		PersonTripAnalysis analysis = new PersonTripAnalysis();
-		
-		log.info("Print trip information...");
-		analysis.printTripInformation(outputPath, null, basicHandler, vttsHandler, congestionHandler, noiseHandler);
-		log.info("Print trip information... Done.");
 				
 		log.info("Print trip information...");
 		analysis.printTripInformation(outputPath, TransportMode.car, basicHandler, vttsHandler, congestionHandler, noiseHandler);
-		log.info("Print trip information... Done.");
-		
-		log.info("Print trip information...");
-		analysis.printTripInformation(outputPath, TransportMode.walk, basicHandler, vttsHandler, congestionHandler, noiseHandler);
-		log.info("Print trip information... Done.");
-		
-		log.info("Print trip information...");
-		analysis.printTripInformation(outputPath, TransportMode.pt, basicHandler, vttsHandler, congestionHandler, noiseHandler);
-		log.info("Print trip information... Done.");
-		
-		log.info("Print trip information...");
-		analysis.printTripInformation(outputPath, TransportMode.bike, basicHandler, vttsHandler, congestionHandler, noiseHandler);
+		analysis.printTripInformation(outputPath, null, basicHandler, vttsHandler, congestionHandler, noiseHandler);
 		log.info("Print trip information... Done.");
 
 		log.info("Print person information...");
 		analysis.printPersonInformation(outputPath, TransportMode.car, personId2userBenefit, basicHandler, vttsHandler, congestionHandler, noiseHandler);	
+		analysis.printPersonInformation(outputPath, null, personId2userBenefit, basicHandler, vttsHandler, congestionHandler, noiseHandler);	
 		log.info("Print person information... Done.");
 		
-		SortedMap<Double, List<Double>> departureTime2tolls = analysis.getParameter2Values(TransportMode.car, basicHandler, basicHandler.getPersonId2tripNumber2departureTime(), basicHandler.getPersonId2tripNumber2amount(), 3600., 30 * 3600.);
+		SortedMap<Double, List<Double>> departureTime2tolls = analysis.getParameter2Values(TransportMode.car, basicHandler, basicHandler.getPersonId2tripNumber2departureTime(), basicHandler.getPersonId2tripNumber2payment(), 3600., 30 * 3600.);
 		analysis.printAvgValuePerParameter(outputPath + "tollsPerDepartureTime_car.csv", departureTime2tolls);
 		
-		SortedMap<Double, List<Double>> tripDistance2tolls = analysis.getParameter2Values(TransportMode.car, basicHandler, basicHandler.getPersonId2tripNumber2tripDistance(), basicHandler.getPersonId2tripNumber2amount(), 2000., 40 * 1000.);
+		SortedMap<Double, List<Double>> tripDistance2tolls = analysis.getParameter2Values(TransportMode.car, basicHandler, basicHandler.getPersonId2tripNumber2tripDistance(), basicHandler.getPersonId2tripNumber2payment(), 2000., 40 * 1000.);
 		analysis.printAvgValuePerParameter(outputPath + "tollsPerTripDistance_car.csv", tripDistance2tolls);
+		
+		analysis.printAggregatedResults(outputPath, TransportMode.car, personId2userBenefit, basicHandler, vttsHandler, congestionHandler, noiseHandler);
+		analysis.printAggregatedResults(outputPath, null, personId2userBenefit, basicHandler, vttsHandler, congestionHandler, noiseHandler);
 	}
 }
 		

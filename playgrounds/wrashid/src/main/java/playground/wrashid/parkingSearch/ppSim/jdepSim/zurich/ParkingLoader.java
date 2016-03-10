@@ -24,12 +24,12 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Random;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.parking.lib.GeneralLib;
-import org.matsim.core.utils.geometry.CoordImpl;
 
 import playground.wrashid.parkingChoice.infrastructure.PublicParking;
 import playground.wrashid.parkingChoice.infrastructure.api.PParking;
@@ -40,7 +40,7 @@ import playground.wrashid.parkingSearch.withindayFW.interfaces.ParkingCostCalcul
 import playground.wrashid.parkingSearch.withindayFW.zhCity.CityZones;
 
 public class ParkingLoader {
-
+	private static final Logger log = Logger.getLogger(ParkingLoader.class);
 	public static double parkingsOutsideZHCityScaling = 1.0;
 	public static double streetParkingCalibrationFactor = 1.0;
 	public static double garageParkingCalibrationFactor = 1.0;
@@ -78,16 +78,16 @@ public class ParkingLoader {
 
 		double totalNumberOfParkingZH = numberOfStreetParking + numberOfGarageParking + numberOfPrivateParking;
 
-		System.out.println("streetParking to garageParking (%): " + numberOfStreetParking / 1.0 / numberOfGarageParking
+		log.info("streetParking to garageParking (%): " + numberOfStreetParking / 1.0 / numberOfGarageParking
 				+ " - ref: 3.03");
-		System.out.println("numberOfStreetParking (%): " + numberOfStreetParking / totalNumberOfParkingZH * 100
+		log.info("numberOfStreetParking (%): " + numberOfStreetParking / totalNumberOfParkingZH * 100
 				+ " - ref: 18.5 - [" + numberOfStreetParking + "]");
-		System.out.println("numberOfGarageParking (%):" + numberOfGarageParking / totalNumberOfParkingZH * 100 + " - ref: 6.1 - ["
+		log.info("numberOfGarageParking (%):" + numberOfGarageParking / totalNumberOfParkingZH * 100 + " - ref: 6.1 - ["
 				+ numberOfGarageParking + "]");
-		System.out.println("numberOfPrivateParking (%):" + numberOfPrivateParking / totalNumberOfParkingZH * 100
+		log.info("numberOfPrivateParking (%):" + numberOfPrivateParking / totalNumberOfParkingZH * 100
 				+ " - ref: 75.4 - [" + numberOfPrivateParking + "]");
 
-		System.out.println("totalNumberOfParkingZH: " + (totalNumberOfParkingZH / 1000) + "k - ref: " + 267000
+		log.info("totalNumberOfParkingZH: " + (totalNumberOfParkingZH / 1000) + "k - ref: " + 267000
 				* populationScalingFactor / 1000 + "k");
 
 		return parkingCollection;
@@ -175,14 +175,14 @@ public class ParkingLoader {
 	}
 
 	private static void addDummyParking(LinkedList<PParking> parkings) {
-		PublicParking parking = new PublicParking(new CoordImpl(100000000,100000000));
+		PublicParking parking = new PublicParking(new Coord((double) 100000000, (double) 100000000));
 		parking.setMaxCapacity(100000000000.0);
 		parking.setParkingId(Id.create("backupParking", PParking.class));
 		parking.setType("public");
 		parkings.add(parking);
-		
-		
-		parking = new PublicParking(new CoordImpl(100000000,100000000));
+
+
+		parking = new PublicParking(new Coord((double) 100000000, (double) 100000000));
 		parking.setMaxCapacity(100000000000.0);
 		parking.setParkingId(Id.create("gp-bkp", PParking.class));
 		parking.setType("public");

@@ -17,7 +17,6 @@ import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
@@ -149,7 +148,7 @@ public class CreateNetworkFromTransitSchedule {
 		if (fromStop == null) {
 			fromNode = this.startNodes.get(toFacility);
 			if (fromNode == null) {
-				Coord coord = new CoordImpl(toFacility.getCoord().getX() + 50, toFacility.getCoord().getY() + 50);
+				Coord coord = new Coord(toFacility.getCoord().getX() + 50, toFacility.getCoord().getY() + 50);
 				fromNode = this.network.getFactory().createNode(Id.create("startnode_" + toFacility.getId(), Node.class), coord);
 				this.network.addNode(fromNode);
 				++nodeIdCounter;
@@ -207,7 +206,7 @@ public class CreateNetworkFromTransitSchedule {
 		//need to change link id naming
 		Long LinkId = Integer.parseInt(this.prefix) * (++this.linkIdCounter);
 		link = this.network.getFactory().createLink(Id.create(LinkId, Link.class), fromNode, toNode);
-		link.setLength(CoordUtils.calcDistance(fromNode.getCoord(), toNode.getCoord()));
+		link.setLength(CoordUtils.calcEuclideanDistance(fromNode.getCoord(), toNode.getCoord()));
 		//need to change it!
 		link.setFreespeed(30.0 / 3.6);
 		link.setCapacity(9999);

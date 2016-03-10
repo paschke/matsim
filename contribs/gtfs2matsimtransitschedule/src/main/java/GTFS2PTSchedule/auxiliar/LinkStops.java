@@ -26,13 +26,13 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.network.LinkFactoryImpl;
 import org.matsim.core.network.LinkImpl;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 
@@ -102,14 +102,14 @@ public class LinkStops {
 			log.warn("Bad position of stop "+stops.get(i).getName()+" according to the link " + link.getId());
 			return null;
 		}
-		Node toNode = network.getFactory().createNode(Id.create(link.getId().toString()+"_"+link.getToNode().getId().toString()+"_"+i, Node.class),new CoordImpl(nearestPoint.getX(), nearestPoint.getY()));
+		Node toNode = network.getFactory().createNode(Id.create(link.getId().toString()+"_"+link.getToNode().getId().toString()+"_"+i, Node.class), new Coord(nearestPoint.getX(), nearestPoint.getY()));
 		if(network.getNodes().get(Id.create(link.getId().toString()+"_"+link.getToNode().getId().toString()+"_"+i, Node.class))==null)
 			network.addNode(toNode);
 		double length = -1;
 		if(((LinkImpl)link).getOrigId()!=null)
-			length=link.getLength()*CoordUtils.calcDistance(link.getFromNode().getCoord(), toNode.getCoord())/CoordUtils.calcDistance(link.getFromNode().getCoord(), link.getToNode().getCoord());
+			length=link.getLength()*CoordUtils.calcEuclideanDistance(link.getFromNode().getCoord(), toNode.getCoord())/CoordUtils.calcEuclideanDistance(link.getFromNode().getCoord(), link.getToNode().getCoord());
 		else
-			length = CoordUtils.calcDistance(coordinateTransformation.transform(link.getFromNode().getCoord()),coordinateTransformation.transform(toNode.getCoord()));
+			length = CoordUtils.calcEuclideanDistance(coordinateTransformation.transform(link.getFromNode().getCoord()),coordinateTransformation.transform(toNode.getCoord()));
 		Link newLink = new LinkFactoryImpl().createLink(Id.create(link.getId().toString()+"_"+i, Link.class), link.getFromNode(), toNode, network, length, link.getFreespeed(), link.getCapacity(), link.getNumberOfLanes());
 		if(((LinkImpl)link).getOrigId()!=null)
 			((LinkImpl)newLink).setOrigId(((LinkImpl)link).getOrigId());

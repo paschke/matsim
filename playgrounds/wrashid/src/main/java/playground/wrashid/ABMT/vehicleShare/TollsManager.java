@@ -6,20 +6,25 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
 import org.matsim.api.core.v01.events.PersonArrivalEvent;
 import org.matsim.api.core.v01.events.PersonDepartureEvent;
+import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
+import org.matsim.api.core.v01.events.VehicleLeavesTrafficEvent;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonArrivalEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonDepartureEventHandler;
+import org.matsim.api.core.v01.events.handler.VehicleEntersTrafficEventHandler;
+import org.matsim.api.core.v01.events.handler.VehicleLeavesTrafficEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.parking.lib.GeneralLib;
 import org.matsim.contrib.parking.lib.obj.DoubleValueHashMap;
-import org.matsim.core.controler.Controler;
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.core.controler.MatsimServices;
+import org.matsim.core.events.algorithms.Vehicle2DriverEventHandler;
 
 import java.util.HashMap;
 
-public class TollsManager implements LinkEnterEventHandler, PersonArrivalEventHandler, PersonDepartureEventHandler {
+public class TollsManager implements LinkEnterEventHandler, PersonArrivalEventHandler, PersonDepartureEventHandler,
+VehicleEntersTrafficEventHandler, VehicleLeavesTrafficEventHandler {
 
 	public static DoubleValueHashMap<Id> tollDisutilities;
 	public static DoubleValueHashMap<Id> tollTimeOfEntry;
@@ -30,9 +35,11 @@ public class TollsManager implements LinkEnterEventHandler, PersonArrivalEventHa
 
 	private Network network;
 
-	private Controler controler;
+	private MatsimServices controler;
+	
+	private Vehicle2DriverEventHandler delegate = new Vehicle2DriverEventHandler() ;
 
-	public TollsManager(Controler controler) {
+	public TollsManager(MatsimServices controler) {
         this.network = controler.getScenario().getNetwork();
 		this.controler = controler;
 	}
@@ -47,14 +54,15 @@ public class TollsManager implements LinkEnterEventHandler, PersonArrivalEventHa
 
 	@Override
 	public void handleEvent(LinkEnterEvent event) {
-		if (!event.getPersonId().toString().contains("pt")) {
+		Id<Person> driverId = delegate.getDriverOfVehicle( event.getVehicleId() ) ;
+		if (!driverId.toString().contains("pt")) {
 			double tollDisutility;
 			
-//			if (!VehicleInitializer.hasElectricVehicle.containsKey(event.getPersonId())){
-//				Plan plan=controler.getPopulation().getPersons().get(event.getPersonId()).getSelectedPlan();
-//				System.out.println(VehicleInitializer.hasElectricVehicle.containsKey(event.getPersonId()));
+//			if (!VehicleInitializer.hasElectricVehicle.containsKey(driverId)){
+//				Plan plan=controler.getPopulation().getPersons().get(driverId).getSelectedPlan();
+//				System.out.println(VehicleInitializer.hasElectricVehicle.containsKey(driverId));
 //			}
-            Person person= controler.getScenario().getPopulation().getPersons().get(event.getPersonId());
+            Person person= controler.getScenario().getPopulation().getPersons().get(driverId);
 			
 			if (!VehicleInitializer.hasElectricVehicle.containsKey(person.getSelectedPlan())){
 				VehicleInitializer.initialize(person.getSelectedPlan());
@@ -66,17 +74,17 @@ public class TollsManager implements LinkEnterEventHandler, PersonArrivalEventHa
 				tollDisutility = EVCVScoringFunction.cvCosts.getPaidTollCost();
 			}
 
-			Coord coordinatesQuaiBridgeZH = new CoordImpl(683423.0, 246819.0);
-			Link prevLink = network.getLinks().get(previousLinks.get(event.getPersonId()));
+			Coord coordinatesQuaiBridgeZH = new Coord(683423.0, 246819.0);
+			Link prevLink = network.getLinks().get(previousLinks.get(driverId));
 			Link currentLink = network.getLinks().get(event.getLinkId());
 			double radiusInMeters = GlobalTESFParameters.tollAreaRadius;
 			
 			if (GeneralLib.getDistance(coordinatesQuaiBridgeZH, currentLink) < radiusInMeters && GeneralLib.getDistance(coordinatesQuaiBridgeZH, prevLink) > radiusInMeters){
-				tollTimeOfEntry.put(event.getPersonId(), event.getTime());				
+				tollTimeOfEntry.put(driverId, event.getTime());
 			}
 			
 			if (GeneralLib.getDistance(coordinatesQuaiBridgeZH, currentLink) > radiusInMeters && GeneralLib.getDistance(coordinatesQuaiBridgeZH, prevLink) < radiusInMeters){
-				tollTimeOfExit.put(event.getPersonId(), event.getTime());				
+				tollTimeOfExit.put(driverId, event.getTime());
 			}
 			
 			if (GeneralLib.getDistance(coordinatesQuaiBridgeZH, currentLink) < radiusInMeters
@@ -85,10 +93,10 @@ public class TollsManager implements LinkEnterEventHandler, PersonArrivalEventHa
 							|| (GlobalTESFParameters.eveningTollStart < event.getTime() && GlobalTESFParameters.eveningTollEnd > event.getTime())
 						)
 				) {
-				tollDisutilities.put(event.getPersonId(), tollDisutility);
+				tollDisutilities.put(driverId, tollDisutility);
 
 			}
-			previousLinks.put(event.getPersonId(), event.getLinkId());
+			previousLinks.put(driverId, event.getLinkId());
 		}
 	}
 
@@ -102,6 +110,16 @@ public class TollsManager implements LinkEnterEventHandler, PersonArrivalEventHa
 		if (event.getLegMode().equalsIgnoreCase(TransportMode.car)) {
 			previousLinks.put(event.getPersonId(), event.getLinkId());
 		}
+	}
+
+	@Override
+	public void handleEvent(VehicleEntersTrafficEvent event) {
+		this.delegate.handleEvent(event);
+	}
+
+	@Override
+	public void handleEvent(VehicleLeavesTrafficEvent event) {
+		this.delegate.handleEvent(event);
 	}
 
 }

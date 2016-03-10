@@ -20,6 +20,7 @@
 
 package org.matsim.analysis;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
@@ -35,11 +36,11 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PlanImpl;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.population.PopulationUtils;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.misc.CRCChecksum;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.testcases.MatsimTestCase;
@@ -58,24 +59,24 @@ public class CalcLegTimesTest extends MatsimTestCase {
 		super.setUp();
 		super.loadConfig(null);
 
-		ScenarioImpl s = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario s = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		this.population = s.getPopulation();
-		PersonImpl person = new PersonImpl(DEFAULT_PERSON_ID);
+		Person person = PopulationUtils.createPerson(DEFAULT_PERSON_ID);
 		this.population.addPerson(person);
-		PlanImpl plan = person.createAndAddPlan(true);
-		plan.createAndAddActivity("act1", new CoordImpl(100.0, 100.0));
+		PlanImpl plan = PersonUtils.createAndAddPlan(person, true);
+		plan.createAndAddActivity("act1", new Coord(100.0, 100.0));
 		plan.createAndAddLeg("undefined");
-		plan.createAndAddActivity("act2", new CoordImpl(200.0, 200.0));
+		plan.createAndAddActivity("act2", new Coord(200.0, 200.0));
 		plan.createAndAddLeg("undefined");
-		plan.createAndAddActivity("act3", new CoordImpl(200.0, 200.0));
+		plan.createAndAddActivity("act3", new Coord(200.0, 200.0));
 		plan.createAndAddLeg("undefined");
-		plan.createAndAddActivity("act4", new CoordImpl(200.0, 200.0));
+		plan.createAndAddActivity("act4", new Coord(200.0, 200.0));
 		plan.createAndAddLeg("undefined");
-		plan.createAndAddActivity("act5", new CoordImpl(200.0, 200.0));
+		plan.createAndAddActivity("act5", new Coord(200.0, 200.0));
 		this.network = s.getNetwork();
-		Node fromNode = this.network.getFactory().createNode(Id.create("123456", Node.class), new CoordImpl(100.0, 100.0));
+		Node fromNode = this.network.getFactory().createNode(Id.create("123456", Node.class), new Coord(100.0, 100.0));
 		this.network.addNode(fromNode);
-		Node toNode = this.network.getFactory().createNode(Id.create("789012", Node.class), new CoordImpl(200.0, 200.0));
+		Node toNode = this.network.getFactory().createNode(Id.create("789012", Node.class), new Coord(200.0, 200.0));
 		this.network.addNode(toNode);
 		Link link = this.network.getFactory().createLink(DEFAULT_LINK_ID, fromNode, toNode);
 		link.setLength(Math.sqrt(20000.0));

@@ -20,13 +20,7 @@
 
 package playground.gregor.casim.experiments;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -40,36 +34,21 @@ import org.matsim.core.events.EventsManagerImpl;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
-
 import playground.gregor.casim.events.CASimAgentConstructEvent;
 import playground.gregor.casim.monitoring.CALinkMultiLaneMonitor;
 import playground.gregor.casim.monitoring.Monitor;
-import playground.gregor.casim.simulation.physics.AbstractCANetwork;
-import playground.gregor.casim.simulation.physics.CAEvent;
+import playground.gregor.casim.simulation.physics.*;
 import playground.gregor.casim.simulation.physics.CAEvent.CAEventType;
-import playground.gregor.casim.simulation.physics.CAMoveableEntity;
-import playground.gregor.casim.simulation.physics.CAMultiLaneDensityEstimatorSPH;
-import playground.gregor.casim.simulation.physics.CAMultiLaneDensityEstimatorSPHFactory;
-import playground.gregor.casim.simulation.physics.CAMultiLaneLink;
-import playground.gregor.casim.simulation.physics.CAMultiLaneNetworkFactory;
-import playground.gregor.casim.simulation.physics.CANetwork;
-import playground.gregor.casim.simulation.physics.CANetworkFactory;
-import playground.gregor.casim.simulation.physics.CASimpleDynamicAgent;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPA;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPAFactory;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPAII;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPH;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPHFactory;
-import playground.gregor.casim.simulation.physics.CASingleLaneDensityEstimatorSPHII;
-import playground.gregor.casim.simulation.physics.CASingleLaneNetworkFactory;
 import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.EventBasedVisDebuggerEngine;
 import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.InfoBox;
 import playground.gregor.sim2d_v4.debugger.eventsbaseddebugger.QSimDensityDrawer;
-import playground.gregor.sim2d_v4.scenario.Sim2DConfig;
-import playground.gregor.sim2d_v4.scenario.Sim2DConfigUtils;
-import playground.gregor.sim2d_v4.scenario.Sim2DScenario;
-import playground.gregor.sim2d_v4.scenario.Sim2DScenarioUtils;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Long1DChannelUniMultiLane {
 
@@ -140,11 +119,11 @@ public class Long1DChannelUniMultiLane {
 				c.global().setCoordinateSystem("EPSG:3395");
 				Scenario sc = ScenarioUtils.createScenario(c);
 
-				// VIS only
-				Sim2DConfig conf2d = Sim2DConfigUtils.createConfig();
-				Sim2DScenario sc2d = Sim2DScenarioUtils
-						.createSim2dScenario(conf2d);
-				sc.addScenarioElement(Sim2DScenario.ELEMENT_NAME, sc2d);
+//				// VIS only
+//				Sim2DConfig conf2d = Sim2DConfigUtils.createConfig();
+//				Sim2DScenario sc2d = Sim2DScenarioUtils
+//						.createSim2dScenario(conf2d);
+//				sc.addScenarioElement(Sim2DScenario.ELEMENT_NAME, sc2d);
 
 				Network net = sc.getNetwork();
 				((NetworkImpl) net).setCapacityPeriod(1);
@@ -152,22 +131,18 @@ public class Long1DChannelUniMultiLane {
 
 				int l = 8;
 				int res = 20;
-				Node n0 = fac.createNode(Id.createNodeId("0"), new CoordImpl(
-						20 - res, 0));
-				Node n1 = fac.createNode(Id.createNodeId("1"), new CoordImpl(
-						20, 0));
-				Node n2 = fac.createNode(Id.createNodeId("2"), new CoordImpl(
-						24, 0));
+				Node n0 = fac.createNode(Id.createNodeId("0"), new Coord((double) (20 - res), (double) 0));
+				Node n1 = fac.createNode(Id.createNodeId("1"), new Coord((double) 20, (double) 0));
+				Node n2 = fac.createNode(Id.createNodeId("2"), new Coord((double) 24, (double) 0));
 				Node n2ex = fac.createNode(Id.createNodeId("2ex"),
-						new CoordImpl(24, 20));
-				Node n3 = fac.createNode(Id.createNodeId("3"), new CoordImpl(
-						24 + l, 0));
+						new Coord((double) 24, (double) 20));
+				Node n3 = fac.createNode(Id.createNodeId("3"), new Coord((double) (24 + l), (double) 0));
+				final double y = -20;
 				Node n3ex = fac.createNode(Id.createNodeId("3ex"),
-						new CoordImpl(24 + l, -20));
-				Node n4 = fac.createNode(Id.createNodeId("4"), new CoordImpl(
-						24 + 4 + l, 0));
-				Node n5 = fac.createNode(Id.createNodeId("5"), new CoordImpl(24
-						+ 4 + res + l, 0));
+						new Coord((double) (24 + l), y));
+				Node n4 = fac.createNode(Id.createNodeId("4"), new Coord((double) (24 + 4 + l), (double) 0));
+				Node n5 = fac.createNode(Id.createNodeId("5"), new Coord((double) (24
+						+ 4 + res + l), (double) 0));
 				net.addNode(n5);
 				net.addNode(n4);
 				net.addNode(n3ex);

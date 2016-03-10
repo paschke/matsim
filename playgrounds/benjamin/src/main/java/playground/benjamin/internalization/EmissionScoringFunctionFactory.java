@@ -22,14 +22,14 @@ package playground.benjamin.internalization;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.scoring.ScoringFunction;
 import org.matsim.core.scoring.ScoringFunctionAccumulator;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.functions.CharyparNagelActivityScoring;
 import org.matsim.core.scoring.functions.CharyparNagelAgentStuckScoring;
-import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
 import org.matsim.core.scoring.functions.CharyparNagelLegScoring;
+import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
 
 /**
  * @author benjamin
@@ -38,16 +38,16 @@ import org.matsim.core.scoring.functions.CharyparNagelLegScoring;
 @Deprecated
 public class EmissionScoringFunctionFactory implements ScoringFunctionFactory {
 	
-	Controler controler;
+	MatsimServices controler;
 	PlanCalcScoreConfigGroup configGroup;
 	CharyparNagelScoringParameters params;
 	Network network;
 	ScoringFromEmissions scoringFromEmissions;
 	
-	public EmissionScoringFunctionFactory(Controler controler) {
+	public EmissionScoringFunctionFactory(MatsimServices controler) {
 		this.controler = controler;
 		this.configGroup = controler.getConfig().planCalcScore();
-		this.params = CharyparNagelScoringParameters.getBuilder(configGroup).create();
+		this.params = new CharyparNagelScoringParameters.Builder(configGroup, configGroup.getScoringParameters(null), controler.getConfig().scenario()).build();
 		this.network = controler.getScenario().getNetwork();
 		this.scoringFromEmissions = new ScoringFromEmissions(params);
 	}
@@ -56,7 +56,7 @@ public class EmissionScoringFunctionFactory implements ScoringFunctionFactory {
 	public ScoringFunction createNewScoringFunction(Person person) {
 		
 		PlanCalcScoreConfigGroup configGroup = controler.getConfig().planCalcScore();
-		CharyparNagelScoringParameters params = CharyparNagelScoringParameters.getBuilder(configGroup).create();
+		CharyparNagelScoringParameters params = new CharyparNagelScoringParameters.Builder(configGroup, configGroup.getScoringParameters(null), controler.getConfig().scenario()).build();
 		Network network = controler.getScenario().getNetwork();
 		
 		ScoringFunctionAccumulator accumulator = new ScoringFunctionAccumulator();

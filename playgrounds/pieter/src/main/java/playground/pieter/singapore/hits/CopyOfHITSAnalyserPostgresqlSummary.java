@@ -21,7 +21,7 @@ import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.algorithms.TransportModeNetworkFilter;
 import org.matsim.core.router.Dijkstra;
-import org.matsim.core.router.costcalculators.TravelTimeAndDistanceBasedTravelDisutilityFactory;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility.Builder;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.LeastCostPathCalculator.Path;
 import org.matsim.core.router.util.PreProcessDijkstra;
@@ -29,7 +29,6 @@ import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.population.algorithms.XY2Links;
@@ -109,7 +108,7 @@ public class CopyOfHITSAnalyserPostgresqlSummary {
     private static void createRouters(String[] args, boolean fSR) {
 		freeSpeedRouting = fSR;
 		scenario = ScenarioUtils.createScenario(ConfigUtils.loadConfig(args[0]));
-		(new MatsimNetworkReader(scenario)).readFile(args[1]);
+		(new MatsimNetworkReader(scenario.getNetwork())).readFile(args[1]);
 		(new TransitScheduleReader(scenario)).readFile(args[3]);
 		double startTime = new Double(args[5]), endTime = new Double(args[6]), binSize = new Double(args[7]);
 		WaitTimeCalculator waitTimeCalculator = new WaitTimeCalculator(scenario.getTransitSchedule(), (int) binSize,
@@ -187,8 +186,8 @@ public class CopyOfHITSAnalyserPostgresqlSummary {
 			eventsManager.addHandler(travelTimeCalculator);
 			(new MatsimEventsReader(eventsManager)).readFile(carEventsFileName);
 		}
-		TravelDisutility travelDisutility = new TravelTimeAndDistanceBasedTravelDisutilityFactory()
-				.createTravelDisutility(travelTimeCalculator.getLinkTravelTimes(), scenario.getConfig().planCalcScore());
+		TravelDisutility travelDisutility = new Builder( TransportMode.car, scenario.getConfig().planCalcScore() )
+				.createTravelDisutility(travelTimeCalculator.getLinkTravelTimes());
 		carCongestedDijkstra = new Dijkstra(scenario.getNetwork(), travelDisutility,
 				travelTimeCalculator.getLinkTravelTimes());
 		HashSet<String> modeSet = new HashSet<>();
@@ -529,7 +528,7 @@ public class CopyOfHITSAnalyserPostgresqlSummary {
 		// ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		while (rs.next()) {
 			try {
-				zip2Coord.put(rs.getInt("pcode"), new CoordImpl(rs.getDouble("x_utm48n"), rs.getDouble("y_utm48n")));
+				zip2Coord.put(rs.getInt("pcode"), new Coord(rs.getDouble("x_utm48n"), rs.getDouble("y_utm48n")));
 
 			} catch (NullPointerException e) {
 				System.out.println(rs.getInt("pcode"));
@@ -665,7 +664,7 @@ public class CopyOfHITSAnalyserPostgresqlSummary {
 						if (j == 0) {
 							Walk walk = journey.addWalk();
 							Coord boardCoord = path.nodes.get(0).getCoord();
-							double walkDistanceAccessFromRouter = CoordUtils.calcDistance(origCoord, boardCoord);
+							double walkDistanceAccessFromRouter = CoordUtils.calcEuclideanDistance(origCoord, boardCoord);
 
 							double walkTimeAccessFromRouter = walkDistanceAccessFromRouter
 									/ transitRouterConfig.getBeelineWalkSpeed();
@@ -763,7 +762,7 @@ public class CopyOfHITSAnalyserPostgresqlSummary {
 					Coord alightCoord = path.nodes.get(path.nodes.size() - 1).getCoord();
 					substage_id++;
 
-					double walkDistanceEgressFromRouter = CoordUtils.calcDistance(alightCoord, destCoord);
+					double walkDistanceEgressFromRouter = CoordUtils.calcEuclideanDistance(alightCoord, destCoord);
 					double walkTimeEgressFromRouter = walkDistanceEgressFromRouter
 							/ transitRouterConfig.getBeelineWalkSpeed();
 					Walk walk = journey.addWalk();
@@ -965,7 +964,7 @@ public class CopyOfHITSAnalyserPostgresqlSummary {
 						if (i == 0) {
 							Walk walk = journey.addWalk();
 							Coord boardCoord = path.nodes.get(0).getCoord();
-							double walkDistanceAccessFromRouter = CoordUtils.calcDistance(origCoord, boardCoord);
+							double walkDistanceAccessFromRouter = CoordUtils.calcEuclideanDistance(origCoord, boardCoord);
 
 							double walkTimeAccessFromRouter = walkDistanceAccessFromRouter
 									/ transitRouterConfig.getBeelineWalkSpeed();
@@ -979,7 +978,7 @@ public class CopyOfHITSAnalyserPostgresqlSummary {
 						}
 						if (i > 0) {// in-between transitStage
 							Coord boardCoord = path.nodes.get(0).getCoord();
-							double interModalTransferDistance = CoordUtils.calcDistance(walkOrigin, boardCoord);
+							double interModalTransferDistance = CoordUtils.calcEuclideanDistance(walkOrigin, boardCoord);
 							double interModalTransferTime = interModalTransferDistance
 									/ transitRouterConfig.getBeelineWalkSpeed();
 							Walk walk = journey.addWalk();
@@ -1079,7 +1078,7 @@ public class CopyOfHITSAnalyserPostgresqlSummary {
 							Coord alightCoord = path.nodes.get(path.nodes.size() - 1).getCoord();
 							substage_id++;
 
-							double walkDistanceEgressFromRouter = CoordUtils.calcDistance(alightCoord, destCoord);
+							double walkDistanceEgressFromRouter = CoordUtils.calcEuclideanDistance(alightCoord, destCoord);
 							double walkTimeEgressFromRouter = walkDistanceEgressFromRouter
 									/ transitRouterConfig.getBeelineWalkSpeed();
 							Walk walk = journey.addWalk();

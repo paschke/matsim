@@ -19,10 +19,9 @@
  * *********************************************************************** */
 package playground.thibautd.scoring;
 
-import java.util.Collections;
-
 import org.junit.Assert;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
@@ -31,7 +30,9 @@ import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
 import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.contrib.socnetsim.framework.scoring.BeingTogetherScoring;
+import org.matsim.contrib.socnetsim.framework.scoring.BeingTogetherScoring.AcceptAllFilter;
+import org.matsim.contrib.socnetsim.framework.scoring.BeingTogetherScoring.RejectAllFilter;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.ActivityFacilitiesImpl;
 import org.matsim.facilities.ActivityFacility;
@@ -40,9 +41,7 @@ import org.matsim.facilities.OpeningTimeImpl;
 import org.matsim.testcases.MatsimTestUtils;
 import org.matsim.vehicles.Vehicle;
 
-import org.matsim.contrib.socnetsim.framework.scoring.BeingTogetherScoring;
-import org.matsim.contrib.socnetsim.framework.scoring.BeingTogetherScoring.AcceptAllFilter;
-import org.matsim.contrib.socnetsim.framework.scoring.BeingTogetherScoring.RejectAllFilter;
+import java.util.Collections;
 
 /**
  * @author thibautd
@@ -517,7 +516,7 @@ public class BeingTogetherScoringTest {
 		final ActivityFacility facility =
 			facilities.getFactory().createActivityFacility(
 					Id.create( "facility" , ActivityFacility.class ),
-					new CoordImpl( 0 , 0 ) );
+					new Coord((double) 0, (double) 0));
 		facilities.addActivityFacility( facility );
 		final ActivityOption option = facilities.getFactory().createActivityOption( type );
 		facility.addActivityOption( option );
@@ -600,7 +599,7 @@ public class BeingTogetherScoringTest {
 		final ActivityFacility facility =
 			facilities.getFactory().createActivityFacility(
 					Id.create( "facility" , ActivityFacility.class ),
-					new CoordImpl( 0 , 0 ) );
+					new Coord((double) 0, (double) 0));
 		facilities.addActivityFacility( facility );
 		final ActivityOption option = facilities.getFactory().createActivityOption( type );
 		facility.addActivityOption( option );

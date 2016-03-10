@@ -91,7 +91,7 @@ public final class QSimConfigGroup extends ReflectiveConfigGroup implements Mobs
 	private boolean insertingWaitingVehiclesBeforeDrivingVehicles = false;
 
 	// ---
-	public static enum LinkDynamics { FIFO, PassingQ }
+	public static enum LinkDynamics { FIFO, PassingQ, SeepageQ }
 	private LinkDynamics linkDynamics = LinkDynamics.FIFO ;
 	private static final String LINK_DYNAMICS = "linkDynamics" ;
 
@@ -104,13 +104,23 @@ public final class QSimConfigGroup extends ReflectiveConfigGroup implements Mobs
 
 	// ---
 	private final static String FAST_CAPACITY_UPDATE = "usingFastCapacityUpdate";
+	/**
+	 * See Javadoc of {@link QueueWithBuffer}
+	 */
 	private boolean usingFastCapacityUpdate = false ;
 	// ---
 	private static final String VEHICLES_SOURCE = "vehiclesSource";
 	public static enum VehiclesSource { defaultVehicle, fromVehiclesData } ;
 	private VehiclesSource vehiclesSource = VehiclesSource.defaultVehicle ;
 	// ---
-
+	private static final String SEEP_MODE = "seepMode";
+	private static final String IS_SEEP_MODE_STORAGE_FREE = "isSeepModeStorageFree";
+	private static final String IS_RESTRICTING_SEEPAGE = "isRestrictingSeepage";
+	private String seepMode = "bike";
+	private boolean isSeepModeStorageFree = false;
+	private boolean isRestrictingSeepage = true;
+	// ---
+	
 	public QSimConfigGroup() {
 		super(GROUP_NAME);
 	}
@@ -217,7 +227,7 @@ public final class QSimConfigGroup extends ReflectiveConfigGroup implements Mobs
 		map.put(INSERTING_WAITING_VEHICLES_BEFORE_DRIVING_VEHICLES, 
 				"decides if waiting vehicles enter the network after or before the already driving vehicles were moved. Default: false"); 
 		map.put(NODE_OFFSET, "Shortens a link in the visualization, i.e. its start and end point are moved into towards the center. Does not affect traffic flow. ");
-		map.put(LINK_WIDTH, "The (initial) width of the links of the network. Use positive floating point values.");
+		map.put(LINK_WIDTH, "The (initial) width of the links of the network. Use positive floating point values. This is used only for visualisation.");
 		{
 			StringBuilder stb = new StringBuilder() ;
 			for ( LinkDynamics ld : LinkDynamics.values() ) {
@@ -229,9 +239,9 @@ public final class QSimConfigGroup extends ReflectiveConfigGroup implements Mobs
 		map.put(USE_DEFAULT_VEHICLES, "[DEPRECATED, use" + VEHICLES_SOURCE + " instead]  If this is true, we do not expect (or use) vehicles from the vehicles database, but create vehicles on the fly with default properties.");
 		map.put(USING_THREADPOOL, "if the qsim should use as many runners as there are threads (Christoph's dissertation version)"
 				+ " or more of them, together with a thread pool (seems to be faster in some situations, but is not tested).") ;
-		map.put(FAST_CAPACITY_UPDATE, "normally, the qsim accumulates fractional flows up to one flow unit.  This is impractical with "
-				+ " with smaller PCEs.  If this switch is set to true, cars can enter a link if the accumulated flow is >=0, and the accumulated flow can go "
-				+ "into negative.  Will probably become the default eventually.") ;
+		map.put(FAST_CAPACITY_UPDATE, "normally, the qsim accumulates fractional flows up to one flow unit in every time step.  If this switch is set to true, "
+				+ "flows are updated only if an agent wants to enter the link or an agent is added to buffer."
+				+ "Will probably become the default eventually.") ;
 		map.put(USE_LANES, "Set this parameter to true if lanes should be used, false if not.");
 		{	
 			StringBuilder stb = new StringBuilder() ;
@@ -241,6 +251,9 @@ public final class QSimConfigGroup extends ReflectiveConfigGroup implements Mobs
 			map.put( VEHICLES_SOURCE, "If vehicles should all be the same default vehicle, or come from the vehicles file, "
 					+ "or something else.  Possible values: " + stb );
 		}
+		map.put(SEEP_MODE, "If link dynamics is set as "+ LinkDynamics.SeepageQ+", set a seep mode. Default is bike.");
+		map.put(IS_SEEP_MODE_STORAGE_FREE, "If link dynamics is set as "+ LinkDynamics.SeepageQ+", set to true if seep mode do not consumes any space on the link. Default is false.");
+		map.put(IS_RESTRICTING_SEEPAGE, "If link dynamics is set as "+ LinkDynamics.SeepageQ+", set to false if all seep modes should perform seepage. Default is true (better option).");
 		return map;
 	}
 
@@ -426,12 +439,12 @@ public final class QSimConfigGroup extends ReflectiveConfigGroup implements Mobs
 	}
 
 	@StringGetter(LINK_WIDTH)
-	public float getLinkWidth() {
+	public float getLinkWidthForVis() {
 		return this.linkWidth;
 	}
 
 	@StringSetter(LINK_WIDTH)
-	public void setLinkWidth(final float linkWidth) {
+	public void setLinkWidthForVis(final float linkWidth) {
 		this.linkWidth = linkWidth;
 	}
 
@@ -498,6 +511,7 @@ public final class QSimConfigGroup extends ReflectiveConfigGroup implements Mobs
 
 	private static final String USE_LANES="useLanes" ;
 	private boolean useLanes = false ;
+
 	@StringGetter(USE_LANES)
 	public boolean isUseLanes() {
 		return this.useLanes;
@@ -507,4 +521,37 @@ public final class QSimConfigGroup extends ReflectiveConfigGroup implements Mobs
 		this.useLanes = useLanes;
 	}
 
+	// ---
+	@StringGetter(SEEP_MODE)
+	public String getSeepMode() {
+		return seepMode;
+	}
+	@StringSetter(SEEP_MODE)
+	public void setSeepMode(String seepMode) {
+		this.seepMode = seepMode;
+	}
+	@StringGetter(IS_SEEP_MODE_STORAGE_FREE)
+	public boolean isSeepModeStorageFree() {
+		return isSeepModeStorageFree;
+	}
+	@StringSetter(IS_SEEP_MODE_STORAGE_FREE)
+	public void setSeepModeStorageFree(boolean isSeepModeStorageFree) {
+		this.isSeepModeStorageFree = isSeepModeStorageFree;
+	}
+	@StringGetter(IS_RESTRICTING_SEEPAGE)
+	public boolean isRestrictingSeepage() {
+		return isRestrictingSeepage;
+	}
+	@StringSetter(IS_RESTRICTING_SEEPAGE)
+	public void setRestrictingSeepage(boolean isRestrictingSeepage) {
+		this.isRestrictingSeepage = isRestrictingSeepage;
+	}
+	// ---
+	private boolean usingTravelTimeCheckInTeleportation = false ;
+	public boolean isUsingTravelTimeCheckInTeleportation() {
+		return this.usingTravelTimeCheckInTeleportation ;
+	}
+	public boolean setUsingTravelTimeCheckInTeleportation( boolean val ) {
+		return this.usingTravelTimeCheckInTeleportation = val ;
+	}
 }

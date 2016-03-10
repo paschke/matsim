@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -44,7 +45,7 @@ import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.PopulationWriter;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.geometry.CoordUtils;
@@ -90,7 +91,7 @@ class CreateTestScenario {
 		
 		createScheduleAndVehicles(sc);
 		new TransitScheduleWriter(sc.getTransitSchedule()).writeFile(DIR + "schedule.xml");
-		new VehicleWriterV1(((ScenarioImpl) sc).getTransitVehicles()).writeFile(DIR + "vehicles.xml");
+		new VehicleWriterV1(((MutableScenario) sc).getTransitVehicles()).writeFile(DIR + "vehicles.xml");
 		
 		createPopulation(sc);
 		new PopulationWriter(sc.getPopulation(), sc.getNetwork()).write(DIR + "plans.xml");
@@ -115,19 +116,19 @@ class CreateTestScenario {
 		NetworkFactory factory = net.getFactory();
 		
 		Node n;
-		n = factory.createNode(Id.create("A", Node.class), sc.createCoord(1000, 2000));
+		n = factory.createNode(Id.create("A", Node.class), new Coord((double) 1000, (double) 2000));
 		net.addNode(n);
-		
-		n = factory.createNode(Id.create("C", Node.class), sc.createCoord(11000, 2000));
+
+		n = factory.createNode(Id.create("C", Node.class), new Coord((double) 11000, (double) 2000));
 		net.addNode(n);
-		
-		n = factory.createNode(Id.create("B1", Node.class), sc.createCoord(6000, 4000));
+
+		n = factory.createNode(Id.create("B1", Node.class), new Coord((double) 6000, (double) 4000));
 		net.addNode(n);
-		
-		n = factory.createNode(Id.create("B2", Node.class), sc.createCoord(6000, 2000));
+
+		n = factory.createNode(Id.create("B2", Node.class), new Coord((double) 6000, (double) 2000));
 		net.addNode(n);
-		
-		n = factory.createNode(Id.create("B3", Node.class), sc.createCoord(6000, 1000));
+
+		n = factory.createNode(Id.create("B3", Node.class), new Coord((double) 6000, (double) 1000));
 		net.addNode(n);
 	}
 	
@@ -200,7 +201,7 @@ class CreateTestScenario {
 		}else{
 			l.setFreespeed(50/3.6);
 		}
-		l.setLength(CoordUtils.calcDistance(from.getCoord(), to.getCoord()));
+		l.setLength(CoordUtils.calcEuclideanDistance(from.getCoord(), to.getCoord()));
 		return l;
 	}
 
@@ -250,8 +251,8 @@ class CreateTestScenario {
 		TransitScheduleFactory f = sc.getTransitSchedule().getFactory();
 		String mode = "bus";
 		//  create vehicleType
-		VehicleType vType = ((ScenarioImpl) sc).getTransitVehicles().getFactory().createVehicleType(Id.create(mode, VehicleType.class));
-		((ScenarioImpl) sc).getTransitVehicles().addVehicleType(vType);
+		VehicleType vType = ((MutableScenario) sc).getTransitVehicles().getFactory().createVehicleType(Id.create(mode, VehicleType.class));
+		((MutableScenario) sc).getTransitVehicles().addVehicleType(vType);
 		vType.setLength(15);
 		VehicleCapacity cap = new VehicleCapacityImpl();
 		cap.setSeats(51);
@@ -310,7 +311,7 @@ class CreateTestScenario {
 			if(vehicles.isEmpty()){
 				//currently we have no vehicle. create a new on, add to vehicles-container
 				v = new VehicleImpl(Id.create(mode + vehCnt++, Vehicle.class), vType);
-				((ScenarioImpl) sc).getTransitVehicles().addVehicle( v);
+				((MutableScenario) sc).getTransitVehicles().addVehicle( v);
 			}else{
 				//check, if the first vehicle of the queue should have finished its route. Poll it, if so
 				if(vehicles.peekFirst().getSecond() <= i){
@@ -320,7 +321,7 @@ class CreateTestScenario {
 				else{
 					
 					v = new VehicleImpl(Id.create(mode + vehCnt++, Vehicle.class), vType);
-					((ScenarioImpl) sc).getTransitVehicles().addVehicle( v);
+					((MutableScenario) sc).getTransitVehicles().addVehicle( v);
 				}
 			}
 			
@@ -338,8 +339,8 @@ class CreateTestScenario {
 		TransitScheduleFactory f = sc.getTransitSchedule().getFactory();
 		String mode = "train";
 		//  create vehicleType
-		VehicleType vType = ((ScenarioImpl) sc).getTransitVehicles().getFactory().createVehicleType(Id.create(mode, VehicleType.class));
-		((ScenarioImpl) sc).getTransitVehicles().addVehicleType(vType);
+		VehicleType vType = ((MutableScenario) sc).getTransitVehicles().getFactory().createVehicleType(Id.create(mode, VehicleType.class));
+		((MutableScenario) sc).getTransitVehicles().addVehicleType(vType);
 		vType.setLength(45);
 		VehicleCapacity cap = new VehicleCapacityImpl();
 		cap.setSeats(150);
@@ -396,7 +397,7 @@ class CreateTestScenario {
 			if(vehicles.isEmpty()){
 				//currently we have no vehicle. create a new on, add to vehicles-container
 				v = new VehicleImpl(Id.create(mode + vehCnt++, Vehicle.class), vType);
-				((ScenarioImpl) sc).getTransitVehicles().addVehicle( v);
+				((MutableScenario) sc).getTransitVehicles().addVehicle( v);
 			}else{
 				//check, if the first vehicle of the queue should have finished its route. Poll it, if so
 				if(vehicles.peekFirst().getSecond() <= i){
@@ -406,7 +407,7 @@ class CreateTestScenario {
 				else{
 					
 					v = new VehicleImpl(Id.create(mode + vehCnt++, Vehicle.class), vType);
-					((ScenarioImpl) sc).getTransitVehicles().addVehicle( v);
+					((MutableScenario) sc).getTransitVehicles().addVehicle( v);
 				}
 			}
 			

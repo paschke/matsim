@@ -4,7 +4,7 @@
 	<groupId>org.matsim</groupId>
 	<artifactId>contrib</artifactId>
 	<packaging>pom</packaging>
-	<version>0.7.0-SNAPSHOT</version>
+	<version>0.8.0-SNAPSHOT</version>
 	<name>MATSim-Contrib</name>
 
 	<scm>
@@ -55,7 +55,20 @@
 					<timestampFormat>{0,date,yyyy-MM-dd HH:mm:ss}</timestampFormat>
 				</configuration>
 			</plugin>
-            <plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.19.1</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
                 <!-- Usage:
                     * Put a file like release.properties.template in the root directory of this project,
                       renaming it to release.properties and changing the version numbers in it.
@@ -77,7 +90,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
-					<version>2.8</version>
+					<version>2.19</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -100,6 +113,7 @@
 		<module>cadytsIntegration</module>
 		<module>carsharing</module>
 		<module>dvrp</module>
+		<module>taxi</module>
 		<module>emissions</module>
 		<module>freight</module>
 		<module>gtfs2matsimtransitschedule</module>
@@ -112,6 +126,7 @@
 		<module>matrixbasedptrouter</module>
 		<module>parking</module>
 		<module>socnetsim</module>
+		<module>socnetgen</module>
 		<module>transEnergySim</module>
 		<module>roadpricing</module>
 		<module>multimodal</module>
@@ -122,6 +137,10 @@
 		<module>eventsBasedPTRouter</module>
 		<module>map2mapmatching</module>
 		<module>travelsummary</module>
+		<module>deprecated</module>
+		<module>protobuf</module>
+		<module>hybridsim</module>
+		<module>noise</module>
 	</modules>
 	<repositories>
 		<repository>
@@ -140,38 +159,27 @@
 			<id>matsim</id>
             <url>http://dl.bintray.com/matsim/matsim</url>
         </repository>
-		<repository>
-			<id>oss-jfrog-artifactory</id>
-			<name>artifactory-snapshots</name>
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-			<url>http://oss.jfrog.org/artifactory/libs-snapshot</url>
-		</repository>
 	</repositories>
 
 	<dependencies>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>4.8.2</version>
+			<version>4.12</version>
 			<type>jar</type>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.matsim</groupId>
 			<artifactId>matsim</artifactId>
-			<version>0.7.0-SNAPSHOT</version>
+			<version>0.8.0-SNAPSHOT</version>
 			<type>jar</type>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.matsim</groupId>
 			<artifactId>matsim</artifactId>
-			<version>0.7.0-SNAPSHOT</version>
+			<version>0.8.0-SNAPSHOT</version>
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>
@@ -186,7 +194,7 @@
 						<plugin>
 							<groupId>org.codehaus.mojo</groupId>
 							<artifactId>cobertura-maven-plugin</artifactId>
-							<version>2.6</version>
+							<version>2.7</version>
 							<configuration>
 								<formats>
 									<format>xml</format>

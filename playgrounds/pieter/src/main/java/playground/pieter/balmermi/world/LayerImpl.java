@@ -21,7 +21,6 @@
 package playground.pieter.balmermi.world;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -82,7 +81,7 @@ public class LayerImpl implements Layer {
 		double shortestDistance = Double.MAX_VALUE;
         for (BasicLocation loc : this.locations.values()) {
             if (loc != excludeLocation) {
-                double distance = CoordUtils.calcDistance(loc.getCoord(), coord);
+                double distance = CoordUtils.calcEuclideanDistance(loc.getCoord(), coord);
                 if (distance == shortestDistance) {
                     locs.add(loc);
                 }

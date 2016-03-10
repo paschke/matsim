@@ -25,11 +25,12 @@ import org.matsim.contrib.dvrp.data.VrpData;
 import org.matsim.contrib.dvrp.run.VrpLauncherUtils;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
-import org.matsim.core.router.TripRouterFactory;
 
-import playground.jbischoff.taxibus.sim.TaxibusQSimProvider;
-import playground.jbischoff.taxibus.sim.TaxibusTripRouterFactory;
-import playground.michalm.taxi.run.TaxiLauncherUtils;
+import playground.jbischoff.taxibus.algorithm.optimizer.fifo.Lines.LineDispatcher;
+import playground.jbischoff.taxibus.algorithm.optimizer.fifo.Lines.LinesUtils;
+import playground.jbischoff.taxibus.algorithm.passenger.TaxibusPassengerOrderManager;
+import playground.jbischoff.taxibus.run.sim.TaxibusQSimProvider;
+import playground.jbischoff.taxibus.run.sim.TaxibusServiceRoutingModule;
 
 /**
  * @author jbischoff
@@ -43,30 +44,46 @@ public class ConfigBasedTaxibusLaunchUtils {
 		
 		public ConfigBasedTaxibusLaunchUtils(Controler controler) {
 			this.controler = controler;
+			
 		}
 		
 	 
 	public  void initiateTaxibusses(){
 		//this is done exactly once per simulation
+		
+		
 		final TaxibusConfigGroup tbcg = (TaxibusConfigGroup) controler.getScenario().getConfig().getModule("taxibusConfig");
       	context = new MatsimVrpContextImpl();
 		context.setScenario(controler.getScenario());
 		VrpData vrpData = VrpLauncherUtils.initVrpData(context, tbcg.getVehiclesFile());
+		
+		final LineDispatcher dispatcher = LinesUtils.createLineDispatcher(tbcg.getLinesFile(), tbcg.getZonesXmlFile(), tbcg.getZonesShpFile(),context,tbcg);	
+		final TaxibusPassengerOrderManager orderManager = new TaxibusPassengerOrderManager();
+		
+		
+		
 		context.setVrpData(vrpData);	 
-    
-       
-        TripRouterFactory factory = new TaxibusTripRouterFactory(controler); 
-		controler.setTripRouterFactory(factory);
+           
 		controler.addOverridingModule(new AbstractModule() {
 			
 			@Override
 			public void install() {
+				
+				addEventHandlerBinding().toInstance(dispatcher);
+				addEventHandlerBinding().toInstance(orderManager);
 				bindMobsim().toProvider(TaxibusQSimProvider.class);
+				addRoutingModuleBinding("taxibus").toInstance(new TaxibusServiceRoutingModule(controler));
+				bind(TaxibusPassengerOrderManager.class).toInstance(orderManager);
 				bind(MatsimVrpContext.class).toInstance(context);
+				bind(LineDispatcher.class).toInstance(dispatcher);
+
 			}
 		});
 		
 		
 		
-	} 
+		
+	}
+
+
 }

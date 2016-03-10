@@ -19,23 +19,19 @@
  * *********************************************************************** */
 package playground.johannes.coopsim.analysis;
 
-import gnu.trove.TDoubleArrayList;
-import gnu.trove.TDoubleDoubleHashMap;
-import gnu.trove.TObjectDoubleHashMap;
+import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
+import gnu.trove.map.hash.TObjectDoubleHashMap;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.contrib.common.stats.Correlations;
+import org.matsim.contrib.common.stats.StatsWriter;
+import playground.johannes.coopsim.pysical.Trajectory;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-import org.matsim.api.core.v01.population.Activity;
-
-import playground.johannes.coopsim.pysical.Trajectory;
-import playground.johannes.sna.math.Discretizer;
-import playground.johannes.sna.math.FixedSampleSizeDiscretizer;
-import playground.johannes.sna.util.TXTWriter;
-import playground.johannes.socialnetworks.statistics.Correlations;
 
 /**
  * @author illenberger
@@ -80,14 +76,14 @@ public class DistanceArrivalTimeTask extends TrajectoryAnalyzerTask {
 			}
 		}
 
-		TDoubleDoubleHashMap map = Correlations.mean(arrivals.toNativeArray(), distances.toNativeArray(), 3600);
-//		Discretizer d = FixedSampleSizeDiscretizer.create(arrivals.toNativeArray(), 100, 100);
-//		TDoubleDoubleHashMap map = Correlations.mean(arrivals.toNativeArray(), distances.toNativeArray(), d);
+		TDoubleDoubleHashMap map = Correlations.mean(arrivals.toArray(), distances.toArray(), 3600);
+//		Discretizer d = FixedSampleSizeDiscretizer.create(arrivals.toArray(), 100, 100);
+//		TDoubleDoubleHashMap map = Correlations.mean(arrivals.toArray(), distances.toArray(), d);
 		try {
 			if(purpose == null)
-				TXTWriter.writeMap(map, "arr", "dist", String.format("%1$s/dist_arr.txt", getOutputDirectory()));
+				StatsWriter.writeHistogram(map, "arr", "dist", String.format("%1$s/dist_arr.txt", getOutputDirectory()));
 			else
-				TXTWriter.writeMap(map, "arr", "dist", String.format("%1$s/dist_arr.%2$s.txt", getOutputDirectory(), purpose));
+				StatsWriter.writeHistogram(map, "arr", "dist", String.format("%1$s/dist_arr.%2$s.txt", getOutputDirectory(), purpose));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

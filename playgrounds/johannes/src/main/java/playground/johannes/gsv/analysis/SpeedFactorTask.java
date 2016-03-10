@@ -19,29 +19,23 @@
 
 package playground.johannes.gsv.analysis;
 
-import gnu.trove.TDoubleArrayList;
-import gnu.trove.TDoubleDoubleHashMap;
-import gnu.trove.TObjectDoubleHashMap;
-import gnu.trove.TObjectDoubleIterator;
+import gnu.trove.iterator.TObjectDoubleIterator;
+import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
+import gnu.trove.map.hash.TObjectDoubleHashMap;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.matsim.api.core.v01.population.Leg;
+import org.matsim.contrib.common.stats.Correlations;
+import org.matsim.contrib.common.stats.LinearDiscretizer;
+import org.matsim.contrib.common.stats.StatsWriter;
+import org.matsim.facilities.ActivityFacilities;
+import playground.johannes.coopsim.analysis.*;
+import playground.johannes.coopsim.pysical.Trajectory;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.facilities.ActivityFacilities;
-
-import playground.johannes.coopsim.analysis.DefaultCondition;
-import playground.johannes.coopsim.analysis.LegModeCondition;
-import playground.johannes.coopsim.analysis.TrajectoryAnalyzerTask;
-import playground.johannes.coopsim.analysis.TripDistanceMean;
-import playground.johannes.coopsim.analysis.TripDuration;
-import playground.johannes.coopsim.pysical.Trajectory;
-import playground.johannes.sna.math.LinearDiscretizer;
-import playground.johannes.sna.util.TXTWriter;
-import playground.johannes.socialnetworks.statistics.Correlations;
 
 /**
  * @author johannes
@@ -113,9 +107,9 @@ public class SpeedFactorTask extends TrajectoryAnalyzerTask {
 			
 			if(outputDirectoryNotNull()) {
 		
-			TDoubleDoubleHashMap map = Correlations.mean(distArray.toNativeArray(), durArray.toNativeArray(), new LinearDiscretizer(1000));
+			TDoubleDoubleHashMap map = Correlations.mean(distArray.toArray(), durArray.toArray(), new LinearDiscretizer(1000));
 			try {
-				TXTWriter.writeMap(map, "Distance", "Traveltime", getOutputDirectory() + "/" + key + ".txt");
+				StatsWriter.writeHistogram(map, "Distance", "Traveltime", getOutputDirectory() + "/" + key + ".txt");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

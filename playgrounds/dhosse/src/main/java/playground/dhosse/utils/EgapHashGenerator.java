@@ -1,6 +1,6 @@
 package playground.dhosse.utils;
 
-import playground.dhosse.gap.scenario.mid.MiDSurveyPerson;
+import playground.dhosse.scenarios.generic.population.io.mid.MiDSurveyPerson;
 
 public class EgapHashGenerator {
 	
@@ -39,6 +39,12 @@ public class EgapHashGenerator {
 		int lowerBound = (int)(age/10) * 10;
 		int upperBound = lowerBound + 9;
 		return (lowerBound + "_" + upperBound);
+		
+	}
+	
+	public static String generateAgeGroupHash(int a0, int aX){
+		
+		return (a0 + "_" + aX);
 		
 	}
 

@@ -22,6 +22,7 @@ package org.matsim.contrib.signals.integration.invertednetworks;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
@@ -40,11 +41,11 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.config.groups.StrategyConfigGroup.StrategySettings;
-import org.matsim.core.replanning.DefaultPlanStrategiesModule;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.lanes.data.v20.Lane;
-import org.matsim.lanes.data.v20.LaneDefinitions20;
+import org.matsim.lanes.data.v20.Lanes;
 import org.matsim.lanes.data.v20.LaneDefinitionsFactory20;
 import org.matsim.lanes.data.v20.LanesToLinkAssignment20;
 
@@ -74,7 +75,7 @@ import org.matsim.lanes.data.v20.LanesToLinkAssignment20;
  * @author dgrether
  */
 public class InvertedNetworkRoutingTestFixture {
-	public final ScenarioImpl scenario;
+	public final MutableScenario scenario;
 
 	public InvertedNetworkRoutingTestFixture(boolean doCreateModes, boolean doCreateLanes, boolean doCreateSignals) {
 		Config config = ConfigUtils.createConfig();
@@ -91,14 +92,15 @@ public class InvertedNetworkRoutingTestFixture {
 		stratSets.setStrategyName(DefaultPlanStrategiesModule.DefaultStrategy.ReRoute.toString());
 		stratSets.setWeight(1.0);
 		config.strategy().addStrategySettings(stratSets);
-		config.planCalcScore().setTraveling_utils_hr(-1200.0);
+		final double traveling = -1200.0;
+		config.planCalcScore().getModes().get(TransportMode.car).setMarginalUtilityOfTraveling(traveling);
 		ActivityParams params = new ActivityParams("home");
 		params.setTypicalDuration(24.0 * 3600.0);
 		config.planCalcScore().addActivityParams(params);
 		config.qsim().setUseLanes(doCreateLanes);
 		ConfigUtils.addOrGetModule(config, SignalSystemsConfigGroup.GROUPNAME, SignalSystemsConfigGroup.class).setUseSignalSystems(doCreateSignals);
 
-		this.scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		this.scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 		createNetwork();
 		if (doCreateLanes){
 			config.qsim().setUseLanes(true);
@@ -111,7 +113,7 @@ public class InvertedNetworkRoutingTestFixture {
 	}
 
 	private void createLanes() {
-		LaneDefinitions20 ld = scenario.getLanes();
+		Lanes ld = scenario.getLanes();
 		LaneDefinitionsFactory20 f = ld.getFactory();
 		LanesToLinkAssignment20 l2l = f.createLanesToLinkAssignment(Id.create(12, Link.class));
 		ld.addLanesToLinkAssignment(l2l);
@@ -145,19 +147,20 @@ public class InvertedNetworkRoutingTestFixture {
 		NetworkFactory f = network.getFactory();
 		Node n;
 		Link l;
-		n = f.createNode(Id.create(0, Node.class), scenario.createCoord(0, -300));
+		double y = -300;
+		n = f.createNode(Id.create(0, Node.class), new Coord((double) 0, y));
 		network.addNode(n);
-		n = f.createNode(Id.create(1, Node.class), scenario.createCoord(0, 0));
+		n = f.createNode(Id.create(1, Node.class), new Coord((double) 0, (double) 0));
 		network.addNode(n);
-		n = f.createNode(Id.create(2, Node.class), scenario.createCoord(0, 300));
+		n = f.createNode(Id.create(2, Node.class), new Coord((double) 0, (double) 300));
 		network.addNode(n);
-		n = f.createNode(Id.create(3, Node.class), scenario.createCoord(0, 600));
+		n = f.createNode(Id.create(3, Node.class), new Coord((double) 0, (double) 600));
 		network.addNode(n);
-		n = f.createNode(Id.create(4, Node.class), scenario.createCoord(0, 900));
+		n = f.createNode(Id.create(4, Node.class), new Coord((double) 0, (double) 900));
 		network.addNode(n);
-		n = f.createNode(Id.create(5, Node.class), scenario.createCoord(0, 300));
+		n = f.createNode(Id.create(5, Node.class), new Coord((double) 0, (double) 300));
 		network.addNode(n);
-		n = f.createNode(Id.create(6, Node.class), scenario.createCoord(0, 600));
+		n = f.createNode(Id.create(6, Node.class), new Coord((double) 0, (double) 600));
 		network.addNode(n);
 		l = f.createLink(Id.create(01, Link.class), network.getNodes().get(Id.create(0, Node.class)), network.getNodes().get(Id.create(1, Node.class)));
 		l.setLength(300.0);

@@ -24,6 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -40,7 +41,7 @@ import org.matsim.core.config.groups.StrategyConfigGroup.StrategySettings;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.transitSchedule.api.Departure;
 import org.matsim.pt.transitSchedule.api.TransitLine;
@@ -67,12 +68,12 @@ import playground.pbouman.agentproperties.AgentProperties;
 
 public class SingleLineScenario
 {
-	public static ScenarioImpl buildScenario()
+	public static MutableScenario buildScenario()
 	{
 		return buildScenario(300);
 	}
 	
-	public static ScenarioImpl buildScenario(int numAgents)
+	public static MutableScenario buildScenario(int numAgents)
 	{
 		Config config = ConfigUtils.createConfig();
 		config.transit().setUseTransit(true);
@@ -81,7 +82,7 @@ public class SingleLineScenario
 		HashSet<String> transitModes = new HashSet<String>();
 		transitModes.add("pt");
 		config.transit().setTransitModes(transitModes);
-		ScenarioImpl scen = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scen = (MutableScenario) ScenarioUtils.createScenario(config);
 		
 		/* ************** *
 		 * Create Network *
@@ -89,11 +90,11 @@ public class SingleLineScenario
 		
 		Network net = scen.getNetwork();
 		NetworkFactory nw = net.getFactory();
-		
-		Node a = nw.createNode(Id.create("NodeA", Node.class), scen.createCoord(100, 100));
-		Node b = nw.createNode(Id.create("NodeB", Node.class), scen.createCoord(5000, 5000));
-		Node u = nw.createNode(Id.create("NodeU", Node.class), scen.createCoord(99, 99));
-		Node v = nw.createNode(Id.create("NodeV", Node.class), scen.createCoord(5001, 5001));
+
+		Node a = nw.createNode(Id.create("NodeA", Node.class), new Coord((double) 100, (double) 100));
+		Node b = nw.createNode(Id.create("NodeB", Node.class), new Coord((double) 5000, (double) 5000));
+		Node u = nw.createNode(Id.create("NodeU", Node.class), new Coord((double) 99, (double) 99));
+		Node v = nw.createNode(Id.create("NodeV", Node.class), new Coord((double) 5001, (double) 5001));
 		Link ab = nw.createLink(Id.create("LinkAB", Link.class),a,b);
 		Link ua = nw.createLink(Id.create("LinkUA", Link.class),u,a);
 		Link bv = nw.createLink(Id.create("LinkBV", Link.class),b,v);

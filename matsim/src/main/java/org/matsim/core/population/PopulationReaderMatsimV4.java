@@ -34,16 +34,18 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.network.NetworkUtils;
-import org.matsim.core.population.routes.GenericRoute;
+import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.transformations.IdentityTransformation;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.ActivityOption;
+import org.matsim.pt.routes.ExperimentalTransitRoute;
 import org.xml.sax.Attributes;
 
 /**
@@ -72,12 +74,14 @@ import org.xml.sax.Attributes;
 
 	private final static String ATTR_TYPE = "type";
 
+	private final CoordinateTransformation coordinateTransformation;
+
 	/* package*/ final Scenario scenario;
 	/* package*/ final Population plans;
 	private final Network network;
 	private final ActivityFacilities facilities;
 
-	/*package*/ PersonImpl currperson = null;
+	/*package*/ Person currperson = null;
 	private String curracttype = null;
 	private ActivityOption curractivity = null;
 	private PlanImpl currplan = null;
@@ -91,6 +95,13 @@ import org.xml.sax.Attributes;
 	private final static Logger log = Logger.getLogger(PopulationReaderMatsimV4.class);
 
 	public PopulationReaderMatsimV4(final Scenario scenario) {
+		this(new IdentityTransformation(), scenario);
+	}
+
+	public PopulationReaderMatsimV4(
+			final CoordinateTransformation coordinateTransformation,
+			final Scenario scenario) {
+		this.coordinateTransformation = coordinateTransformation;
 		this.scenario = scenario;
 		this.plans = scenario.getPopulation();
 		this.network = scenario.getNetwork();
@@ -99,7 +110,7 @@ import org.xml.sax.Attributes;
 
 	@Override
 	public void startTag(final String name, final Attributes atts,
-			final Stack<String> context) {
+						 final Stack<String> context) {
 		if (PLANS.equals(name)) {
 			startPlans(atts);
 		} else if (PERSON.equals(name)) {
@@ -137,7 +148,7 @@ import org.xml.sax.Attributes;
 
 	@Override
 	public void endTag(final String name, final String content,
-			final Stack<String> context) {
+					   final Stack<String> context) {
 		if (PERSON.equals(name)) {
 			this.plans.addPerson(this.currperson);
 			this.currperson = null;
@@ -161,9 +172,8 @@ import org.xml.sax.Attributes;
 	/**
 	 * Parses the specified plans file. This method calls {@link #parse(String)}
 	 * .
-	 * 
-	 * @param filename
-	 *            The name of the file to parse.
+	 *
+	 * @param filename The name of the file to parse.
 	 */
 	@Override
 	public void readFile(final String filename) throws UncheckedIOException {
@@ -179,23 +189,24 @@ import org.xml.sax.Attributes;
 
 	private void startPerson(final Attributes atts) {
 		String ageString = atts.getValue("age");
-		int age = Integer.MIN_VALUE;
+//		int age = Integer.MIN_VALUE;
+		Integer age = null;
 		if (ageString != null) age = Integer.parseInt(ageString);
-		this.currperson = new PersonImpl(Id.create(atts.getValue("id"), Person.class));
-		this.currperson.setSex(atts.getValue("sex"));
-		this.currperson.setAge(age);
-		this.currperson.setLicence(atts.getValue("license"));
-		this.currperson.setCarAvail(atts.getValue("car_avail"));
+		this.currperson = PopulationUtils.createPerson(Id.create(atts.getValue("id"), Person.class));
+		PersonUtils.setSex(this.currperson, atts.getValue("sex"));
+		PersonUtils.setAge(this.currperson, age);
+		PersonUtils.setLicence(this.currperson, atts.getValue("license"));
+		PersonUtils.setCarAvail(this.currperson, atts.getValue("car_avail"));
 		String employed = atts.getValue("employed");
 		if (employed == null) {
-			this.currperson.setEmployed(null);
+			PersonUtils.setEmployed(this.currperson, null);
 		} else {
-			this.currperson.setEmployed("yes".equals(employed));
+			PersonUtils.setEmployed(this.currperson, "yes".equals(employed));
 		}
 	}
 
 	private void startTravelcard(final Attributes atts) {
-		this.currperson.addTravelcard(atts.getValue(ATTR_TYPE));
+		PersonUtils.addTravelcard(this.currperson, atts.getValue(ATTR_TYPE));
 	}
 
 	private void startActivityFacility(final Attributes atts) {
@@ -248,7 +259,7 @@ import org.xml.sax.Attributes;
 			throw new NumberFormatException("Attribute 'selected' of Element 'Plan' is neither 'yes' nor 'no'.");
 		}
 		this.routeDescription = null;
-		this.currplan = this.currperson.createAndAddPlan(selected);
+		this.currplan = PersonUtils.createAndAddPlan(this.currperson, selected);
 
 		String scoreString = atts.getValue("score");
 		if (scoreString != null) {
@@ -261,17 +272,16 @@ import org.xml.sax.Attributes;
 	}
 
 	private void startAct(final Attributes atts) {
-		Coord coord = null;
 		if (atts.getValue("link") != null) {
 			Id<Link> linkId = Id.create(atts.getValue("link"), Link.class);
 			this.curract = this.currplan.createAndAddActivity(
 					atts.getValue(ATTR_TYPE), linkId);
 			if ((atts.getValue("x") != null) && (atts.getValue("y") != null)) {
-				coord = new CoordImpl(atts.getValue("x"), atts.getValue("y"));
+				final Coord coord = parseCoord( atts );
 				this.curract.setCoord(coord);
 			}
 		} else if ((atts.getValue("x") != null) && (atts.getValue("y") != null)) {
-			coord = new CoordImpl(atts.getValue("x"), atts.getValue("y"));
+			final Coord coord = parseCoord( atts );
 			this.curract = this.currplan.createAndAddActivity(
 					atts.getValue(ATTR_TYPE), coord);
 		} else {
@@ -294,22 +304,27 @@ import org.xml.sax.Attributes;
 			if (this.curract.getLinkId() != null) {
 				endLinkId = this.curract.getLinkId();
 			}
-			if (this.currRoute instanceof GenericRoute) {
-				((GenericRoute) this.currRoute).setRouteDescription(
-						startLinkId, this.routeDescription.trim(), endLinkId);
-			} else if (this.currRoute instanceof NetworkRoute) {
+			this.currRoute.setStartLinkId(startLinkId);
+			this.currRoute.setEndLinkId(endLinkId);
+			if (this.currRoute instanceof NetworkRoute) {
 				((NetworkRoute) this.currRoute).setLinkIds(startLinkId,
 						NetworkUtils.getLinkIds(RouteUtils
 								.getLinksFromNodes(NetworkUtils.getNodes(
 										this.network, this.routeDescription))),
 						endLinkId);
 			} else {
-				throw new RuntimeException("unknown route type: "
-						+ this.currRoute.getClass().getName());
+				this.currRoute.setRouteDescription(this.routeDescription.trim());
 			}
 			this.routeDescription = null;
 			this.currRoute = null;
 		}
+	}
+
+	private Coord parseCoord(Attributes atts) {
+		return coordinateTransformation.transform(
+				new Coord(
+						Double.parseDouble(atts.getValue("x")),
+						Double.parseDouble(atts.getValue("y")) ) );
 	}
 
 	private void startLeg(final Attributes atts) {
@@ -324,7 +339,14 @@ import org.xml.sax.Attributes;
 	}
 
 	private void startRoute(final Attributes atts) {
-		this.currRoute = ((PopulationFactoryImpl) this.plans.getFactory()).createRoute(this.currleg.getMode(), null, null);
+		Class<? extends Route> routeType = GenericRouteImpl.class;
+		if ("pt".equals(this.currleg.getMode())) {
+			routeType = ExperimentalTransitRoute.class;
+		}
+		if ("car".equals(this.currleg.getMode())) {
+			routeType = NetworkRoute.class;
+		}
+		this.currRoute = ((PopulationFactoryImpl) this.plans.getFactory()).createRoute(routeType, null, null);
 		this.currleg.setRoute(this.currRoute);
 		if (atts.getValue("dist") != null) {
 			this.currRoute.setDistance(Double.parseDouble(atts.getValue("dist")));

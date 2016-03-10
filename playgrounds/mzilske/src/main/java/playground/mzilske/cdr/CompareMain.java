@@ -1,15 +1,19 @@
 package playground.mzilske.cdr;
 
-import com.telmomenezes.jfastemd.Feature;
-import com.telmomenezes.jfastemd.JFastEMD;
-import com.telmomenezes.jfastemd.Signature;
+import java.util.Arrays;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import org.matsim.analysis.VolumesAnalyzer;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
+import org.matsim.contrib.cadyts.car.CadytsCarModule;
 import org.matsim.contrib.cadyts.car.CadytsContext;
 import org.matsim.contrib.cadyts.general.CadytsPlanChanger;
 import org.matsim.core.config.Config;
@@ -21,16 +25,16 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.replanning.PlanStrategy;
 import org.matsim.core.replanning.PlanStrategyImpl;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.scenario.ScenarioUtils.ScenarioBuilder;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.counts.Count;
 import org.matsim.counts.Counts;
-import playground.mzilske.cdr.ZoneTracker.LinkToZoneResolver;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import java.util.Arrays;
+import com.telmomenezes.jfastemd.Feature;
+import com.telmomenezes.jfastemd.JFastEMD;
+import com.telmomenezes.jfastemd.Signature;
+
+import playground.mzilske.cdr.ZoneTracker.LinkToZoneResolver;
 
 @Singleton
 public class CompareMain {
@@ -50,7 +54,7 @@ public class CompareMain {
 		@Override
 		public double groundDist(Feature f) {
 			VolumeOnLinkFeature other = (VolumeOnLinkFeature) f;
-			double spacialDistance = CoordUtils.calcDistance(link.getCoord(), other.link.getCoord());
+			double spacialDistance = CoordUtils.calcEuclideanDistance(link.getCoord(), other.link.getCoord());
 			int temporalDistance = Math.abs(hour - other.hour);
 			return (0.0 * spacialDistance) + (2.0 * temporalDistance);
 		}
@@ -185,18 +189,20 @@ public class CompareMain {
 		return signature;
 	}
 
-	public static VolumesAnalyzer runWithTwoPlansAndCadyts(String outputDirectory, Network network, final LinkToZoneResolver linkToZoneResolver, Sightings allSightings, Counts counts) {
+	public static VolumesAnalyzer runWithTwoPlansAndCadyts(String outputDirectory, Network network, final LinkToZoneResolver linkToZoneResolver, Sightings allSightings, Counts<Link> counts) {
 		Config config = ConfigUtils.createConfig();
 		ActivityParams sightingParam = new ActivityParams("sighting");
 		// sighting.setOpeningTime(0.0);
 		// sighting.setClosingTime(0.0);
 		sightingParam.setTypicalDuration(30.0 * 60);
 		config.planCalcScore().addActivityParams(sightingParam);
-		config.planCalcScore().setTraveling_utils_hr(-6);
+		final double traveling = -6;
+		config.planCalcScore().getModes().get(TransportMode.car).setMarginalUtilityOfTraveling(traveling);
 		config.planCalcScore().setPerforming_utils_hr(0);
-		config.planCalcScore().setTravelingOther_utils_hr(-6);
-		config.planCalcScore().setConstantCar(0);
-		config.planCalcScore().setMonetaryDistanceCostRateCar(0);
+		double travelingOtherUtilsHr = -6;
+		config.planCalcScore().getModes().get(TransportMode.other).setMarginalUtilityOfTraveling(travelingOtherUtilsHr);
+		config.planCalcScore().getModes().get(TransportMode.car).setConstant((double) 0);
+		config.planCalcScore().getModes().get(TransportMode.car).setMonetaryDistanceRate((double) 0);
 		config.planCalcScore().setWriteExperiencedPlans(true);
         config.controler().setOutputDirectory(outputDirectory);
 		config.controler().setLastIteration(10);
@@ -210,20 +216,18 @@ public class CompareMain {
 		stratSets.setWeight(1.) ;
 		config.strategy().addStrategySettings(stratSets) ;
 
-
-		final ScenarioImpl scenario2 = (ScenarioImpl) ScenarioUtils.createScenario(config);
-		scenario2.setNetwork(network);
+		final Scenario scenario2 = new ScenarioBuilder(config).setNetwork(network).build() ;
 
 		PopulationFromSightings.createPopulationWithTwoPlansEach(scenario2, linkToZoneResolver, allSightings);
 //		PopulationFromSightings.preparePopulation(scenario2, linkToZoneResolver, allSightings);
 
-		final CadytsContext context = new CadytsContext(config, counts) ;
 		Controler controler = new Controler(scenario2);
-		controler.addControlerListener(context);
+		controler.addOverridingModule(new CadytsCarModule(counts));
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
 				addPlanStrategyBinding("ccc").toProvider(new javax.inject.Provider<PlanStrategy>() {
+					@Inject CadytsContext context;
 					@Override
 					public PlanStrategy get() {
 						final CadytsPlanChanger planSelector = new CadytsPlanChanger(scenario2, context);
@@ -238,7 +242,7 @@ public class CompareMain {
 		double sum=0.0;
 		for (Person person : scenario2.getPopulation().getPersons().values()) {
 			Plan plan = person.getSelectedPlan();
-			double currentPlanCadytsCorrection = calcCadytsScore(context, plan);
+			double currentPlanCadytsCorrection = calcCadytsScore(controler.getInjector().getInstance(CadytsContext.class), plan);
 			sum += Math.abs(currentPlanCadytsCorrection);
 		}
 		System.out.println(sum);
@@ -247,7 +251,7 @@ public class CompareMain {
 
 
     public static double calcCadytsScore(final CadytsContext context, Plan plan) {
-		cadyts.demand.Plan<Link> currentPlanSteps = context.getPlansTranslator().getPlanSteps(plan);
+		cadyts.demand.Plan<Link> currentPlanSteps = context.getPlansTranslator().getCadytsPlan(plan);
         return context.getCalibrator().calcLinearPlanEffect(currentPlanSteps);
 	}
 	

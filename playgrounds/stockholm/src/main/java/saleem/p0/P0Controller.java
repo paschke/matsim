@@ -24,7 +24,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.network.NetworkFactoryImpl;
 import org.matsim.core.network.NetworkImpl;
-import org.matsim.core.network.TimeVariantLinkFactory;
+import org.matsim.core.network.VariableIntervalTimeVariantLinkFactory;
+import org.matsim.core.scenario.ScenarioUtils;
 
 /**
  * @author nagel
@@ -36,10 +37,10 @@ public class P0Controller {
 		
 		Config config = ConfigUtils.loadConfig("H:\\Mike Work\\input\\config.xml");
 		config.network().setTimeVariantNetwork(true);
-		Controler controler = new Controler(config);
-		Scenario scenario = controler.getScenario();
+        Scenario scenario = ScenarioUtils.loadScenario(config);
+		Controler controler = new Controler(scenario);
 		NetworkFactoryImpl nf = (NetworkFactoryImpl) scenario.getNetwork().getFactory();
-		nf.setLinkFactory(new TimeVariantLinkFactory());
+		nf.setLinkFactory(new VariableIntervalTimeVariantLinkFactory());
 		controler.addControlerListener(new P0ControlListener((NetworkImpl) scenario.getNetwork()));
 		controler.run();
 	}

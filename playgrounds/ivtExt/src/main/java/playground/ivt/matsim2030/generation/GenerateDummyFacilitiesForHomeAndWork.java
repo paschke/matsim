@@ -19,9 +19,6 @@
  * *********************************************************************** */
 package playground.ivt.matsim2030.generation;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -41,14 +38,12 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.misc.Counter;
 import org.matsim.core.utils.misc.Time;
-import org.matsim.facilities.ActivityFacilities;
-import org.matsim.facilities.ActivityFacility;
-import org.matsim.facilities.ActivityFacilityImpl;
-import org.matsim.facilities.ActivityOption;
-import org.matsim.facilities.FacilitiesWriter;
-import org.matsim.facilities.OpeningTimeImpl;
+import org.matsim.facilities.*;
 import org.matsim.population.algorithms.PersonAlgorithm;
 import org.matsim.pt.PtConstants;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
 
 /**
  * @author thibautd
@@ -143,8 +138,7 @@ public class GenerateDummyFacilitiesForHomeAndWork {
 		ActivityFacility facility = facilities.getFacilities().get( id );
 
 		if ( facility == null ) {
-			facility = facilities.getFactory().createActivityFacility( id , coord );
-			((ActivityFacilityImpl) facility).setLinkId( linkId );
+			facility = facilities.getFactory().createActivityFacility( id , coord, linkId );
 			facilities.addActivityFacility( facility );
 
 			final ActivityOption option = facilities.getFactory().createActivityOption( type );

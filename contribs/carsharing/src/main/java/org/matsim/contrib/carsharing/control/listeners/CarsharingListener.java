@@ -10,7 +10,7 @@ import org.matsim.contrib.carsharing.control.listeners.NoVehicleEventHandler.NoV
 import org.matsim.contrib.carsharing.control.listeners.CarSharingRequestEventHandler.CarSharingRequestInfo;
 import org.matsim.contrib.carsharing.control.listeners.OWEventsHandler.RentalInfoOW;
 import org.matsim.contrib.carsharing.control.listeners.TwoWayEventsHandler.RentalInfo;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.events.IterationStartsEvent;
 import org.matsim.core.controler.events.StartupEvent;
@@ -27,10 +27,11 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 	NoVehicleEventHandler noVehicleHandler;
 	NoParkingEventHandler noParkingHandler;
 	CarSharingRequestEventHandler carSharingRequestEventHandler;
-	Controler controler;
+	MatsimServices controler;
 	int frequency = 0;
 	
-	public CarsharingListener(Controler controler, int frequency) {
+	public CarsharingListener(MatsimServices controler, int frequency) {
+
 		this.controler = controler;
 		this.frequency = frequency;
 	}
@@ -155,12 +156,12 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 			e.printStackTrace();
 		}
 		
-		event.getControler().getEvents().removeHandler(this.cshandler);
-		event.getControler().getEvents().removeHandler(this.ffhandler);
-		event.getControler().getEvents().removeHandler(this.owhandler);
-		event.getControler().getEvents().removeHandler(this.noVehicleHandler);
-		event.getControler().getEvents().removeHandler(this.noParkingHandler);
-		event.getControler().getEvents().removeHandler(this.carSharingRequestEventHandler);
+		event.getServices().getEvents().removeHandler(this.cshandler);
+		event.getServices().getEvents().removeHandler(this.ffhandler);
+		event.getServices().getEvents().removeHandler(this.owhandler);
+		event.getServices().getEvents().removeHandler(this.noVehicleHandler);
+		event.getServices().getEvents().removeHandler(this.noParkingHandler);
+		event.getServices().getEvents().removeHandler(this.carSharingRequestEventHandler);
 		}
 		
 	}
@@ -169,11 +170,11 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 	public void notifyStartup(StartupEvent event) {
 		// TODO Auto-generated method stub
 
-        this.cshandler = new TwoWayEventsHandler(event.getControler().getScenario().getNetwork());
+        this.cshandler = new TwoWayEventsHandler(event.getServices().getScenario().getNetwork());
 
-        this.ffhandler = new FFEventsHandler(event.getControler().getScenario().getNetwork());
+        this.ffhandler = new FFEventsHandler(event.getServices().getScenario().getNetwork());
 
-        this.owhandler = new OWEventsHandler(event.getControler().getScenario().getNetwork());
+        this.owhandler = new OWEventsHandler(event.getServices().getScenario().getNetwork());
 		
 		this.noVehicleHandler = new NoVehicleEventHandler();
 		
@@ -186,12 +187,12 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 	public void notifyIterationStarts(IterationStartsEvent event) {
 		// TODO Auto-generated method stub
 		if (event.getIteration() % this.frequency == 0) {
-			event.getControler().getEvents().addHandler(this.cshandler);
-			event.getControler().getEvents().addHandler(this.ffhandler);
-			event.getControler().getEvents().addHandler(this.owhandler);
-			event.getControler().getEvents().addHandler(this.noVehicleHandler);
-			event.getControler().getEvents().addHandler(this.noParkingHandler);
-			event.getControler().getEvents().addHandler(this.carSharingRequestEventHandler);
+			event.getServices().getEvents().addHandler(this.cshandler);
+			event.getServices().getEvents().addHandler(this.ffhandler);
+			event.getServices().getEvents().addHandler(this.owhandler);
+			event.getServices().getEvents().addHandler(this.noVehicleHandler);
+			event.getServices().getEvents().addHandler(this.noParkingHandler);
+			event.getServices().getEvents().addHandler(this.carSharingRequestEventHandler);
 		}
 	}
 }

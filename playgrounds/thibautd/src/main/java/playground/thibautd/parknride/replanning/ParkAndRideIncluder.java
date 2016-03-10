@@ -19,9 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.parknride.replanning;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Activity;
@@ -32,10 +29,12 @@ import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.router.ActivityWrapperFacility;
 import org.matsim.core.router.TripRouter;
 import org.matsim.core.utils.collections.QuadTree;
-
 import playground.thibautd.parknride.ParkAndRideConstants;
 import playground.thibautd.parknride.ParkAndRideFacilities;
 import playground.thibautd.parknride.ParkAndRideFacility;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -63,7 +62,7 @@ public class ParkAndRideIncluder {
 		Coord egress = egressOriginActivity.getCoord();
 
 		// we take the facility which is the closest to the centroid
-		ParkAndRideFacility fac = quadTree.get( 
+		ParkAndRideFacility fac = quadTree.getClosest(
 				(anchor.getX() + access.getX() + egress.getX()) / 3d,
 				(anchor.getY() + access.getY() + egress.getY()) / 3d);
 

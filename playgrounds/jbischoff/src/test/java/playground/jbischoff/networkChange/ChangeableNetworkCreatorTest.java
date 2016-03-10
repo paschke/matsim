@@ -3,6 +3,7 @@ package playground.jbischoff.networkChange;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
@@ -24,7 +25,7 @@ public class ChangeableNetworkCreatorTest {
 
 	private Id<Node> id1, id2;
 	private Id<Link> linkId1;
-	private Id<Person> personId1;
+	private Id<Vehicle> personId1;
 
 	@Before
 	public void setUp() throws Exception {
@@ -41,12 +42,12 @@ public class ChangeableNetworkCreatorTest {
 		this.id1 = Id.create("1", Node.class);
 		this.id2 = Id.create("2", Node.class);
 		this.linkId1 = Id.create("1", Link.class);
-		this.personId1 = Id.create("1", Person.class);
+		this.personId1 = Id.create("1", Vehicle.class);
 		Network net = sc.getNetwork();
 		NetworkFactory nf = sc.getNetwork().getFactory();
-		Node n1 = nf.createNode(id1, sc.createCoord(0, 0));
+		Node n1 = nf.createNode(id1, new Coord((double) 0, (double) 0));
 		net.addNode(n1);
-		Node n2 = nf.createNode(id2, sc.createCoord(500, 0));
+		Node n2 = nf.createNode(id2, new Coord((double) 500, (double) 0));
 		net.addNode(n2);
 	
 		Link l = nf.createLink(this.linkId1, n1, n2);
@@ -63,8 +64,8 @@ public class ChangeableNetworkCreatorTest {
 		Scenario sc = createScenario();
 		TravelTimeCalculatorConfigGroup ttccg = new TravelTimeCalculatorConfigGroup();
 		TravelTimeCalculator calc = new TravelTimeCalculator(sc.getNetwork(), ttccg);
-		LinkEnterEvent ev1 = new LinkEnterEvent(0, this.personId1, linkId1, Id.create(id1, Vehicle.class));
-		LinkLeaveEvent ev2 = new LinkLeaveEvent(200, this.personId1, linkId1, Id.create(id1, Vehicle.class));
+		LinkEnterEvent ev1 = new LinkEnterEvent(0,  personId1 , linkId1);
+		LinkLeaveEvent ev2 = new LinkLeaveEvent(200, this.personId1, linkId1);
 		calc.handleEvent(ev1);
 		calc.handleEvent(ev2);
 		double newTt=calc.getLinkTravelTimes().getLinkTravelTime(sc.getNetwork().getLinks().get(id1), 100, null, null);

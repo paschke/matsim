@@ -13,10 +13,9 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.population.routes.ModeRouteFactory;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.pt.transitSchedule.TransitScheduleFactoryImpl;
 import org.matsim.pt.transitSchedule.TransitScheduleImpl;
 import org.matsim.pt.transitSchedule.TransitScheduleReaderV1;
@@ -53,15 +52,15 @@ public class CreateScheduleToMatchPseudoNetwork{
 		
 		while (rdStops.next()){
 			Id<Node> StopID = Id.create(rdStops.current().get("stop_id").toString(), Node.class);
-			CoordImpl StopCoord = new CoordImpl(Double.parseDouble(rdStops.current().get("X").toString()), Double.parseDouble(rdStops.current().get("Y").toString()));
+			Coord StopCoord = new Coord(Double.parseDouble(rdStops.current().get("X").toString()), Double.parseDouble(rdStops.current().get("Y").toString()));
 			StopAndCoordinates.put(StopID, StopCoord);	
 		}//end of while loop
 		
 		
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		//read network
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
-		new MatsimNetworkReader(scenario).readFile(NetworkFile);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(NetworkFile);
 		
 		//read schedule
 		TransitScheduleFactoryImpl builder = new TransitScheduleFactoryImpl();

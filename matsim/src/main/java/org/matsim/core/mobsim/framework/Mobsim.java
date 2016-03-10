@@ -19,7 +19,15 @@
  * *********************************************************************** */
 package org.matsim.core.mobsim.framework;
 
-public interface Mobsim {
+import org.matsim.core.api.internal.MatsimExtensionPoint;
+
+/**
+ * Example(s):<ul>
+ * <li> {@link  tutorial.programming.ownMobsimAgentUsingRouter.RunOwnMobsimAgentUsingRouterExample}
+ * <li> {@link tutorial.programming.ownMobsimAgentWithPerception.RunOwnMobsimAgentWithPerceptionExample}
+ *</ul>
+ */
+public interface Mobsim extends MatsimExtensionPoint {
 
   /**
    * Start the mobility simulation

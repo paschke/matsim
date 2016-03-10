@@ -30,6 +30,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
@@ -42,15 +43,13 @@ import org.matsim.core.mobsim.qsim.interfaces.MobsimVehicle;
 import org.matsim.core.mobsim.qsim.interfaces.Netsim;
 import org.matsim.core.mobsim.qsim.qnetsimengine.NetsimLink;
 import org.matsim.core.population.PopulationFactoryImpl;
-import org.matsim.core.population.PopulationImpl;
 import org.matsim.core.population.routes.ModeRouteFactory;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.population.routes.RouteUtils;
+import org.matsim.core.router.DefaultRoutingModules;
 import org.matsim.core.router.LinkWrapperFacility;
 import org.matsim.core.router.RoutingModule;
 import org.matsim.core.router.TripRouter;
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility;
-import org.matsim.core.router.old.DefaultRoutingModules;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
 import org.matsim.core.router.util.TravelDisutility;
@@ -58,6 +57,7 @@ import org.matsim.core.router.util.TravelTime;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.Facility;
 import org.matsim.vehicles.Vehicle;
+import org.matsim.withinday.utils.EditRoutes;
 
 import com.google.inject.Inject;
 
@@ -119,7 +119,7 @@ class KNWithinDayMobsimListener implements MobsimBeforeSimStepListener {
 			TravelDisutility td) {
 		LeastCostPathCalculator routeAlgo = pathAlgoFactory.createPathCalculator( scenario.getNetwork(), td, tt);
 
-		final RoutingModule routingModule = DefaultRoutingModules.createNetworkRouter(TransportMode.car, scenario.getPopulation().getFactory(), 
+		final RoutingModule routingModule = DefaultRoutingModules.createPureNetworkRouter(TransportMode.car, scenario.getPopulation().getFactory(), 
 				scenario.getNetwork(), routeAlgo);
 
 		List<Id<Link>> links = null ;
@@ -210,29 +210,29 @@ class KNWithinDayMobsimListener implements MobsimBeforeSimStepListener {
 		// the above forces a copy, which I need later
 
 		// method 1:
-//		final Id<Link> destinationLinkId = ((Activity) plan.getPlanElements().get(planElementsIndex+1)).getLinkId();
-//		EditRoutes.relocateCurrentRoute(agent, destinationLinkId, now, scenario.getNetwork(), tripRouter);
+		final Id<Link> destinationLinkId = ((Activity) plan.getPlanElements().get(planElementsIndex+1)).getLinkId();
+		EditRoutes.relocateCurrentRoute(agent, destinationLinkId, now, scenario.getNetwork(), tripRouter);
 		
 		// method 2:
-		if ( ttimeDetour < ttimeOrig ) {
-
-			final int idx = WithinDayAgentUtils.getCurrentRouteLinkIdIndex(agent);
-
-			if ( oldRoute.getLinkIds().contains( this.returnId ) ) {
-				List<Id<Link>> copy = new ArrayList<>( oldRoute.getLinkIds() ) ;
-				while (  !copy.get( idx ).equals( this.returnId )  ) {
-					copy.remove( idx ) ;
-				}
-				copy.addAll( idx, this.alternativeLinks ) ;
-				final ModeRouteFactory modeRouteFactory = ((PopulationFactoryImpl) this.scenario.getPopulation().getFactory()).getModeRouteFactory();
-				NetworkRoute newRoute = (NetworkRoute) modeRouteFactory.createRoute( TransportMode.car, oldRoute.getStartLinkId(), oldRoute.getEndLinkId()) ;
-
-				//			RouteUtils.createNetworkRoute(routeLinkIds, network) ;
-
-				newRoute.setLinkIds( oldRoute.getStartLinkId(), copy, oldRoute.getEndLinkId() );
-				leg.setRoute(newRoute);
-			}
-		}
+//		if ( ttimeDetour < ttimeOrig ) {
+//
+//			final int idx = WithinDayAgentUtils.getCurrentRouteLinkIdIndex(agent);
+//
+//			if ( oldRoute.getLinkIds().contains( this.returnId ) ) {
+//				List<Id<Link>> copy = new ArrayList<>( oldRoute.getLinkIds() ) ;
+//				while (  !copy.get( idx ).equals( this.returnId )  ) {
+//					copy.remove( idx ) ;
+//				}
+//				copy.addAll( idx, this.alternativeLinks ) ;
+//				final ModeRouteFactory modeRouteFactory = ((PopulationFactoryImpl) this.scenario.getPopulation().getFactory()).getModeRouteFactory();
+//				NetworkRoute newRoute = modeRouteFactory.createRoute( NetworkRoute.class, oldRoute.getStartLinkId(), oldRoute.getEndLinkId()) ;
+//
+//				//			RouteUtils.createNetworkRoute(routeLinkIds, network) ;
+//
+//				newRoute.setLinkIds( oldRoute.getStartLinkId(), copy, oldRoute.getEndLinkId() );
+//				leg.setRoute(newRoute);
+//			}
+//		}
 
 		ArrayList<Id<Link>> currentLinkIds = new ArrayList<>( ((NetworkRoute) leg.getRoute()).getLinkIds() ) ;
 		if ( !Arrays.deepEquals(oldLinkIds.toArray(), currentLinkIds.toArray()) ) {

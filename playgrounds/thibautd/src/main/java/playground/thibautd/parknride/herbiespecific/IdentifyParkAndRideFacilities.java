@@ -35,13 +35,20 @@ import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.pt.transitSchedule.TransitScheduleFactoryImpl;
 import org.matsim.pt.transitSchedule.TransitScheduleReaderV1;
-import org.matsim.pt.transitSchedule.api.*;
-
+import org.matsim.pt.transitSchedule.api.TransitLine;
+import org.matsim.pt.transitSchedule.api.TransitRoute;
+import org.matsim.pt.transitSchedule.api.TransitRouteStop;
+import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import playground.thibautd.parknride.ParkAndRideFacilities;
 import playground.thibautd.parknride.ParkAndRideFacilitiesXmlWriter;
 import playground.thibautd.parknride.ParkAndRideFacility;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author thibautd
@@ -59,7 +66,7 @@ public class IdentifyParkAndRideFacilities {
 		final String networkFile = args[ 1 ];
 		final String outputFile = args[ 2 ];
 
-		final double minDist = CoordUtils.calcDistance( CENTER , BOUNDARY_POINT ) * factor;
+		final double minDist = CoordUtils.calcEuclideanDistance( CENTER , BOUNDARY_POINT ) * factor;
 		final PnrIds ids = new PnrIds();
 
 		NetworkImpl network = readNetwork( networkFile );
@@ -126,7 +133,7 @@ public class IdentifyParkAndRideFacilities {
 	}
 
 	private static boolean acceptStop(final Coord coord , final double dist) {
-		return CoordUtils.calcDistance( coord , CENTER ) > dist;
+		return CoordUtils.calcEuclideanDistance( coord , CENTER ) > dist;
 	}
 
 	private static TransitSchedule readSchedule( final String fileName ) {

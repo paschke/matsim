@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
@@ -79,7 +80,7 @@ public class RunSimulation {
 
 		@Override
 		public void notifyStartup(StartupEvent event) {
-			String filename = event.getControler().getControlerIO().getOutputFilename("modeshare.txt");
+			String filename = event.getServices().getControlerIO().getOutputFilename("modeshare.txt");
 			this.out = IOUtils.getBufferedWriter(filename);
 			try {
 				this.out.write("ITERATION\tcar\tother\tnone\n");
@@ -105,7 +106,7 @@ public class RunSimulation {
 
 	private static void run(Config config) {
 		final Scenario scenario = ScenarioUtils.createScenario(config);
-		new MatsimNetworkReader(scenario).readFile(D4DConsts.WORK_DIR + "network-simplified.xml");
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(D4DConsts.WORK_DIR + "network-simplified.xml");
 		AltPopulationReaderMatsimV5 altPopulationReaderMatsimV5 = new AltPopulationReaderMatsimV5(scenario);
 		//	altPopulationReaderMatsimV5.readFile("/Users/zilske/d4d/output/population.xml");
 		altPopulationReaderMatsimV5.readFile(D4DConsts.WORK_DIR + "population-capital-only.xml");
@@ -148,14 +149,14 @@ public class RunSimulation {
 		
 		config.planCalcScore().setWriteExperiencedPlans(true);
 		
-	//	config.controler().setLastIteration(180);
+	//	config.services().setLastIteration(180);
 		config.controler().setLastIteration(1);
 		config.controler().setMobsim(MobsimType.qsim.toString());
 		config.controler().setOutputDirectory(outputDirectory);
-		// config.controler().setMobsim("DoNothing");
+		// config.services().setMobsim("DoNothing");
 		config.global().setCoordinateSystem("EPSG:3395");
 		config.global().setNumberOfThreads(8);
-		// config.controler().setWriteSnapshotsInterval(5);
+		// config.services().setWriteSnapshotsInterval(5);
 		config.qsim().setStorageCapFactor(0.01);
 		config.qsim().setFlowCapFactor(0.01);
 		config.qsim().setSnapshotStyle(QSimConfigGroup.SnapshotStyle.queue);
@@ -177,11 +178,13 @@ public class RunSimulation {
 		// sighting.setClosingTime(0.0);
 		sighting.setTypicalDuration(30.0 * 60);
 		config.planCalcScore().addActivityParams(sighting);
-		config.planCalcScore().setTraveling_utils_hr(-6);
+		final double traveling = -6;
+		config.planCalcScore().getModes().get(TransportMode.car).setMarginalUtilityOfTraveling(traveling);
 		config.planCalcScore().setPerforming_utils_hr(0);
-		config.planCalcScore().setTravelingOther_utils_hr(-6);
-		config.planCalcScore().setConstantCar(0);
-		config.planCalcScore().setMonetaryDistanceCostRateCar(0);
+		double travelingOtherUtilsHr = -6;
+		config.planCalcScore().getModes().get(TransportMode.other).setMarginalUtilityOfTraveling(travelingOtherUtilsHr);
+		config.planCalcScore().getModes().get(TransportMode.car).setConstant((double) 0);
+		config.planCalcScore().getModes().get(TransportMode.car).setMonetaryDistanceRate((double) 0);
 		// config.planCalcScore().setWriteExperiencedPlans(true);
 //		config.setParam("JDEQSim", "flowCapacityFactor", "0.01");
 //		config.setParam("JDEQSim", "storageCapacityFactor", "0.05");

@@ -19,33 +19,27 @@
 
 package playground.johannes.gsv.analysis;
 
-import gnu.trove.TDoubleArrayList;
-import gnu.trove.TDoubleDoubleHashMap;
-
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-
+import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.common.stats.*;
+import org.matsim.contrib.socnetgen.sna.snowball.analysis.WSMStatsFactory;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.listener.AfterMobsimListener;
 import org.matsim.counts.Count;
 import org.matsim.counts.Counts;
 import org.matsim.counts.CountsReaderMatsimV1;
-
 import playground.johannes.gsv.gis.CountsCompare2GeoJSON;
 import playground.johannes.gsv.gis.NetworkLoad2GeoJSON;
 import playground.johannes.gsv.sim.LinkOccupancyCalculator;
 import playground.johannes.gsv.sim.cadyts.ODCalibrator;
-import playground.johannes.sna.math.DescriptivePiStatistics;
-import playground.johannes.sna.math.Histogram;
-import playground.johannes.sna.math.LinearDiscretizer;
-import playground.johannes.sna.util.TXTWriter;
-import playground.johannes.socialnetworks.snowball2.analysis.WSMStatsFactory;
-import playground.johannes.socialnetworks.statistics.Correlations;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 
 /**
  * @author johannes
@@ -59,7 +53,7 @@ public class CountsCompareAnalyzer implements AfterMobsimListener {
 
 	private final double factor;
 
-	private final Counts counts;
+	private final Counts<Link> counts;
 
 	public CountsCompareAnalyzer(LinkOccupancyCalculator calculator, String countsFile, double factor) {
 		this.calculator = calculator;
@@ -72,7 +66,7 @@ public class CountsCompareAnalyzer implements AfterMobsimListener {
 
 	@Override
 	public void notifyAfterMobsim(AfterMobsimEvent event) {
-		Network network = event.getControler().getScenario().getNetwork();
+		Network network = event.getServices().getScenario().getNetwork();
 		DescriptiveStatistics error = new DescriptiveStatistics();
 		DescriptiveStatistics errorAbs = new DescriptiveStatistics();
 		DescriptivePiStatistics errorWeighted = new WSMStatsFactory().newInstance();
@@ -114,29 +108,29 @@ public class CountsCompareAnalyzer implements AfterMobsimListener {
 				errorWeighted.getMean(), errorWeighted.getVariance(), errorWeighted.getStandardDeviation(), errorWeighted.getMin(),
 				errorWeighted.getMax()));
 
-		String outdir = event.getControler().getControlerIO().getIterationPath(event.getIteration());
+		String outdir = event.getServices().getControlerIO().getIterationPath(event.getIteration());
 
 		try {
-			TDoubleDoubleHashMap map = Correlations.mean(caps.toNativeArray(), errorVals.toNativeArray());
-			TXTWriter.writeMap(map, "capacity", "counts", String.format("%s/countsError.capacity.txt", outdir));
+			TDoubleDoubleHashMap map = Correlations.mean(caps.toArray(), errorVals.toArray());
+			StatsWriter.writeHistogram(map, "capacity", "counts", String.format("%s/countsError.capacity.txt", outdir));
 
-			map = Correlations.mean(speeds.toNativeArray(), errorVals.toNativeArray());
-			TXTWriter.writeMap(map, "speed", "counts", String.format("%s/countsError.speed.txt", outdir));
+			map = Correlations.mean(speeds.toArray(), errorVals.toArray());
+			StatsWriter.writeHistogram(map, "speed", "counts", String.format("%s/countsError.speed.txt", outdir));
 
-			TXTWriter.writeMap(Histogram.createHistogram(error, new LinearDiscretizer(0.1), false), "Error", "Frequency",
+			StatsWriter.writeHistogram(Histogram.createHistogram(error, new LinearDiscretizer(0.1), false), "Error", "Frequency",
 					String.format("%s/countsError.hist.txt", outdir));
-			TXTWriter.writeMap(Histogram.createHistogram(errorAbs, new LinearDiscretizer(0.1), false), "Error (absolute)", "Frequency",
+			StatsWriter.writeHistogram(Histogram.createHistogram(errorAbs, new LinearDiscretizer(0.1), false), "Error (absolute)", "Frequency",
 					String.format("%s/countsErrorAbs.hist.txt", outdir));
-			TXTWriter.writeMap(Histogram.createHistogram(errorWeighted, new LinearDiscretizer(0.1), true), "Error (weighted)", "Frequency",
+			StatsWriter.writeHistogram(Histogram.createHistogram(errorWeighted, new LinearDiscretizer(0.1), true), "Error (weighted)", "Frequency",
 					String.format("%s/countsErrorWeighted.hist.txt", outdir));
 
 			CountsCompare2GeoJSON.write(calculator, counts, factor, network, outdir);
-			NetworkLoad2GeoJSON.write(event.getControler().getScenario().getNetwork(), calculator, factor, outdir + "/network.json");
-		} catch (IOException e) {
+			NetworkLoad2GeoJSON.write(event.getServices().getScenario().getNetwork(), calculator, factor, outdir + "/network.json");
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		String rootOutDir = event.getControler().getControlerIO().getOutputPath();
+		String rootOutDir = event.getServices().getControlerIO().getOutputPath();
 		boolean append = false;
 		if (event.getIteration() > 0) {
 			append = true;

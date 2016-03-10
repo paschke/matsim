@@ -24,15 +24,16 @@ package playground.ikaddoura.integrationCN;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.noise.data.NoiseAllocationApproach;
+import org.matsim.contrib.noise.data.NoiseContext;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.vehicles.Vehicle;
 
-import playground.ikaddoura.noise2.data.NoiseAllocationApproach;
-import playground.ikaddoura.noise2.data.NoiseContext;
 import playground.vsp.congestion.handlers.TollHandler;
 
 /**
@@ -57,11 +58,12 @@ public class CNTollTravelDisutilityCalculator implements TravelDisutility{
 	private NoiseContext noiseContext;
 	private TollHandler tollHandler;
 	
+	@Deprecated
 	public CNTollTravelDisutilityCalculator(TravelTime timeCalculator, PlanCalcScoreConfigGroup cnScoringGroup, NoiseContext noiseContext, TollHandler tollHandler) {
 		this.timeCalculator = timeCalculator;
 		this.marginalUtlOfMoney = cnScoringGroup.getMarginalUtilityOfMoney();
-		this.distanceCostRateCar = cnScoringGroup.getMonetaryDistanceCostRateCar();
-		this.marginalUtlOfTravelTime = (- cnScoringGroup.getTraveling_utils_hr() / 3600.0) + (cnScoringGroup.getPerforming_utils_hr() / 3600.0); // TODO: make this dependent on the agent-specific time pressure...
+		this.distanceCostRateCar = cnScoringGroup.getModes().get(TransportMode.car).getMonetaryDistanceRate();
+		this.marginalUtlOfTravelTime = (-cnScoringGroup.getModes().get(TransportMode.car).getMarginalUtilityOfTraveling() / 3600.0) + (cnScoringGroup.getPerforming_utils_hr() / 3600.0); // TODO: make this dependent on the agent-specific time pressure...
 		this.noiseContext = noiseContext;		
 		this.tollHandler = tollHandler;
 		log.info("The link travel disutility is calculated based on the marginal utility of the travel time and the travel distance (based on config parameters and the expected toll (monetized noise damage costs and monetized congestion cost) of each link.");
@@ -112,7 +114,7 @@ public class CNTollTravelDisutilityCalculator implements TravelDisutility{
 		} else {
 			
 			boolean isHGV = false;
-			for (String hgvPrefix : this.noiseContext.getNoiseParams().getHgvIdPrefixes()) {
+			for (String hgvPrefix : this.noiseContext.getNoiseParams().getHgvIdPrefixesArray()) {
 				if (personId.toString().startsWith(hgvPrefix)) {
 					isHGV = true;
 					break;

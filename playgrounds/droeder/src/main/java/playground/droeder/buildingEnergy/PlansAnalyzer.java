@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
-import org.matsim.analysis.LegHistogram;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Activity;
@@ -197,7 +196,7 @@ final class PlansAnalyzer {
 		List<SingleLegStat> delegate = new ArrayList<SingleLegStat>();
 		
 		void add(LegImpl l, Coord from, Coord to){
-			double dist = ((from == null) || (to == null)) ? Double.NaN : CoordUtils.calcDistance(from, to); 
+			double dist = ((from == null) || (to == null)) ? Double.NaN : CoordUtils.calcEuclideanDistance(from, to); 
 			double tt = l.getTravelTime();
 			double speed = (dist == Double.NaN) ? Double.NaN : (dist / tt);
 			delegate.add(new SingleLegStat(dist, tt, speed));

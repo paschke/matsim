@@ -19,49 +19,36 @@
 
 package playground.johannes.gsv.sim;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.HasPlansAndId;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.*;
+import org.matsim.contrib.common.util.ProgressLogger;
+import org.matsim.core.controler.events.IterationStartsEvent;
+import org.matsim.core.controler.listener.IterationStartsListener;
 import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.replanning.GenericPlanStrategy;
+import org.matsim.core.replanning.PlanStrategy;
 import org.matsim.core.replanning.ReplanningContext;
 import org.matsim.core.router.TripRouter;
+import org.matsim.core.utils.collections.QuadTree;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.ActivityOption;
 import org.matsim.utils.objectattributes.ObjectAttributes;
-
-import playground.johannes.gsv.misc.QuadTree;
 import playground.johannes.synpop.data.CommonKeys;
-import playground.johannes.sna.util.ProgressLogger;
+
+import javax.inject.Provider;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author johannes
  * 
  */
-public class ActivityLocationStrategy implements GenericPlanStrategy<Plan, Person> {
+public class ActivityLocationStrategy implements PlanStrategy, IterationStartsListener {
 
 	// private static final Logger logger =
 	// Logger.getLogger(ActivityLocationStrategy.class);
+	private final Provider<TripRouter> tripRouterProvider;
 
 	private Map<String, QuadTree<ActivityFacility>> quadTrees;
 
@@ -73,7 +60,7 @@ public class ActivityLocationStrategy implements GenericPlanStrategy<Plan, Perso
 
 	private ActivityFacilities facilities;
 
-	private ReplanningContext replanContext;
+//	private ReplanningContext replanContext;
 
 	private final ExecutorService executor;
 
@@ -87,12 +74,13 @@ public class ActivityLocationStrategy implements GenericPlanStrategy<Plan, Perso
 	
 	private final AtomicInteger replanCnt;
 
-	public ActivityLocationStrategy(ActivityFacilities facilities, Population population, Random random, int numThreads, String blacklist, double mutationError) {
+	public ActivityLocationStrategy(ActivityFacilities facilities, Population population, Random random, int numThreads, String blacklist, double mutationError, Provider<TripRouter> tripRouterProvider) {
 		this.random = random;
 		this.facilities = facilities;
 		this.blacklist = blacklist;
 		this.mutationError = mutationError;
 		this.population = population;
+		this.tripRouterProvider = tripRouterProvider;
 		executor = Executors.newFixedThreadPool(numThreads);
 
 		replanCnt = new AtomicInteger(0);
@@ -107,7 +95,7 @@ public class ActivityLocationStrategy implements GenericPlanStrategy<Plan, Perso
 
 	@Override
 	public void init(ReplanningContext replanningContext) {
-		this.replanContext = replanningContext;
+//		this.replanContext = replanningContext;
 		futures = new LinkedList<Future<?>>();
 
 		if (quadTrees == null) {
@@ -155,7 +143,7 @@ public class ActivityLocationStrategy implements GenericPlanStrategy<Plan, Perso
 			}
 		}
 
-		ProgressLogger.termiante();
+		ProgressLogger.terminate();
 
 	}
 
@@ -163,7 +151,7 @@ public class ActivityLocationStrategy implements GenericPlanStrategy<Plan, Perso
 		// System.out.println("enter");
 		TripRouter router;
 		if (routers.isEmpty()) {
-			router = replanContext.getTripRouter();
+			router = tripRouterProvider.get();
 		} else {
 			router = routers.poll();
 		}
@@ -185,6 +173,11 @@ public class ActivityLocationStrategy implements GenericPlanStrategy<Plan, Perso
 		int cnt = replanCnt.intValue();
 		replanCnt.set(0);
 		return cnt;
+	}
+
+	@Override
+	public void notifyIterationStarts(IterationStartsEvent event) {
+
 	}
 
 	private class Task implements Runnable {
@@ -246,7 +239,7 @@ public class ActivityLocationStrategy implements GenericPlanStrategy<Plan, Perso
 				Coord coord = current.getCoord();
 				double min = Math.max(0, d * (1 - mutationError));
 				double max = d * (1 + mutationError);
-				List<ActivityFacility> candidates = (List<ActivityFacility>) quadtree.get(coord.getX(), coord.getY(), min, max);
+				List<ActivityFacility> candidates = (List<ActivityFacility>) quadtree.getRing(coord.getX(), coord.getY(), min, max);
 
 				if (!candidates.isEmpty()) {
 					/*

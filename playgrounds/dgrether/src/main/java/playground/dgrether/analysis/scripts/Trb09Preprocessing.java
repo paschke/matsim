@@ -29,8 +29,7 @@ import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 
 import playground.dgrether.DgPaths;
@@ -57,12 +56,11 @@ public class Trb09Preprocessing {
 			String plans1file = DgPaths.RUNBASE + runid1 + "/" + runNumber1 + ".output_plans.xml.gz";
 			String plans1fileOut = DgPaths.RUNBASE + runid1 + "/" + runNumber1 + ".output_plans_wo_routes.xml.gz";
 
-			ScenarioImpl sc = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+			MutableScenario sc = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 			Config conf = sc.getConfig();
 			conf.network().setInputFile(netfile);
 			conf.plans().setInputFile(plans1file);
-			ScenarioLoaderImpl loader = new ScenarioLoaderImpl(sc);
-			loader.loadScenario();
+			ScenarioUtils.loadScenario(sc);
 			Population pop = sc.getPopulation();
 			for (Person p : pop.getPersons().values()){
 				for (Plan plan : p.getPlans()) {

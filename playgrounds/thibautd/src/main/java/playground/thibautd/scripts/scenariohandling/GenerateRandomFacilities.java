@@ -19,14 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.scripts.scenariohandling;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -37,12 +29,18 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.facilities.ActivityFacilitiesImpl;
 import org.matsim.facilities.ActivityFacility;
-import org.matsim.facilities.ActivityFacilityImpl;
 import org.matsim.facilities.ActivityOption;
 import org.matsim.facilities.FacilitiesWriter;
-
 import playground.ivt.utils.ArgParser;
 import playground.ivt.utils.ArgParser.Args;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Random;
 
 /**
  * @author thibautd
@@ -80,7 +78,7 @@ public class GenerateRandomFacilities {
 		if ( types.size() != numbers.size() ) throw new IllegalArgumentException();
 
 		final Scenario sc = ScenarioUtils.createScenario( ConfigUtils.createConfig() );
-		new MatsimNetworkReader( sc ).readFile( inNet );
+		new MatsimNetworkReader(sc.getNetwork()).readFile( inNet );
 
 		final Random random = new Random( 20140224 );
 
@@ -105,8 +103,7 @@ public class GenerateRandomFacilities {
 				final ActivityFacility facility =
 					sc.getActivityFacilities().getFactory().createActivityFacility(
 							Id.create( "fac-"+type+"-"+n , ActivityFacility.class ),
-							l.getCoord() );
-				((ActivityFacilityImpl) facility).setLinkId( l.getId() );
+							l.getCoord(), l.getId() );
 
 				final ActivityOption option = 
 					sc.getActivityFacilities().getFactory().createActivityOption(

@@ -22,7 +22,6 @@ package playground.thibautd.scripts.scenariohandling;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.NetworkWriter;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
 import org.matsim.pt.transitSchedule.api.TransitScheduleWriter;
@@ -38,7 +37,6 @@ public class CreatePseudoTransitNetwork {
 		final String outputNetwork = args[ 2 ];
 
 		final Scenario sc = ScenarioUtils.createScenario( ConfigUtils.createConfig() );
-		((ScenarioImpl) sc).createTransitScheduleContainer();
 		new TransitScheduleReader( sc ).readFile( inputSchedule );
 		new CreatePseudoNetwork(sc.getTransitSchedule(), sc.getNetwork(), "tr_").createNetwork();
 		new NetworkWriter( sc.getNetwork() ).write( outputNetwork );

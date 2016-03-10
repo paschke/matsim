@@ -10,7 +10,7 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.LinkImpl;
 import org.matsim.core.network.NetworkImpl;
@@ -29,7 +29,7 @@ public class LinksRetailerReaderV2
   public static final String CONFIG_LINKS_CRITERIA = "freeLinksCriteria";
   public static final String CONFIG_GROUP = "Retailers";
   private String linkIdFile;
-  private Controler controler;
+  private MatsimServices controler;
   protected TreeMap<Id<Link>, LinkRetailersImpl> allLinks = new TreeMap<>();
   protected TreeMap<Id<Link>, LinkRetailersImpl> freeLinks = new TreeMap<>();
   private TreeMap<Id<Link>, LinkRetailersImpl> currentLinks = new TreeMap<>();
@@ -38,7 +38,7 @@ public class LinksRetailerReaderV2
   private double ratioSum = 0.0D;
   private static final Logger log = Logger.getLogger(LinksRetailerReaderV2.class);
 
-  public LinksRetailerReaderV2(Controler controler, Retailers retailers)
+  public LinksRetailerReaderV2(MatsimServices controler, Retailers retailers)
   {
     this.controler = controler;
     this.retailers = retailers;
@@ -141,7 +141,7 @@ public class LinksRetailerReaderV2
     for (Retailer r : this.retailers.getRetailers().values()) {
       for (ActivityFacility af : r.getFacilities().values()) {
     	  log.info("Quad tree = " + Utils.getFacilityQuadTree());
-        Collection<ActivityFacility> facilities = Utils.getFacilityQuadTree().get(af.getCoord().getX(), af.getCoord().getY(), 1000.0D);
+        Collection<ActivityFacility> facilities = Utils.getFacilityQuadTree().getDisk(af.getCoord().getX(), af.getCoord().getY(), 1000.0D);
         double ratio;
         double globalCapacity = 0.0D;
         double numberPersons = 0.0D;
@@ -153,7 +153,7 @@ public class LinksRetailerReaderV2
           }
         }
 
-        numberPersons = Utils.getPersonQuadTree().get(af.getCoord().getX(), af.getCoord().getY(), 1000.0D).size();
+        numberPersons = Utils.getPersonQuadTree().getDisk(af.getCoord().getX(), af.getCoord().getY(), 1000.0D).size();
         log.info("The number of person around the facility " + af.getId() + " is: " + numberPersons);
         ratio = numberPersons / globalCapacity;
         this.ratioSum += ratio;
@@ -204,7 +204,7 @@ public class LinksRetailerReaderV2
       }
       else {
         double ratio;
-        Collection<ActivityFacility> facilities = Utils.getFacilityQuadTree().get(link.getCoord().getX(), link.getCoord().getY(), 2000.0D);
+        Collection<ActivityFacility> facilities = Utils.getFacilityQuadTree().getDisk(link.getCoord().getX(), link.getCoord().getY(), 2000.0D);
         double globalCapacity = 0.0D;
         double numberPersons = 0.0D;
         int numberShops = 0;
@@ -218,7 +218,7 @@ public class LinksRetailerReaderV2
        // log.info("Link " + link.getId());
        // log.info("Link X" + link.getCoord().getX());
       //  log.info("Link Y" + link.getCoord().getY());
-        numberPersons = Utils.getPersonQuadTree().get(link.getCoord().getX(), link.getCoord().getY(), 1500.0D).size();
+        numberPersons = Utils.getPersonQuadTree().getDisk(link.getCoord().getX(), link.getCoord().getY(), 1500.0D).size();
       //  log.info("The number of person around the link " + link.getId() + " is: " + numberPersons);
         ratio = numberPersons / globalCapacity;
       //  log.info("The ratio persons/shopsCapacity of the link " + link.getId() + " is: " + ratio);
@@ -231,12 +231,12 @@ public class LinksRetailerReaderV2
         	  int counter = 0;        	 
         		 
         		 for(Link l:freeLinks.values()) {
-        			 if (CoordUtils.calcDistance(l.getCoord(), link.getCoord()) < 2500)
+        			 if (CoordUtils.calcEuclideanDistance(l.getCoord(), link.getCoord()) < 2500)
         				 counter++;
         		 }
         		 for(Link l:currentLinks.values()) {
         			 
-        			 if (CoordUtils.calcDistance(l.getCoord(), link.getCoord()) < 2500)
+        			 if (CoordUtils.calcEuclideanDistance(l.getCoord(), link.getCoord()) < 2500)
         				 counter++;
         		 }
         		 

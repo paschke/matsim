@@ -1,9 +1,19 @@
 package playground.mzilske.ant2014;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
 import org.matsim.analysis.VolumesAnalyzer;
 import org.matsim.analysis.VolumesAnalyzerModule;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
 import org.matsim.api.core.v01.population.Person;
@@ -20,26 +30,24 @@ import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.ReplayEvents;
 import org.matsim.core.controler.events.BeforeMobsimEvent;
 import org.matsim.core.controler.listener.BeforeMobsimListener;
+import org.matsim.core.events.EventsManagerModule;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.population.PlanImpl;
 import org.matsim.core.router.TripRouter;
-import org.matsim.core.router.TripRouterProviderImpl;
-import org.matsim.core.router.costcalculators.OnlyTimeDependentTravelDisutilityFactory;
+import org.matsim.core.router.TripRouterFactoryBuilderWithDefaults;
 import org.matsim.core.router.util.DijkstraFactory;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
-import playground.mzilske.cdr.*;
+import org.matsim.core.scenario.ScenarioByInstanceModule;
+import org.matsim.core.scenario.ScenarioUtils.ScenarioBuilder;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import playground.mzilske.cdr.CallBehavior;
+import playground.mzilske.cdr.CallBehaviorModule;
+import playground.mzilske.cdr.CollectSightingsModule;
+import playground.mzilske.cdr.LinkIsZone;
+import playground.mzilske.cdr.PopulationFromSightings;
+import playground.mzilske.cdr.PowerPlans;
+import playground.mzilske.cdr.Sightings;
+import playground.mzilske.cdr.ZoneTracker;
 
 class MultiRateRunResource {
 
@@ -102,7 +110,8 @@ class MultiRateRunResource {
         ActivityParams sightingParam = new ActivityParams("sighting");
         sightingParam.setScoringThisActivityAtAll(false);
         config.planCalcScore().addActivityParams(sightingParam);
-        config.planCalcScore().setTraveling_utils_hr(-6);
+        final double traveling = -6;
+        config.planCalcScore().getModes().get(TransportMode.car).setMarginalUtilityOfTraveling(traveling);
         config.planCalcScore().setWriteExperiencedPlans(true);
         config.controler().setWritePlansInterval(1);
         config.controler().setLastIteration(20);
@@ -133,11 +142,13 @@ class MultiRateRunResource {
         sightingParam.setTypicalDuration(30.0 * 60);
         config.controler().setWritePlansInterval(1);
         config.planCalcScore().addActivityParams(sightingParam);
-        config.planCalcScore().setTraveling_utils_hr(-6);
+        final double traveling = -6;
+        config.planCalcScore().getModes().get(TransportMode.car).setMarginalUtilityOfTraveling(traveling);
         config.planCalcScore().setPerforming_utils_hr(0);
-        config.planCalcScore().setTravelingOther_utils_hr(-6);
-        config.planCalcScore().setConstantCar(0);
-        config.planCalcScore().setMonetaryDistanceCostRateCar(0);
+        double travelingOtherUtilsHr = -6;
+        config.planCalcScore().getModes().get(TransportMode.other).setMarginalUtilityOfTraveling(travelingOtherUtilsHr);
+        config.planCalcScore().getModes().get(TransportMode.car).setConstant((double) 0);
+        config.planCalcScore().getModes().get(TransportMode.car).setMonetaryDistanceRate((double) 0);
         config.planCalcScore().setWriteExperiencedPlans(true);
         config.controler().setLastIteration(0);
         QSimConfigGroup tmp = config.qsim();
@@ -162,7 +173,6 @@ class MultiRateRunResource {
     }
 
     private void runPhoneOnActivityStartEnd(Scenario baseScenario) {
-        EventsManager events = EventsUtils.createEventsManager();
         LinkIsZone linkIsZone = new LinkIsZone();
         AbstractModule phoneModule = new CallBehaviorModule(new CallBehavior() {
 
@@ -183,17 +193,17 @@ class MultiRateRunResource {
 
         }, linkIsZone);
         ReplayEvents.Results results = ReplayEvents.run(
-                baseScenario,
+                baseScenario.getConfig(),
                 getBaseRun().getLastIteration().getEventsFileName(),
-                new CollectSightingsModule(),
+                new CollectSightingsModule(), new ScenarioByInstanceModule(baseScenario),
+                new EventsManagerModule(),
                 phoneModule);
 
 
         final Sightings sightings = results.get(Sightings.class);
 
-        final ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(baseScenario.getConfig());
+        final Scenario scenario = new ScenarioBuilder(baseScenario.getConfig()).setNetwork(baseScenario.getNetwork()).build() ;
         scenario.getConfig().controler().setOutputDirectory(WD + "/rates/actevents");
-        scenario.setNetwork(baseScenario.getNetwork());
         PopulationFromSightings.createPopulationWithEndTimesAtLastSightings(scenario, linkIsZone, sightings);
         PopulationFromSightings.preparePopulation(scenario, linkIsZone, sightings);
 
@@ -226,16 +236,16 @@ class MultiRateRunResource {
 
         ZoneTracker.LinkToZoneResolver linkToZoneResolver = new LinkIsZone();
         ReplayEvents.Results results = ReplayEvents.run(
-                baseScenario,
+                baseScenario.getConfig(),
                 getBaseRun().getLastIteration().getEventsFileName(),
-                new VolumesAnalyzerModule(),
+                new VolumesAnalyzerModule(), new ScenarioByInstanceModule(baseScenario),
+                new EventsManagerModule(),
                 new CollectSightingsModule(),
                 new CallBehaviorModule(callBehavior, linkToZoneResolver));
 
         final Config config = phoneConfig();
         config.controler().setOutputDirectory(WD + "/rates/" + dailyRate);
-        final ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
-        scenario.setNetwork(baseScenario.getNetwork());
+        final Scenario scenario = new ScenarioBuilder(config).setNetwork(baseScenario.getNetwork()).build() ;
         PopulationFromSightings.createPopulationWithEndTimesAtLastSightings(scenario, linkToZoneResolver, results.get(Sightings.class));
         PopulationFromSightings.preparePopulation(scenario, linkToZoneResolver, results.get(Sightings.class));
         final double flowCapacityFactor = config.qsim().getFlowCapFactor();
@@ -253,7 +263,7 @@ class MultiRateRunResource {
                         config.qsim().setFlowCapFactor(flowCapacityFactor * sensedSampleSize);
                         config.qsim().setStorageCapFactor(storageCapacityFactor * sensedSampleSize);
                     }
-                    final String filename = event.getControler().getControlerIO().getIterationFilename(event.getIteration(), "config.xml.gz");
+                    final String filename = event.getServices().getControlerIO().getIterationFilename(event.getIteration(), "config.xml.gz");
                     new ConfigWriter(config).write(filename);
                 }
             });
@@ -282,8 +292,7 @@ class MultiRateRunResource {
         }
         config.controler().setOutputDirectory(WD + "/rates/contbaseplans");
 
-        Scenario scenario = ScenarioUtils.createScenario(config);
-        ((ScenarioImpl) scenario).setNetwork(baseScenario.getNetwork());
+        Scenario scenario = new ScenarioBuilder(config).setNetwork( baseScenario.getNetwork()).build();
 
         for (Person basePerson : baseScenario.getPopulation().getPersons().values()) {
             Person person = scenario.getPopulation().getFactory().createPerson(basePerson.getId());
@@ -384,10 +393,8 @@ class MultiRateRunResource {
             public void write(PrintWriter pw) throws IOException {
                 for (String rate : getRates()) {
                     Scenario scenario = getRateRun(rate).getLastIteration().getExperiencedPlansAndNetwork();
-                    TripRouter tripRouter = new TripRouterProviderImpl(
+                    TripRouter tripRouter = TripRouterFactoryBuilderWithDefaults.createTripRouterProvider(
                             scenario,
-                            new OnlyTimeDependentTravelDisutilityFactory(),
-                            new FreeSpeedTravelTime(),
                             new DijkstraFactory(),
                             null)
                             .get();

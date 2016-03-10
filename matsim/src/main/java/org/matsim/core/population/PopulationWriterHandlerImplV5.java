@@ -24,8 +24,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 
 import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
@@ -33,8 +32,7 @@ import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.Route;
-import org.matsim.core.population.routes.GenericRoute;
-import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.misc.Time;
 
@@ -45,8 +43,11 @@ import org.matsim.core.utils.misc.Time;
 /*package*/ class PopulationWriterHandlerImplV5 implements PopulationWriterHandler {
 	private static final Logger log = Logger.getLogger( PopulationWriterHandlerImplV5.class );
 
-	private static final int MAX_WARN_UNKNOWN_ROUTE = 10;
-	private int countWarnUnkownRoute = 0;
+	private final CoordinateTransformation coordinateTransformation;
+
+	PopulationWriterHandlerImplV5(CoordinateTransformation coordinateTransformation) {
+		this.coordinateTransformation = coordinateTransformation;
+	}
 
 	@Override
 	public void writeHeaderAndStartElement(final BufferedWriter out) throws IOException {
@@ -80,22 +81,8 @@ import org.matsim.core.utils.misc.Time;
 					// route
 					Route route = leg.getRoute();
 					if (route != null) {
-						if ( route instanceof GenericRoute ) {
-							this.startGenericRoute( (GenericRoute) route, out);
-							this.endRoute(out);
-						}
-						else if ( route instanceof NetworkRoute ) {
-							this.startNetworkRoute( (NetworkRoute) route, out);
-							this.endRoute(out);
-						}
-						else if ( countWarnUnkownRoute < MAX_WARN_UNKNOWN_ROUTE ) {
-							log.warn( getClass().getSimpleName()+" can only write routes implementing NetworkRoute or GenericRoute."
-									+" This is not the case for route type "+route.getClass().getName()
-									+". Such routes will not be written to file." );
-							if ( ++countWarnUnkownRoute == MAX_WARN_UNKNOWN_ROUTE ) {
-								log.warn( "Future occurences of this warning for this file will not be shown." );
-							}
-						}
+						this.startRoute(route, out);
+						this.endRoute(out);
 					}
 					this.endLeg(out);
 				}
@@ -117,30 +104,30 @@ import org.matsim.core.utils.misc.Time;
 		out.write(p.getId().toString());
 		out.write("\"");
 		if (p instanceof PersonImpl){
-			PersonImpl person = (PersonImpl)p;
-			if (person.getSex() != null) {
+			Person person = p;
+			if (PersonUtils.getSex(person) != null) {
 				out.write(" sex=\"");
-				out.write(person.getSex());
+				out.write(PersonUtils.getSex(person));
 				out.write("\"");
 			}
-			if (person.getAge() != Integer.MIN_VALUE) {
+			if (PersonUtils.getAge(person) != null) {
 				out.write(" age=\"");
-				out.write(Integer.toString(person.getAge()));
+				out.write(Integer.toString(PersonUtils.getAge(person)));
 				out.write("\"");
 			}
-			if (person.getLicense() != null) {
+			if (PersonUtils.getLicense(person) != null) {
 				out.write(" license=\"");
-				out.write(person.getLicense());
+				out.write(PersonUtils.getLicense(person));
 				out.write("\"");
 			}
-			if (person.getCarAvail() != null) {
+			if (PersonUtils.getCarAvail(person) != null) {
 				out.write(" car_avail=\"");
-				out.write(person.getCarAvail());
+				out.write(PersonUtils.getCarAvail(person));
 				out.write("\"");
 			}
-			if (person.isEmployed() != null) {
+			if (PersonUtils.isEmployed(person) != null) {
 				out.write(" employed=\"");
-				out.write((person.isEmployed() ? "yes" : "no"));
+				out.write((PersonUtils.isEmployed(person) ? "yes" : "no"));
 				out.write("\"");
 			}
 		}
@@ -158,7 +145,7 @@ import org.matsim.core.utils.misc.Time;
 			out.write(plan.getScore().toString());
 			out.write("\"");
 		}
-		if (plan.isSelected())
+		if (PersonUtils.isSelected(plan))
 			out.write(" selected=\"yes\"");
 		else
 			out.write(" selected=\"no\"");
@@ -192,10 +179,11 @@ import org.matsim.core.utils.misc.Time;
 			out.write("\"");
 		}
 		if (act.getCoord() != null) {
+			final Coord coord = coordinateTransformation.transform( act.getCoord() );
 			out.write(" x=\"");
-			out.write(Double.toString(act.getCoord().getX()));
+			out.write(Double.toString( coord.getX() ));
 			out.write("\" y=\"");
-			out.write(Double.toString(act.getCoord().getY()));
+			out.write(Double.toString( coord.getY() ));
 			out.write("\"");
 		}
 		if (act.getStartTime() != Time.UNDEFINED_TIME) {
@@ -248,7 +236,7 @@ import org.matsim.core.utils.misc.Time;
 		out.write("\t\t\t</leg>\n");
 	}
 
-	private void startGenericRoute(final GenericRoute route, final BufferedWriter out) throws IOException {
+	private void startRoute(final Route route, final BufferedWriter out) throws IOException {
 		out.write("\t\t\t\t<route ");
 		out.write("type=\"");
 		out.write(route.getRouteType());
@@ -269,31 +257,6 @@ import org.matsim.core.utils.misc.Time;
 		String rd = route.getRouteDescription();
 		if (rd != null) {
 			out.write(rd);
-		}
-	}
-
-	private void startNetworkRoute(final NetworkRoute route, final BufferedWriter out) throws IOException {
-		out.write("\t\t\t\t<route ");
-		if ( route.getVehicleId()!=null ) {
-			out.write("vehicleRefId=\""+ route.getVehicleId() +"\" ") ;
-		}
-		out.write("type=\"links\"");
-		out.write(" trav_time=\"");
-		out.write(Time.writeTime(route.getTravelTime()));
-		out.write("\"");
-		out.write(" distance=\"");
-		out.write(Double.toString(route.getDistance()));
-		out.write("\"");
-		out.write(">");
-		out.write(route.getStartLinkId().toString());
-		for (Id<Link> linkId : route.getLinkIds()) {
-			out.write(" ");
-			out.write(linkId.toString());
-		}
-		// If the start links equals the end link additionally check if its is a round trip. 
-		if (!route.getEndLinkId().equals(route.getStartLinkId()) || route.getLinkIds().size() > 0) {
-			out.write(" ");
-			out.write(route.getEndLinkId().toString());
 		}
 	}
 

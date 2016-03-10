@@ -22,17 +22,15 @@
  */
 package org.matsim.core.mobsim.qsim;
 
+import com.google.inject.*;
+import com.google.inject.Injector;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.config.groups.QSimConfigGroup;
-import org.matsim.core.mobsim.qsim.agents.AgentFactory;
-import org.matsim.core.mobsim.qsim.agents.DefaultAgentFactory;
-import org.matsim.core.mobsim.qsim.agents.PopulationAgentSource;
-import org.matsim.core.mobsim.qsim.agents.TransitAgentFactory;
-import org.matsim.core.mobsim.qsim.changeeventsengine.NetworkChangeEventsEngine;
-import org.matsim.core.mobsim.qsim.pt.ComplexTransitStopHandlerFactory;
-import org.matsim.core.mobsim.qsim.pt.TransitQSimEngine;
-import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngineModule;
+import org.matsim.core.mobsim.framework.Mobsim;
+import org.matsim.core.scenario.ScenarioByInstanceModule;
+
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * @author nagel
@@ -41,38 +39,37 @@ public class QSimUtils {
 	 // should only contain static methods; should thus not be instantiated
 	private QSimUtils() {}
 
-	public static QSim createDefaultQSim(Scenario scenario, EventsManager eventsManager) {
-		QSimConfigGroup conf = scenario.getConfig().qsim();
-		if (conf == null) {
-			throw new NullPointerException("There is no configuration set for the QSim. Please add the module 'qsim' to your config file.");
+	public static QSim createDefaultQSim(final Scenario scenario, final EventsManager eventsManager) {
+		Injector injector = org.matsim.core.controler.Injector.createInjector(scenario.getConfig(), new StandaloneQSimModule(scenario, eventsManager));
+		return (QSim) injector.getInstance(Mobsim.class);
+	}
+
+	public static QSim createQSim(final Scenario scenario, final EventsManager eventsManager, final Collection<AbstractQSimPlugin> plugins) {
+		Injector injector = org.matsim.core.controler.Injector.createInjector(scenario.getConfig(),
+				org.matsim.core.controler.AbstractModule.override(Collections.singleton(new StandaloneQSimModule(scenario, eventsManager)),
+				new org.matsim.core.controler.AbstractModule() {
+					@Override
+					public void install() {
+						bind(new TypeLiteral<Collection<AbstractQSimPlugin>>() {}).toInstance(plugins);
+					}
+				}));
+		return (QSim) injector.getInstance(Mobsim.class);
+	}
+
+	private static class StandaloneQSimModule extends org.matsim.core.controler.AbstractModule {
+		private final Scenario scenario;
+		private final EventsManager eventsManager;
+
+		public StandaloneQSimModule(Scenario scenario, EventsManager eventsManager) {
+			this.scenario = scenario;
+			this.eventsManager = eventsManager;
 		}
 
-		QSim qSim = new QSim(scenario, eventsManager);
-		ActivityEngine activityEngine = new ActivityEngine(eventsManager, qSim.getAgentCounter());
-		qSim.addMobsimEngine(activityEngine);
-		qSim.addActivityHandler(activityEngine);
-
-		QNetsimEngineModule.configure(qSim);
-
-		TeleportationEngine teleportationEngine = new TeleportationEngine(scenario, eventsManager);
-		qSim.addMobsimEngine(teleportationEngine);
-
-		AgentFactory agentFactory;
-		if (scenario.getConfig().transit().isUseTransit()) {
-			agentFactory = new TransitAgentFactory(qSim);
-			TransitQSimEngine transitEngine = new TransitQSimEngine(qSim);
-			transitEngine.setTransitStopHandlerFactory(new ComplexTransitStopHandlerFactory());
-			qSim.addDepartureHandler(transitEngine);
-			qSim.addAgentSource(transitEngine);
-			qSim.addMobsimEngine(transitEngine);
-		} else {
-			agentFactory = new DefaultAgentFactory(qSim);
+		@Override
+		public void install() {
+			install(new ScenarioByInstanceModule(scenario));
+			bind(EventsManager.class).toInstance(eventsManager);
+			install(new QSimModule());
 		}
-		if (scenario.getConfig().network().isTimeVariantNetwork()) {
-			qSim.addMobsimEngine(new NetworkChangeEventsEngine());
-		}
-		PopulationAgentSource agentSource = new PopulationAgentSource(scenario.getPopulation(), agentFactory, qSim);
-		qSim.addAgentSource(agentSource);
-		return qSim;
 	}
 }

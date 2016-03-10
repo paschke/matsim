@@ -6,25 +6,28 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.contrib.accessibility.interfaces.ZoneDataExchangeInterface;
+import org.matsim.contrib.accessibility.interfaces.FacilityDataExchangeInterface;
 import org.matsim.contrib.accessibility.utils.AggregationObject;
 import org.matsim.contrib.accessibility.utils.ProgressBar;
 import org.matsim.contrib.matrixbasedptrouter.PtMatrix;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
-import org.matsim.core.controler.Controler;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkUtils;
+import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
+import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.ActivityFacilitiesImpl;
 import org.matsim.facilities.ActivityFacility;
 
+import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -65,12 +68,11 @@ import java.util.concurrent.ConcurrentHashMap;
 	// destinations, opportunities like jobs etc ...
 	private AggregationObject[] aggregatedOpportunities;
 
-	private Map<Modes4Accessibility,Boolean> isComputingMode = new HashMap<>() ;
 	private Map<Modes4Accessibility, AccessibilityContributionCalculator> calculators = new HashMap<>();
 
 	private PtMatrix ptMatrix;
 
-	private ArrayList<ZoneDataExchangeInterface> zoneDataExchangeListeners = new ArrayList<>();
+	private ArrayList<FacilityDataExchangeInterface> zoneDataExchangeListeners = new ArrayList<>();
 
 	private boolean useRawSum	; //= false;
 	private double logitScaleParameter;
@@ -83,47 +85,51 @@ import java.util.concurrent.ConcurrentHashMap;
 
 	// counter for warning that capacities are not used so far ... in order not to give the same warning multiple times; dz, apr'14
 	private static int cnt = 0 ;
+	private Map<String, TravelTime> travelTimes;
+	private Map<String, TravelDisutilityFactory> travelDisutilityFactories;
+	private Scenario scenario;
+	private AccessibilityConfigGroup config;
 
-	AccessibilityCalculator() {
-		for ( Modes4Accessibility mode : Modes4Accessibility.values() ) {
-			this.isComputingMode.put( mode, false ) ;
-		}
+	@Inject
+	AccessibilityCalculator(Map<String, TravelTime> travelTimes, Map<String, TravelDisutilityFactory> travelDisutilityFactories, Scenario scenario, AccessibilityConfigGroup config) {
+		this.travelTimes = travelTimes;
+		this.travelDisutilityFactories = travelDisutilityFactories;
+		this.scenario = scenario;
+		this.config = config;
 	}
 
-	public void addZoneDataExchangeListener(ZoneDataExchangeInterface l){
+	public void addFacilityDataExchangeListener(FacilityDataExchangeInterface l){
 		this.zoneDataExchangeListeners.add(l);
 	}
 
-
-	// XXX Ugly but temporary
-	final void initDefaultContributionCalculators( final Controler controler ) {
+	final void initDefaultContributionCalculators() {
 		calculators.put(
 				Modes4Accessibility.car,
 				new NetworkModeAccessibilityContributionCalculator(
-						controler.getLinkTravelTimes(),
-						controler.getTravelDisutilityFactory(),
-						controler.getScenario()));
+						travelTimes.get(TransportMode.car),
+						travelDisutilityFactories.get(TransportMode.car),
+						scenario));
 		calculators.put(
 				Modes4Accessibility.freeSpeed,
 				new NetworkModeAccessibilityContributionCalculator(
 						new FreeSpeedTravelTime(),
-						controler.getTravelDisutilityFactory(),
-						controler.getScenario() ) );
+						travelDisutilityFactories.get(TransportMode.car),
+						scenario));
 		calculators.put(
 				Modes4Accessibility.walk,
 				new ConstantSpeedAccessibilityContributionCalculator(
 						TransportMode.walk,
-						controler.getScenario() ) );
+						scenario));
 		calculators.put(
 				Modes4Accessibility.bike,
 				new ConstantSpeedAccessibilityContributionCalculator(
 						TransportMode.bike,
-						controler.getScenario()));
+						scenario));
 		calculators.put(
 				Modes4Accessibility.pt,
 				new MatrixBasedPtAccessibilityContributionCalculator(
 						ptMatrix,
-						controler.getConfig() ) );
+						scenario.getConfig()));
 	}
 	
 	/**
@@ -142,10 +148,10 @@ import java.util.concurrent.ConcurrentHashMap;
 		if (planCalcScoreConfigGroup.getOrCreateModeParams(TransportMode.pt).getMarginalUtilityOfDistance() != 0.) {
 			log.error("marginal utility of distance for pt different from zero but not used in accessibility computations");
 		}
-		if (planCalcScoreConfigGroup.getOrCreateModeParams(TransportMode.bike).getMonetaryDistanceCostRate() != 0.) {
+		if (planCalcScoreConfigGroup.getOrCreateModeParams(TransportMode.bike).getMonetaryDistanceRate() != 0.) {
 			log.error("monetary distance cost rate for bike different from zero but not used in accessibility computations");
 		}
-		if (planCalcScoreConfigGroup.getOrCreateModeParams(TransportMode.walk).getMonetaryDistanceCostRate() != 0.) {
+		if (planCalcScoreConfigGroup.getOrCreateModeParams(TransportMode.walk).getMonetaryDistanceRate() != 0.) {
 			log.error("monetary distance cost rate for walk different from zero but not used in accessibility computations");
 		}
 
@@ -154,8 +160,8 @@ import java.util.concurrent.ConcurrentHashMap;
 		inverseOfLogitScaleParameter = 1 / (logitScaleParameter); // logitScaleParameter = same as brainExpBeta on 2-aug-12. kai
 		walkSpeedMeterPerHour = config.plansCalcRoute().getTeleportedModeSpeeds().get(TransportMode.walk) * 3600.;
 
-		betaWalkTT = planCalcScoreConfigGroup.getTravelingWalk_utils_hr() - planCalcScoreConfigGroup.getPerforming_utils_hr();
-		betaWalkTD = planCalcScoreConfigGroup.getMarginalUtlOfDistanceWalk();
+		betaWalkTT = planCalcScoreConfigGroup.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() - planCalcScoreConfigGroup.getPerforming_utils_hr();
+		betaWalkTD = planCalcScoreConfigGroup.getModes().get(TransportMode.walk).getMarginalUtilityOfDistance();
 		betaWalkTMC = -planCalcScoreConfigGroup.getMarginalUtilityOfMoney();
 	}
 
@@ -186,7 +192,7 @@ import java.util.concurrent.ConcurrentHashMap;
 			Node nearestNode = ((NetworkImpl)network).getNearestNode( opportunity.getCoord() );
 
 			// get Euclidian distance to nearest node
-			double distance_meter 	= NetworkUtils.getEuclidianDistance(opportunity.getCoord(), nearestNode.getCoord());
+			double distance_meter 	= NetworkUtils.getEuclideanDistance(opportunity.getCoord(), nearestNode.getCoord());
 			double walkTravelTime_h = distance_meter / this.walkSpeedMeterPerHour;
 
 			double VjkWalkTravelTime	= this.betaWalkTT * walkTravelTime_h;
@@ -243,7 +249,7 @@ import java.util.concurrent.ConcurrentHashMap;
 	}
 
 	
-	final void computeAccessibilities( Scenario scenario ) {
+	final void computeAccessibilities( Scenario scenario, Double departureTime ) {
 		SumOfExpUtils[] gcs = new SumOfExpUtils[Modes4Accessibility.values().length] ;
 		// this could just be a double array, or a Map.  Not using a Map for computational speed reasons (untested);
 		// not using a simple double array for type safety in long argument lists. kai, feb'14
@@ -281,19 +287,19 @@ import java.util.concurrent.ConcurrentHashMap;
 		// ========================================================================
 		// go through all nodes (keys) that have a measuring point (origin) assigned
 		for ( Id<Node> nodeId : aggregatedOrigins.keySet() ) {
-
+			
 			bar.update();
 
 			Node fromNode = scenario.getNetwork().getNodes().get( nodeId );
 
 			for ( AccessibilityContributionCalculator calculator : calculators.values() ) {
-				calculator.notifyNewOriginNode( fromNode );
+				calculator.notifyNewOriginNode( fromNode, departureTime );
 			}
 
 			// get list with origins that are assigned to "fromNode"
 			for ( ActivityFacility origin : aggregatedOrigins.get( nodeId ) ) {
 				assert( origin.getCoord() != null );
-
+				
 				for (SumOfExpUtils gc : gcs) {
 					gc.reset();
 				}
@@ -301,7 +307,7 @@ import java.util.concurrent.ConcurrentHashMap;
 				// --------------------------------------------------------------------------------------------------------------
 				// goes through all opportunities, e.g. jobs, (nearest network node) and calculate/add their exp(U) contributions:
 				for (final AggregationObject aggregatedFacility : this.aggregatedOpportunities) {
-					computeAndAddExpUtilContributions( gcs, origin, aggregatedFacility );
+					computeAndAddExpUtilContributions( gcs, origin, aggregatedFacility, departureTime );
 				}
 				// --------------------------------------------------------------------------------------------------------------
 				// What does the aggregation of the starting locations save if we do the just ended loop for all starting
@@ -310,46 +316,47 @@ import java.util.concurrent.ConcurrentHashMap;
 				// aggregated value
 				Map< Modes4Accessibility, Double> accessibilities  = new HashMap<>() ;
 
-				for ( Modes4Accessibility mode : Modes4Accessibility.values() ) {
-					if ( this.isComputingMode.get(mode) ) {
-						if(!useRawSum){ 	// get log sum
-							accessibilities.put( mode, inverseOfLogitScaleParameter * Math.log( gcs[mode.ordinal()].getSum() ) ) ;
-						} else {
-							// this was used by IVT within SustainCity.  Not sure if we should maintain this; they could, after all, just exp the log results. kai, may'15
-							accessibilities.put( mode, gcs[mode.ordinal()].getSum() ) ;
+				for ( Modes4Accessibility mode : config.getIsComputingMode() ) {
+					if(!useRawSum){ 	// get log sum
+						accessibilities.put( mode, inverseOfLogitScaleParameter * Math.log( gcs[mode.ordinal()].getSum() ) ) ;
+					} else {
+						// this was used by IVT within SustainCity.  Not sure if we should maintain this; they could, after all, just exp the log results. kai, may'15
+						accessibilities.put( mode, gcs[mode.ordinal()].getSum() ) ;
 //							accessibilities.put( mode, inverseOfLogitScaleParameter * gcs[mode.ordinal()].getSum() ) ;
-							// yyyy why _multiply_ with "inverseOfLogitScaleParameter"??  If anything, would need to take the power:
-							// a * ln(b) = ln( b^a ).  kai, jan'14
-						}
+						// yyyy why _multiply_ with "inverseOfLogitScaleParameter"??  If anything, would need to take the power:
+						// a * ln(b) = ln( b^a ).  kai, jan'14
 					}
 				}
 
-				for (ZoneDataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
-					log.info("here");
-					zoneDataExchangeInterface.setZoneAccessibilities(origin, fromNode, accessibilities);
+				for (FacilityDataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
+					//log.info("here");
+					zoneDataExchangeInterface.setFacilityAccessibilities(origin, departureTime, accessibilities);
 				}
+
 			}
 
 		}
-		// ========================================================================
+		for (FacilityDataExchangeInterface zoneDataExchangeInterface : this.zoneDataExchangeListeners) {
+			zoneDataExchangeInterface.finish();
+		}
 	}
 
 	
 	private void computeAndAddExpUtilContributions( SumOfExpUtils[] gcs, ActivityFacility origin, 
-			final AggregationObject aggregatedFacility) {
+			final AggregationObject aggregatedFacility, Double departureTime) {
 		for ( Map.Entry<Modes4Accessibility, AccessibilityContributionCalculator> calculatorEntry : calculators.entrySet() ) {
-			if ( !isComputingMode.get( calculatorEntry.getKey() ) ) continue; // XXX should be configured by adding only the relevant calculators
-			final double expVhk = calculatorEntry.getValue().computeContributionOfOpportunity( origin , aggregatedFacility );
+			if ( !this.config.getIsComputingMode().contains(calculatorEntry.getKey()) ) continue; // XXX should be configured by adding only the relevant calculators
+			final double expVhk = calculatorEntry.getValue().computeContributionOfOpportunity( origin , aggregatedFacility, departureTime );
 			gcs[ calculatorEntry.getKey().ordinal() ].addExpUtils( expVhk );
 		}
 	}
 
 	public void setComputingAccessibilityForMode( Modes4Accessibility mode, boolean val ) {
-		this.isComputingMode.put(mode, val) ;
+		this.config.setComputingAccessibilityForMode(mode, val);
 	}
 
-	public Map<Modes4Accessibility, Boolean> getIsComputingMode() {
-		return isComputingMode;
+	public Set<Modes4Accessibility> getIsComputingMode() {
+		return this.config.getIsComputingMode();
 	}
 
 	/**

@@ -1,6 +1,7 @@
 package playground.balac.utils;
 
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
@@ -9,9 +10,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.FacilitiesReaderMatsimV1;
 import org.matsim.facilities.Facility;
@@ -20,18 +20,18 @@ import org.matsim.facilities.Facility;
 public class AnalyseShoppingBehaviour {
 
 	public void run(String plansFilePath, String networkFilePath, String facilitiesfilePath, String  facilitiesfilePath1) {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		PopulationReader populationReader = new MatsimPopulationReader(scenario);
-		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 		networkReader.readFile(networkFilePath);
 		new FacilitiesReaderMatsimV1(scenario).readFile(facilitiesfilePath);
 		populationReader.readFile(plansFilePath);
 		
-		ScenarioImpl scenario1 = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario1 = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		new FacilitiesReaderMatsimV1(scenario1).readFile(facilitiesfilePath1);
 		double centerX = 683217.0; 
 	    double centerY = 247300.0;
-	    CoordImpl coord = new CoordImpl(centerX, centerY);
+		Coord coord = new Coord(centerX, centerY);
 		int group1 = 0;
 		int group2 = 0;
 		int group3 = 0;
@@ -42,7 +42,7 @@ public class AnalyseShoppingBehaviour {
 		
 		for (Facility f : scenario1.getActivityFacilities().getFacilities().values()) {
 			
-			if (CoordUtils.calcDistance(f.getCoord(), coord) < 4000)
+			if (CoordUtils.calcEuclideanDistance(f.getCoord(), coord) < 4000)
 				numberInside++;
 		}
 		
@@ -69,7 +69,7 @@ public class AnalyseShoppingBehaviour {
 			for (PlanElement pe: plan.getPlanElements()) {
 				if (pe instanceof Activity) {
 				 if (((Activity) pe).getType().equals("home")) {
-							if ( (CoordUtils.calcDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
+							if ( (CoordUtils.calcEuclideanDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
 								homeInside = true;
 							}
 						
@@ -77,7 +77,7 @@ public class AnalyseShoppingBehaviour {
 					}
 					else if (((Activity) pe).getType().startsWith("work")) {
 						hasWork = true;
-							if ( (CoordUtils.calcDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
+							if ( (CoordUtils.calcEuclideanDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
 								workInside = true;
 						}
 					
@@ -85,7 +85,7 @@ public class AnalyseShoppingBehaviour {
 				}
 					else if (((Activity) pe).getType().startsWith("education")) {
 						hasEducation = true;
-						if ( (CoordUtils.calcDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
+						if ( (CoordUtils.calcEuclideanDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
 							educationInside = true;
 						}
 						else
@@ -95,7 +95,7 @@ public class AnalyseShoppingBehaviour {
 			}
 					else if (((Activity) pe).getType().startsWith("leisure")) {
 						hasLeisure = true;
-						if ( (CoordUtils.calcDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
+						if ( (CoordUtils.calcEuclideanDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
 							leisureInside = true;
 					}
 				
@@ -103,7 +103,7 @@ public class AnalyseShoppingBehaviour {
 			}
 					else if (((Activity) pe).getType().startsWith("nongrocery")) {
 						hasNon = true;
-						if ( (CoordUtils.calcDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
+						if ( (CoordUtils.calcEuclideanDistance(((Activity)pe).getCoord(), coord) < 4000.0)) {
 							nonInside = true;
 					}
 				
@@ -118,7 +118,7 @@ public class AnalyseShoppingBehaviour {
 				if (pe instanceof Activity) {
 					if (((Activity) pe).getType().equals("shopgrocery") && scenario1.getActivityFacilities().getFacilities().containsKey(((Activity) pe).getFacilityId())) {
 						
-						if ( (CoordUtils.calcDistance(((Activity)pe).getCoord(), coord) > 4000)) {
+						if ( (CoordUtils.calcEuclideanDistance(((Activity)pe).getCoord(), coord) > 4000)) {
 							groceryInside = true;	
 							
 						}

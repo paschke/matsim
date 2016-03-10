@@ -24,7 +24,6 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.population.routes.RouteFactory;
-
 import playground.meisterk.org.matsim.config.PlanomatConfigGroup;
 
 public class KtiLinkNetworkRouteFactory implements RouteFactory {
@@ -41,6 +40,11 @@ public class KtiLinkNetworkRouteFactory implements RouteFactory {
 	@Override
 	public Route createRoute(Id startLinkId, Id endLinkId) {
 		return new KtiLinkNetworkRouteImpl(startLinkId, endLinkId, this.network, this.planomatConfigGroup.getSimLegInterpretation());
+	}
+
+	@Override
+	public String getCreatedRouteType() {
+		return "links";
 	}
 
 }

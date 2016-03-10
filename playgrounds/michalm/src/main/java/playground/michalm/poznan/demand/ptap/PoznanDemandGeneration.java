@@ -24,13 +24,13 @@ import java.util.Map;
 import org.matsim.api.core.v01.*;
 import org.matsim.contrib.dvrp.run.VrpConfigUtils;
 import org.matsim.contrib.util.random.RandomUtils;
+import org.matsim.contrib.zone.*;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.matrices.Matrix;
 
 import playground.michalm.demand.ODDemandGenerator;
-import playground.michalm.zone.*;
 
 
 public class PoznanDemandGeneration
@@ -54,7 +54,7 @@ public class PoznanDemandGeneration
         RandomUtils.reset(randomSeed);
 
         Scenario scenario = ScenarioUtils.createScenario(VrpConfigUtils.createConfig());
-        new MatsimNetworkReader(scenario).readFile(networkFile);
+        new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
         Map<Id<Zone>, Zone> zones = Zones.readZones(zonesXmlFile, zonesShpFile);
 
         ODDemandGenerator dg = new ODDemandGenerator(scenario, zones, false);

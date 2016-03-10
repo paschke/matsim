@@ -29,7 +29,6 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.core.utils.collections.QuadTree;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.io.IOUtils;
@@ -61,7 +60,7 @@ public class GeneralGrid{
 
 	/* For caching purposes, create the grid cell geometry once, and return the 
 	 * cached geometry subsequently. */
-	private Map<Point, Geometry> geometryCache = new HashMap<Point, Geometry>();
+	private final Map<Point, Geometry> geometryCache = new HashMap<Point, Geometry>();
 
 
 	/**
@@ -72,7 +71,7 @@ public class GeneralGrid{
 	 * 	      right-most point. 
 	 * @param type an indicator specifying the {@link GridType}. 
 	 */
-	public GeneralGrid(double width, GridType type) {
+	public GeneralGrid(final double width, final GridType type) {
 		this.width = width;
 		this.type = type;
 	}
@@ -84,7 +83,7 @@ public class GeneralGrid{
 	 * 		  given {@link Geometry} has multiple geometries... I don't know 
 	 * 		  what happens.
 	 */
-	public void generateGrid(Geometry g){
+	public void generateGrid(final Geometry g){
 		LOG.warn("Did you check that the width given is in the same unit-of-measure as the shapefile?");
 		LOG.info("Generating " + this.type.toString() + " grid. This may take some time...");
 		this.geometry = g;
@@ -165,7 +164,7 @@ public class GeneralGrid{
 		counter.printCounter();
 	}
 	
-	public Geometry getCellGeometry(Point p){
+	public Geometry getCellGeometry(final Point p){
 		return this.geometryCache.get(p);
 	}
 
@@ -201,7 +200,8 @@ public class GeneralGrid{
 	 * 		  provided. If <code>null</code> then no transformation will be done 
 	 * 		  on the coordinate points of the centroids.  
 	 */
-	public void writeGrid(String folder, String originalCRS){
+	public void writeGrid(final String folder, final String originalCRS){
+		//ZZ_TODO : more arguments are passed than than actually needed (wants 4 but 5 are passed)
 		String filename = String.format("%s%s%s_%.0f.csv", folder, (folder.endsWith("/") ? "" : "/"), this.type, this.width, ".csv");
 		LOG.info("Writing grid to file: " + filename);
 
@@ -218,9 +218,9 @@ public class GeneralGrid{
 		try{
 			bw.write("Long,Lat,X,Y,Width");
 			bw.newLine();
-			Collection<Point> list = qt.get(qt.getMinEasting(), qt.getMinNorthing(), qt.getMaxEasting(), qt.getMaxNorthing(), new ArrayList<Point>());
+			Collection<Point> list = qt.getRectangle(qt.getMinEasting(), qt.getMinNorthing(), qt.getMaxEasting(), qt.getMaxNorthing(), new ArrayList<Point>());
 			for(Point p : list){
-				Coord original = new CoordImpl(new Double(p.getX()), new Double(p.getY()));
+				Coord original = new Coord(new Double(p.getX()), new Double(p.getY()));
 				Coord wgs84 = null;
 				if(ct != null){
 					wgs84 = ct.transform(original);
@@ -316,7 +316,7 @@ public class GeneralGrid{
 	 * @param centroid
 	 * @return
 	 */
-	private Geometry getIndividualGeometry(Point centroid){
+	private Geometry getIndividualGeometry(final Point centroid){
 		Geometry g = null;
 
 		switch (this.type) {

@@ -12,9 +12,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.PointFeatureFactory;
@@ -26,9 +25,9 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 public class PersonsShoppingFacility {
 	
 	public void run(String plansFilePath, String networkFilePath, String facilitiesfilePath ) {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		PopulationReader populationReader = new MatsimPopulationReader(scenario);
-		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 		networkReader.readFile(networkFilePath);
 		new FacilitiesReaderMatsimV1(scenario).readFile(facilitiesfilePath);
 		populationReader.readFile(plansFilePath);
@@ -36,7 +35,7 @@ public class PersonsShoppingFacility {
 		int grocery = 0;
 		double centerX = 683217.0; 
 	    double centerY = 247300.0;
-	    CoordImpl coord = new CoordImpl(centerX, centerY);
+		Coord coord = new Coord(centerX, centerY);
 		int previousIn = 0;
 		int previousOut = 0;
 	    for(Person p:scenario.getPopulation().getPersons().values()) {
@@ -48,11 +47,11 @@ public class PersonsShoppingFacility {
 				if (pe instanceof Activity) {
 					if (((Activity) pe).getType().equals("shopgrocery")) {
 						
-						if ( (CoordUtils.calcDistance(((Activity)pe).getCoord(), coord) < 4000)) {
+						if ( (CoordUtils.calcEuclideanDistance(((Activity)pe).getCoord(), coord) < 4000)) {
 							
 							grocery++;
 							int index = plan.getPlanElements().indexOf(pe);
-							if ((CoordUtils.calcDistance(((Activity)plan.getPlanElements().get(index - 2)).getCoord(), coord) < 4000)) {
+							if ((CoordUtils.calcEuclideanDistance(((Activity)plan.getPlanElements().get(index - 2)).getCoord(), coord) < 4000)) {
 								previousIn++;
 							}
 							else

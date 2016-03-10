@@ -52,7 +52,7 @@ public class MyCarrierPlanInterpreter {
 		String networkFile = args[2];
 
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		MatsimNetworkReader reader = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader reader = new MatsimNetworkReader(scenario.getNetwork());
 		reader.readFile(networkFile);
 		network = scenario.getNetwork();
 
@@ -123,7 +123,7 @@ public class MyCarrierPlanInterpreter {
 				if(te instanceof Leg){
 					Leg leg = (Leg) te;
 
-					double distance = RouteUtils.calcDistance((NetworkRoute) leg.getRoute(), network);
+					double distance = RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) leg.getRoute(), network);
 
 					if(distance>0){
 						interActDistance.add(distance);

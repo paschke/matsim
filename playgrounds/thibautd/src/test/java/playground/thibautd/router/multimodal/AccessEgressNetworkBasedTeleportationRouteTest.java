@@ -19,8 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.router.multimodal;
 
-import java.util.Arrays;
-
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,6 +35,8 @@ import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.testcases.MatsimTestUtils;
+
+import java.util.Arrays;
 
 /**
  * @author thibautd
@@ -78,7 +78,7 @@ public class AccessEgressNetworkBasedTeleportationRouteTest {
 		final Population pop = sc.getPopulation();
 
 		((PopulationFactoryImpl) pop.getFactory()).setRouteFactory(
-					"shloumpf",
+				AccessEgressNetworkBasedTeleportationRoute.class,
 					new AccessEgressNetworkBasedTeleportationRouteFactory( ) );
 
 		final Person person = pop.getFactory().createPerson( Id.create( "jojo" , Person.class ) );
@@ -99,7 +99,7 @@ public class AccessEgressNetworkBasedTeleportationRouteTest {
 		final Scenario insc = ScenarioUtils.createScenario( ConfigUtils.createConfig() );
 
 		((PopulationFactoryImpl) insc.getPopulation().getFactory()).setRouteFactory(
-					"shloumpf",
+				AccessEgressNetworkBasedTeleportationRoute.class,
 					new AccessEgressNetworkBasedTeleportationRouteFactory( ) );
 
 		new MatsimPopulationReader( insc ).readFile( file );

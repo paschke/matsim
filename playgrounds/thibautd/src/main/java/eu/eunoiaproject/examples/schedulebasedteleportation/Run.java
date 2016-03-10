@@ -20,14 +20,12 @@
 package eu.eunoiaproject.examples.schedulebasedteleportation;
 
 import org.apache.log4j.Logger;
-
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.core.scenario.ScenarioImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.PtConstants;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
@@ -68,7 +66,6 @@ public class Run {
 		// if actual simulation of transit is disabled, the transit schedule
 		// is not loaded automatically: we need to do it by hand
 		if ( !config.transit().isUseTransit() ) {
-			((ScenarioImpl) scenario).createTransitScheduleContainer();
 			log.info( "read schedule from "+config.transit().getTransitScheduleFile() );
 			new TransitScheduleReader( scenario ).readFile( config.transit().getTransitScheduleFile() );
 

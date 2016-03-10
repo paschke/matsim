@@ -21,6 +21,7 @@
 package org.matsim.core.population;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Leg;
@@ -32,24 +33,24 @@ import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.routes.GenericRouteImpl;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.scenario.ScenarioUtils.ScenarioBuilder;
 import org.matsim.testcases.MatsimTestCase;
 
 public class PopulationWriterHandlerImplV4Test extends MatsimTestCase {
 
 	public void testWriteGenericRoute() {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(super.loadConfig(null));
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(super.loadConfig(null));
 		Network network = scenario.getNetwork();
-		new MatsimNetworkReader(scenario).readFile("test/scenarios/equil/network.xml");
+		new MatsimNetworkReader(scenario.getNetwork()).readFile("test/scenarios/equil/network.xml");
 		Link link1 = network.getLinks().get(Id.create(1, Link.class));
 		Link link2 = network.getLinks().get(Id.create(2, Link.class));
 
-		ScenarioImpl tmpScenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		tmpScenario.setNetwork(network);
+		Scenario tmpScenario = new ScenarioBuilder(ConfigUtils.createConfig()).setNetwork(network).build() ;
 		Population pop = tmpScenario.getPopulation();
 		PopulationFactory pb = pop.getFactory();
-		PersonImpl person = (PersonImpl) pb.createPerson(Id.create(1, Person.class));
+		Person person = pb.createPerson(Id.create(1, Person.class));
 		PlanImpl plan = (PlanImpl) pb.createPlan();
 		plan.setPerson(person);
 		plan.addActivity(pb.createActivityFromLinkId("h", link1.getId()));

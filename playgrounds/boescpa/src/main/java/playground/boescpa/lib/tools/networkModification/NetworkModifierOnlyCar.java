@@ -23,7 +23,6 @@ package playground.boescpa.lib.tools.networkModification;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 
 /**
@@ -38,16 +37,16 @@ public class NetworkModifierOnlyCar extends AbstractNetworkModifier {
 	}
 
 	public static void main(String[] args) {
-		AbstractNetworkModifier networkModifier = new NetworkModifierOnlyCar(new CoordImpl(682952.0,247797.0)); // A bit south of HB Zurich...);
+		AbstractNetworkModifier networkModifier = new NetworkModifierOnlyCar(new Coord(682952.0, 247797.0)); // A bit south of HB Zurich...);
 		networkModifier.run(args);
 	}
 
 	@Override
 	public boolean isLinkAffected(Link link) {
 		// Area:
-		boolean isAffected = CoordUtils.calcDistance(link.getFromNode().getCoord(), center) <= radius ||
-				CoordUtils.calcDistance(link.getToNode().getCoord(), center) <= radius ||
-				CoordUtils.calcDistance(link.getCoord(), center) <= radius;
+		boolean isAffected = CoordUtils.calcEuclideanDistance(link.getFromNode().getCoord(), center) <= radius ||
+				CoordUtils.calcEuclideanDistance(link.getToNode().getCoord(), center) <= radius ||
+				CoordUtils.calcEuclideanDistance(link.getCoord(), center) <= radius;
 		// Mode:
 		if (isAffected) {
 			isAffected = link.getAllowedModes().contains("car");

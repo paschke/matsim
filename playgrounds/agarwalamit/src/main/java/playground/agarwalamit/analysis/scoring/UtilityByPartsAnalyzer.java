@@ -37,6 +37,8 @@ import org.matsim.core.scoring.functions.CharyparNagelActivityScoring;
 import org.matsim.core.scoring.functions.CharyparNagelAgentStuckScoring;
 import org.matsim.core.scoring.functions.CharyparNagelLegScoring;
 import org.matsim.core.scoring.functions.CharyparNagelMoneyScoring;
+import org.matsim.core.scoring.functions.CharyparNagelScoringParametersForPerson;
+import org.matsim.core.scoring.functions.SubpopulationCharyparNagelScoringParameters;
 import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
 
 import playground.vsp.analysis.modules.AbstractAnalysisModule;
@@ -47,10 +49,19 @@ import playground.vsp.analysis.modules.AbstractAnalysisModule;
  */
 
 public class UtilityByPartsAnalyzer extends AbstractAnalysisModule {
+	private final boolean includeActivitScoring;
+	private final boolean includeLegScoring;
+	private final boolean includeMoneyScongin;
+	private final boolean includeStuckAgentScoring;
 
+	private EventsToScore events2Score;
+	private Scenario sc;
+	private String eventsFile;
+	private final Map<Id<Person>, Double> person2Score = new HashMap<>();
+	private final EventsManager events = EventsUtils.createEventsManager();
 
-	public UtilityByPartsAnalyzer(boolean includeActivitScoring, boolean includeLegScoring, 
-			boolean includeMoneyScongin, boolean includeStuckAgentScoring) {
+	public UtilityByPartsAnalyzer(final boolean includeActivitScoring, final boolean includeLegScoring, 
+			final boolean includeMoneyScongin, final boolean includeStuckAgentScoring) {
 		super(UtilityByPartsAnalyzer.class.getSimpleName());
 		this.includeActivitScoring = includeActivitScoring;
 		this.includeLegScoring = includeLegScoring;
@@ -58,22 +69,12 @@ public class UtilityByPartsAnalyzer extends AbstractAnalysisModule {
 		this.includeStuckAgentScoring = includeStuckAgentScoring;
 	}
 
-	private boolean includeActivitScoring;
-	private boolean includeLegScoring;
-	private boolean includeMoneyScongin;
-	private boolean includeStuckAgentScoring;
-
-	private EventsToScore events2Score;
-	private Scenario sc;
-	private String eventsFile;
-	private Map<Id<Person>, Double> person2Score = new HashMap<>();
-
-	public void run(final Scenario sc, String outputDir){
+	public void run(final Scenario sc, final String outputDir){
 		this.sc = sc;
 		int lastIt = sc.getConfig().controler().getLastIteration();
 		this.eventsFile = outputDir+"/ITERS/it."+lastIt+"/"+lastIt+".events.xml.gz";
 		ScoringFunctionFactory sfFactory = getScoringFunctionFactory(sc);
-		this.events2Score = new EventsToScore(sc, sfFactory);
+		this.events2Score = EventsToScore.createWithScoreUpdating(sc, sfFactory, events);
 		preProcessData();
 		postProcessData();
 	}
@@ -85,9 +86,7 @@ public class UtilityByPartsAnalyzer extends AbstractAnalysisModule {
 
 	@Override
 	public void preProcessData() {
-		EventsManager events = EventsUtils.createEventsManager();
 		MatsimEventsReader reader = new MatsimEventsReader(events);
-		events.addHandler(events2Score);
 		reader.readFile(eventsFile);
 	}
 
@@ -101,31 +100,28 @@ public class UtilityByPartsAnalyzer extends AbstractAnalysisModule {
 
 	@Override
 	public void writeResults(String outputFolder) {
-
 	}
 
 	private ScoringFunctionFactory getScoringFunctionFactory(final Scenario sc){
 		ScoringFunctionFactory sfFactory = new ScoringFunctionFactory() {
-
-			CharyparNagelScoringParameters params = CharyparNagelScoringParameters.getBuilder(sc.getConfig().planCalcScore()).create();
-
+			CharyparNagelScoringParametersForPerson parametersForPerson = new SubpopulationCharyparNagelScoringParameters( sc );
 			@Override
 			public ScoringFunction createNewScoringFunction(Person person) {
+				final CharyparNagelScoringParameters params = parametersForPerson.getScoringParameters( person );
 				SumScoringFunction sumScoringFunction = new SumScoringFunction();
 				if(includeActivitScoring)
 					sumScoringFunction.addScoringFunction(new CharyparNagelActivityScoring(params));
 				if(includeLegScoring)
 					sumScoringFunction.addScoringFunction(new CharyparNagelLegScoring(params,sc.getNetwork()));
 				if(includeMoneyScongin)
-					sumScoringFunction.addScoringFunction(new CharyparNagelMoneyScoring(this.params));
+					sumScoringFunction.addScoringFunction(new CharyparNagelMoneyScoring(params));
 				if(includeStuckAgentScoring)
-					sumScoringFunction.addScoringFunction(new CharyparNagelAgentStuckScoring(this.params));
+					sumScoringFunction.addScoringFunction(new CharyparNagelAgentStuckScoring(params));
 				return sumScoringFunction;
 			}
 		}; 
 		return sfFactory;
 	}
-
 	public Map<Id<Person>, Double> getPerson2Score() {
 		return person2Score;
 	}

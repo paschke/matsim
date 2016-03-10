@@ -36,12 +36,12 @@ import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.mobsim.framework.Mobsim;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.router.Dijkstra;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import playground.wrashid.lib.obj.TwoHashMapsConcatenated;
 import playground.wrashid.parkingChoice.infrastructure.ActInfo;
 import playground.wrashid.parkingChoice.infrastructure.PrivateParking;
@@ -111,7 +111,7 @@ public class MainPPSimZurich30km {
 		}
 
 		ParkingPersonalBetas parkingPersonalBetas = new ParkingPersonalBetas(scenario,
-				HouseHoldIncomeZH.getHouseHoldIncomeCantonZH((ScenarioImpl) scenario));
+				HouseHoldIncomeZH.getHouseHoldIncomeCantonZH((MutableScenario) scenario));
 
 		parkingPersonalBetas.externalWalkFactor = ZHScenarioGlobal.loadDoubleParam("ParkingPersonalBetas.externalWalkFactor");
 		parkingPersonalBetas.externalSearchFactor = ZHScenarioGlobal.loadDoubleParam("ParkingPersonalBetas.externalSearchFactor");
@@ -458,12 +458,12 @@ public class MainPPSimZurich30km {
 
 		for (int i = 0; i < populationExpansionFactor; i++) {
 			for (Person origPerson : originalAgents) {
-				PersonImpl originPersonImpl = (PersonImpl) origPerson;
+				Person originPerson = origPerson;
 
-				PersonImpl newPerson = (PersonImpl) factory.createPerson(Id.create(String.valueOf(pCounter++), Person.class));
-				newPerson.setAge(((PersonImpl) origPerson).getAge());
-				newPerson.setSex(((PersonImpl) origPerson).getSex());
-				newPerson.addPlan(originPersonImpl.createCopyOfSelectedPlanAndMakeSelected());
+				Person newPerson = factory.createPerson(Id.create(String.valueOf(pCounter++), Person.class));
+				PersonUtils.setAge(newPerson, PersonUtils.getAge(origPerson));
+				PersonUtils.setSex(newPerson, PersonUtils.getSex(origPerson));
+				newPerson.addPlan(originPerson.createCopyOfSelectedPlanAndMakeSelected());
 
 				scenario.getPopulation().addPerson(newPerson);
 			}

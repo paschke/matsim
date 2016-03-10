@@ -10,7 +10,6 @@ import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
@@ -21,7 +20,6 @@ import org.matsim.facilities.ActivityOption;
 import org.matsim.facilities.FacilitiesWriter;
 import org.matsim.facilities.OpeningTime;
 import org.matsim.facilities.OpeningTimeImpl;
-import org.matsim.facilities.OpeningTime.DayType;
 
 import others.sergioo.util.dataBase.DataBaseAdmin;
 import others.sergioo.util.dataBase.NoConnectionException;
@@ -38,7 +36,7 @@ public class EducationalFacilitiesGenerator {
 		Map<Integer, Coord> allPostalCodes = new HashMap<Integer, Coord>();
 		ResultSet resultZone = dataBasePostalCodes.executeQuery("SELECT zip,lng,lat FROM postal_codes");
 		while(resultZone.next())
-			allPostalCodes.put(resultZone.getInt(1), new CoordImpl(resultZone.getDouble(2),resultZone.getDouble(3)));
+			allPostalCodes.put(resultZone.getInt(1), new Coord(resultZone.getDouble(2), resultZone.getDouble(3)));
 		resultZone.close();
 		dataBasePostalCodes.close();
 		ActivityFacilitiesImpl facilities = new ActivityFacilitiesImpl("Educational facilities Singapore");
@@ -52,11 +50,11 @@ public class EducationalFacilitiesGenerator {
 				int postalCode = educationalFacilitiesResult.getInt(1);
 				Coord coord = null;
 				if(postalCode==0)
-					postalCode = getPostalCode(allPostalCodes, new CoordImpl(lon,lat));
+					postalCode = getPostalCode(allPostalCodes, new Coord(lon, lat));
 				ActivityFacility facility = facilities.getFacilities().get(Id.create(postalCode, ActivityFacility.class));
 				if(facility==null) {
 					if(educationalFacilitiesResult.getDouble(4)!=0)
-						coord = new CoordImpl(lon,lat);
+						coord = new Coord(lon, lat);
 					else
 						coord = allPostalCodes.get(postalCode);
 					if(coord!=null)
@@ -68,25 +66,25 @@ public class EducationalFacilitiesGenerator {
 					ActivityOption option = facility.getActivityOptions().get("edu");
 					double capacity = 0;
 					if(option==null)
-						option = ((ActivityFacilityImpl) facility).createActivityOption("edu");
+						option = ((ActivityFacilityImpl) facility).createAndAddActivityOption("edu");
 					else
 						capacity = option.getCapacity();
-					option.setCapacity((double)((int)(capacity+educationalFacilitiesResult.getDouble(2))));
+					option.setCapacity(((int)(capacity+educationalFacilitiesResult.getDouble(2))));
 					if(educationalFacilitiesResult.getString(7)!= null && (educationalFacilitiesResult.getString(7).toLowerCase().contains("school") || educationalFacilitiesResult.getString(7).toLowerCase().contains("college") || educationalFacilitiesResult.getString(7).toLowerCase().contains("primary") || educationalFacilitiesResult.getString(7).toLowerCase().contains("secondary") || educationalFacilitiesResult.getString(7).toLowerCase().contains("kinder")))
-						option.addOpeningTime(new OpeningTimeImpl(DayType.wkday, 18000, 64800));
+						option.addOpeningTime(new OpeningTimeImpl(18000, 64800));
 					else
-						option.addOpeningTime(new OpeningTimeImpl(DayType.wkday, 18000, 86400));
+						option.addOpeningTime(new OpeningTimeImpl(18000, 86400));
 					option = facility.getActivityOptions().get("profess");
 					capacity = 0;
 					if(option==null)
-						option = ((ActivityFacilityImpl) facility).createActivityOption("profess");
+						option = ((ActivityFacilityImpl) facility).createAndAddActivityOption("profess");
 					else
 						capacity = option.getCapacity();
-					option.setCapacity((double)((int)(capacity+educationalFacilitiesResult.getDouble(3))));
+					option.setCapacity(((int)(capacity+educationalFacilitiesResult.getDouble(3))));
 					if(educationalFacilitiesResult.getString(7)!= null && (educationalFacilitiesResult.getString(7).toLowerCase().contains("school") || educationalFacilitiesResult.getString(7).toLowerCase().contains("college") || educationalFacilitiesResult.getString(7).toLowerCase().contains("primary") || educationalFacilitiesResult.getString(7).toLowerCase().contains("secondary") || educationalFacilitiesResult.getString(7).toLowerCase().contains("kinder")))
-						option.addOpeningTime(new OpeningTimeImpl(DayType.wkday, 18000, 64800));
+						option.addOpeningTime(new OpeningTimeImpl(18000, 64800));
 					else
-						option.addOpeningTime(new OpeningTimeImpl(DayType.wkday, 18000, 86400));
+						option.addOpeningTime(new OpeningTimeImpl(18000, 86400));
 				}	
 			}
 		}
@@ -117,7 +115,7 @@ public class EducationalFacilitiesGenerator {
 				else
 					dataBaseFacilities.executeStatement("UPDATE Activity_options SET capacity=capacity+"+optionResult.getDouble(1)+" WHERE type='"+option.getType()+"' AND facility_id ="+idFacility);
 				for(OpeningTime openingTime:option.getOpeningTimes())
-					dataBaseFacilities.executeStatement("INSERT INTO Opening_times (day_type,start_time,end_time,type,facility_id) VALUES ('"+DayType.wkday+"',"+openingTime.getStartTime()+","+openingTime.getEndTime()+",'"+option.getType()+"',"+idFacility+")");
+					dataBaseFacilities.executeStatement("INSERT INTO Opening_times (day_type,start_time,end_time,type,facility_id) VALUES ('wkday',"+openingTime.getStartTime()+","+openingTime.getEndTime()+",'"+option.getType()+"',"+idFacility+")");
 			}
 		}
 	}
@@ -125,7 +123,7 @@ public class EducationalFacilitiesGenerator {
 		int zip=-1;
 		double nearest = Double.MAX_VALUE;
 		for(Entry<Integer, Coord> postalCode: allPostalCodes.entrySet()) {
-			double distance = CoordUtils.calcDistance(postalCode.getValue(), coord);
+			double distance = CoordUtils.calcEuclideanDistance(postalCode.getValue(), coord);
 			if(distance<nearest) {
 				zip = postalCode.getKey();
 				nearest = distance;

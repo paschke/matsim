@@ -19,8 +19,8 @@
 
 package playground.michalm.chargerlocation;
 
-import playground.michalm.util.distance.DistanceCalculator;
-import playground.michalm.zone.Zone;
+import org.matsim.contrib.util.distance.DistanceCalculator;
+import org.matsim.contrib.zone.Zone;
 
 
 public class ChargerLocationProblem
@@ -64,7 +64,7 @@ public class ChargerLocationProblem
         this.maxChargers = maxChargers;
 
         I = zoneData.entries.size();
-        J = chargerData.stations.size();
+        J = chargerData.locations.size();
 
         distances = calcDistanceMatrix();
     }
@@ -77,8 +77,8 @@ public class ChargerLocationProblem
             Zone zone_i = zoneData.entries.get(i).zone;
 
             for (int j = 0; j < J; j++) {
-                ChargingStation station_j = chargerData.stations.get(j);
-                d[i][j] = distanceCalculator.calcDistance(zone_i.getCoord(), station_j.getCoord());
+                ChargerLocation location_j = chargerData.locations.get(j);
+                d[i][j] = distanceCalculator.calcDistance(zone_i.getCoord(), location_j.getCoord());
             }
         }
         return d;

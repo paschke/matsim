@@ -20,6 +20,9 @@
 
 package org.matsim.vis.otfvis;
 
+import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLProfile;
 import org.jdesktop.swingx.mapviewer.DefaultTileFactory;
 import org.jdesktop.swingx.mapviewer.TileFactory;
 import org.jdesktop.swingx.mapviewer.TileFactoryInfo;
@@ -51,6 +54,12 @@ public class OTFClientLive {
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
+				SettingsSaver saver = new SettingsSaver("otfsettings");
+				OTFVisConfigGroup visconf = saver.tryToReadSettingsFile();
+				if (visconf == null) {
+					visconf = server.getOTFVisConfig();
+				}
+
 				OTFConnectionManager connectionManager = new OTFConnectionManager();
 				connectionManager.connectLinkToWriter(OTFLinkAgentsHandler.Writer.class);
 				connectionManager.connectWriterToReader(OTFLinkAgentsHandler.Writer.class, OTFLinkAgentsHandler.class);
@@ -63,34 +72,31 @@ public class OTFClientLive {
 					connectionManager.connectReaderToReceiver(FacilityDrawer.Reader.class, FacilityDrawer.DataDrawer.class);
 					connectionManager.connectReceiverToLayer(FacilityDrawer.DataDrawer.class, SimpleSceneLayer.class);
 				}
-				
-				OTFClient otfClient = new OTFClient();
+
+				GLAutoDrawable canvas = OTFOGLDrawer.createGLCanvas(visconf);
+				OTFClient otfClient = new OTFClient(canvas);
 				otfClient.setServer(server);
-				SettingsSaver saver = new SettingsSaver("otfsettings");
-				OTFVisConfigGroup visconf = saver.tryToReadSettingsFile();
-				if (visconf == null) {
-					visconf = server.getOTFVisConfig();
-				}
 				OTFClientControl.getInstance().setOTFVisConfig(visconf); // has to be set before OTFClientQuadTree.getConstData() is invoked!
 				OTFServerQuadTree serverQuadTree = server.getQuad(connectionManager);
 				OTFClientQuadTree clientQuadTree = serverQuadTree.convertToClient(server, connectionManager);
 				clientQuadTree.getConstData();
 				OTFHostControlBar hostControlBar = otfClient.getHostControlBar();
-				OTFOGLDrawer mainDrawer = new OTFOGLDrawer(clientQuadTree, hostControlBar, ConfigUtils.addOrGetModule(config, OTFVisConfigGroup.GROUP_NAME, OTFVisConfigGroup.class));
+
+				OTFOGLDrawer mainDrawer = new OTFOGLDrawer(clientQuadTree, hostControlBar, visconf, canvas);
 				OTFQueryControl queryControl = new OTFQueryControl(server, hostControlBar, visconf);
 				OTFQueryControlToolBar queryControlBar = new OTFQueryControlToolBar(queryControl, visconf);
 				queryControl.setQueryTextField(queryControlBar.getTextField());
 				otfClient.getContentPane().add(queryControlBar, BorderLayout.SOUTH);
 				mainDrawer.setQueryHandler(queryControl);
 				otfClient.addDrawerAndInitialize(mainDrawer, saver);
-				if (ConfigUtils.addOrGetModule(config, OTFVisConfigGroup.GROUP_NAME, OTFVisConfigGroup.class).isMapOverlayMode()) {
+				if (visconf.isMapOverlayMode()) {
 					TileFactory tf;
-					if (ConfigUtils.addOrGetModule(config, OTFVisConfigGroup.GROUP_NAME, OTFVisConfigGroup.class).getMapBaseURL().isEmpty()) {
+					if (visconf.getMapBaseURL().isEmpty()) {
 						assertZoomLevel17(config);
 						tf = osmTileFactory();
 					} else {
-						WMSService wms = new WMSService(ConfigUtils.addOrGetModule(config, OTFVisConfigGroup.GROUP_NAME, OTFVisConfigGroup.class).getMapBaseURL(), ConfigUtils.addOrGetModule(config, OTFVisConfigGroup.GROUP_NAME, OTFVisConfigGroup.class).getMapLayer());
-						tf = new OTFVisWMSTileFactory(wms, ConfigUtils.addOrGetModule(config, OTFVisConfigGroup.GROUP_NAME, OTFVisConfigGroup.class).getMaximumZoom());
+						WMSService wms = new WMSService(visconf.getMapBaseURL(), visconf.getMapLayer());
+						tf = new OTFVisWMSTileFactory(wms, visconf.getMaximumZoom());
 					}
 					otfClient.addMapViewer(tf);
 				}

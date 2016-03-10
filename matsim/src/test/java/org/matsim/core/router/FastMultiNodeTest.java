@@ -22,8 +22,10 @@ package org.matsim.core.router;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.config.Config;
@@ -57,7 +59,7 @@ public class FastMultiNodeTest {
 		createNetwork(scenario);
 
 		TravelTime travelTime = new FreeSpeedTravelTime();
-		TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutility.Builder().createTravelDisutility(travelTime, config.planCalcScore());
+		TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutility.Builder( TransportMode.car, config.planCalcScore() ).createTravelDisutility(travelTime);
 		FastMultiNodeDijkstra dijkstra = (FastMultiNodeDijkstra) new FastMultiNodeDijkstraFactory().
 				createPathCalculator(scenario.getNetwork(), travelDisutility, travelTime);
 		
@@ -112,7 +114,7 @@ public class FastMultiNodeTest {
 		createNetwork(scenario);
 
 		TravelTime travelTime = new FreeSpeedTravelTime();
-		TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutility.Builder().createTravelDisutility(travelTime, config.planCalcScore());
+		TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutility.Builder( TransportMode.car, config.planCalcScore() ).createTravelDisutility(travelTime);
 		FastMultiNodeDijkstra dijkstra = (FastMultiNodeDijkstra) new FastMultiNodeDijkstraFactory(false).
 				createPathCalculator(scenario.getNetwork(), travelDisutility, travelTime);
 		
@@ -200,7 +202,7 @@ public class FastMultiNodeTest {
 		createNetwork(scenario);
 
 		TravelTime travelTime = new FreeSpeedTravelTime();
-		TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutility.Builder().createTravelDisutility(travelTime, config.planCalcScore());
+		TravelDisutility travelDisutility = new RandomizingTimeDistanceTravelDisutility.Builder( TransportMode.car, config.planCalcScore() ).createTravelDisutility(travelTime);
 		FastMultiNodeDijkstra dijkstra = (FastMultiNodeDijkstra) new FastMultiNodeDijkstraFactory(true).
 				createPathCalculator(scenario.getNetwork(), travelDisutility, travelTime);
 		
@@ -315,12 +317,14 @@ public class FastMultiNodeTest {
 		/*
 		 * create nodes
 		 */
-		Node n0 = scenario.getNetwork().getFactory().createNode(Id.create("n0", Node.class), scenario.createCoord(   0.0,     0.0));
-		Node n1 = scenario.getNetwork().getFactory().createNode(Id.create("n1", Node.class), scenario.createCoord(1000.0,     0.0));
-		Node n2 = scenario.getNetwork().getFactory().createNode(Id.create("n2", Node.class), scenario.createCoord(2000.0,     0.0));
-		Node n3 = scenario.getNetwork().getFactory().createNode(Id.create("n3", Node.class), scenario.createCoord(3000.0,     0.0));
-		Node n4 = scenario.getNetwork().getFactory().createNode(Id.create("n4", Node.class), scenario.createCoord(2000.0, -2000.0));
-		Node n5 = scenario.getNetwork().getFactory().createNode(Id.create("n5", Node.class), scenario.createCoord(2000.0, -4000.0));
+		Node n0 = scenario.getNetwork().getFactory().createNode(Id.create("n0", Node.class), new Coord(0.0, 0.0));
+		Node n1 = scenario.getNetwork().getFactory().createNode(Id.create("n1", Node.class), new Coord(1000.0, 0.0));
+		Node n2 = scenario.getNetwork().getFactory().createNode(Id.create("n2", Node.class), new Coord(2000.0, 0.0));
+		Node n3 = scenario.getNetwork().getFactory().createNode(Id.create("n3", Node.class), new Coord(3000.0, 0.0));
+		double y1 = -2000.0;
+		Node n4 = scenario.getNetwork().getFactory().createNode(Id.create("n4", Node.class), new Coord(2000.0, y1));
+		double y = -4000.0;
+		Node n5 = scenario.getNetwork().getFactory().createNode(Id.create("n5", Node.class), new Coord(2000.0, y));
 		
 		/*
 		 * create links

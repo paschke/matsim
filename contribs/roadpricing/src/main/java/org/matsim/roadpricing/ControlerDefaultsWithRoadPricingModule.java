@@ -22,18 +22,26 @@
 
 package org.matsim.roadpricing;
 
-import com.google.inject.Singleton;
+import java.util.Arrays;
+
+import javax.inject.Inject;
+import javax.inject.Provider;
+
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.ControlerDefaults;
 import org.matsim.core.controler.ControlerDefaultsModule;
+import org.matsim.core.router.NetworkRouting;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
-import java.util.Arrays;
+import com.google.inject.Singleton;
+import org.matsim.core.router.util.TravelTime;
 
 public class ControlerDefaultsWithRoadPricingModule extends AbstractModule {
 
@@ -49,6 +57,7 @@ public class ControlerDefaultsWithRoadPricingModule extends AbstractModule {
 
     @Override
     public void install() {
+        ConfigUtils.addOrGetModule(getConfig(), RoadPricingConfigGroup.GROUP_NAME, RoadPricingConfigGroup.class);
         // This is not optimal yet. Modules should not need to have parameters.
         // But I am not quite sure yet how to best handle custom scenario elements. mz
         if (this.roadPricingScheme != null) {
@@ -56,7 +65,7 @@ public class ControlerDefaultsWithRoadPricingModule extends AbstractModule {
         } else {
             bind(RoadPricingScheme.class).toProvider(RoadPricingSchemeProvider.class).in(Singleton.class);
         }
-
+        bind(RoadPricingInitializer.class).asEagerSingleton();
         bind(PlansCalcRouteWithTollOrNot.class);
         addPlanStrategyBinding("ReRouteAreaToll").toProvider(ReRouteAreaToll.class);
 
@@ -64,9 +73,12 @@ public class ControlerDefaultsWithRoadPricingModule extends AbstractModule {
         install(AbstractModule.override(Arrays.<AbstractModule>asList(new ControlerDefaultsModule()), new AbstractModule() {
             @Override
             public void install() {
-                bind(TravelDisutilityFactory.class).toProvider(TravelDisutilityIncludingTollFactoryProvider.class);
+                addTravelDisutilityFactoryBinding(TransportMode.car).toProvider(TravelDisutilityIncludingTollFactoryProvider.class).asEagerSingleton();
             }
         }));
+
+        addTravelDisutilityFactoryBinding("car_with_payed_area_toll").toInstance(new RandomizingTimeDistanceTravelDisutility.Builder(TransportMode.car, getConfig().planCalcScore()));
+        addRoutingModuleBinding("car_with_payed_area_toll").toProvider(new RoadPricingNetworkRouting());
 
         addControlerListenerBinding().to(RoadPricingControlerListener.class);
 
@@ -78,27 +90,49 @@ public class ControlerDefaultsWithRoadPricingModule extends AbstractModule {
         addEventHandlerBinding().to(CalcAverageTolledTripLength.class);
     }
 
+    private static class RoadPricingInitializer {
+        @Inject
+        RoadPricingInitializer(RoadPricingScheme roadPricingScheme, Scenario scenario) {
+            RoadPricingScheme scenarioRoadPricingScheme = (RoadPricingScheme) scenario.getScenarioElement(RoadPricingScheme.ELEMENT_NAME);
+            if (scenarioRoadPricingScheme == null) {
+                scenario.addScenarioElement(RoadPricingScheme.ELEMENT_NAME, roadPricingScheme);
+            } else {
+                if (roadPricingScheme != scenarioRoadPricingScheme) {
+                    throw new RuntimeException();
+                }
+            }
+        }
+    }
+
+
     private static class RoadPricingSchemeProvider implements Provider<RoadPricingScheme> {
 
         private final Config config;
+        private Scenario scenario;
 
         @Inject
-        RoadPricingSchemeProvider(Config config) {
+        RoadPricingSchemeProvider(Config config, Scenario scenario) {
             this.config = config;
+            this.scenario = scenario;
         }
 
         @Override
         public RoadPricingScheme get() {
-            RoadPricingConfigGroup rpConfig = ConfigUtils.addOrGetModule(config, RoadPricingConfigGroup.GROUP_NAME, RoadPricingConfigGroup.class);
-            String tollLinksFile = rpConfig.getTollLinksFile();
-            if ( tollLinksFile == null ) {
-                throw new RuntimeException("Road pricing inserted but neither toll links file nor RoadPricingScheme given.  "
-                        + "Such an execution path is not allowed.  If you want a base case without toll, "
-                        + "construct a zero toll file and insert that. ") ;
+            RoadPricingScheme scenarioRoadPricingScheme = (RoadPricingScheme) scenario.getScenarioElement(RoadPricingScheme.ELEMENT_NAME);
+            if (scenarioRoadPricingScheme != null) {
+                return scenarioRoadPricingScheme;
+            } else {
+                RoadPricingConfigGroup rpConfig = ConfigUtils.addOrGetModule(config, RoadPricingConfigGroup.GROUP_NAME, RoadPricingConfigGroup.class);
+                String tollLinksFile = rpConfig.getTollLinksFile();
+                if ( tollLinksFile == null ) {
+                    throw new RuntimeException("Road pricing inserted but neither toll links file nor RoadPricingScheme given.  "
+                            + "Such an execution path is not allowed.  If you want a base case without toll, "
+                            + "construct a zero toll file and insert that. ") ;
+                }
+                RoadPricingSchemeImpl rpsImpl = new RoadPricingSchemeImpl() ;
+                new RoadPricingReaderXMLv1(rpsImpl).parse(tollLinksFile);
+                return rpsImpl;
             }
-            RoadPricingSchemeImpl rpsImpl = new RoadPricingSchemeImpl() ;
-            new RoadPricingReaderXMLv1(rpsImpl).parse(tollLinksFile);
-            return rpsImpl;
         }
     }
 
@@ -117,11 +151,15 @@ public class ControlerDefaultsWithRoadPricingModule extends AbstractModule {
         public TravelDisutilityFactory get() {
             RoadPricingConfigGroup rpConfig = ConfigUtils.addOrGetModule(scenario.getConfig(), RoadPricingConfigGroup.GROUP_NAME, RoadPricingConfigGroup.class);
             final TravelDisutilityFactory originalTravelDisutilityFactory = ControlerDefaults.createDefaultTravelDisutilityFactory(scenario);
-			RoadPricingTravelDisutilityFactory travelDisutilityFactory = new RoadPricingTravelDisutilityFactory(
-                    originalTravelDisutilityFactory, scheme, scenario.getConfig().planCalcScore().getMarginalUtilityOfMoney()
-            );
-            travelDisutilityFactory.setSigma(rpConfig.getRoutingRandomness());
-            return travelDisutilityFactory;
+//			if (!scheme.getType().equals(RoadPricingScheme.TOLL_TYPE_AREA)) {
+                RoadPricingTravelDisutilityFactory travelDisutilityFactory = new RoadPricingTravelDisutilityFactory(
+                        originalTravelDisutilityFactory, scheme, scenario.getConfig().planCalcScore().getMarginalUtilityOfMoney()
+                );
+                travelDisutilityFactory.setSigma(rpConfig.getRoutingRandomness());
+                return travelDisutilityFactory;
+//            } else {
+//                return originalTravelDisutilityFactory;
+//            }
         }
 
     }

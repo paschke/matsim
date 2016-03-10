@@ -43,10 +43,10 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.scenario.ScenarioUtils;
-
 
 
 public class CreatePlans {
@@ -79,10 +79,10 @@ public class CreatePlans {
 			
 			
 			Scenario scenario = ScenarioUtils.createScenario(config);
-			new MatsimNetworkReader(scenario).readFile(networkFile);
+			new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
 			Population pop = fillScenario(scenario);
 			
-			Controler controler = new Controler(scenario);
+			MatsimServices controler = new Controler(scenario);
 			controler.getConfig().controler().setOverwriteFileSetting(
 					true ?
 							OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
@@ -153,8 +153,8 @@ public class CreatePlans {
 						trip = currline.split(cvsSplitBy);
 						Double startx = Double.parseDouble(trip[4]);
 						Double starty = Double.parseDouble(trip[5]);
-						
-						Coord startCoordinates = scenario.createCoord(startx,starty);
+
+					Coord startCoordinates = new Coord(startx, starty);
 						//create activity
 						String actType = "work";
 						if(trip[2].equals("1"))actType="home";
@@ -169,7 +169,7 @@ public class CreatePlans {
 				}
 				Double endx = Double.parseDouble(trip[7]);
 				Double endy = Double.parseDouble(trip[8]);
-				Coord endCoordinates = scenario.createCoord(endx, endy);
+				Coord endCoordinates = new Coord(endx, endy);
 				Activity lastAct = populationFactory.createActivityFromCoord("home", endCoordinates);
 				plan.addActivity(lastAct);
 //				logger.info("x=" + endx + " y=" + endy);

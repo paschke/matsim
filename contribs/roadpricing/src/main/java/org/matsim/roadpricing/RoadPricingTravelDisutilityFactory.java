@@ -24,10 +24,9 @@ package org.matsim.roadpricing;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.controler.ControlerDefaults;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility.Builder;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.costcalculators.TravelTimeAndDistanceBasedTravelDisutilityFactory;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 
@@ -55,29 +54,20 @@ public class RoadPricingTravelDisutilityFactory implements TravelDisutilityFacto
 	}
 
 	@Override
-	public TravelDisutility createTravelDisutility(TravelTime timeCalculator, PlanCalcScoreConfigGroup cnScoringGroup) {
+	public TravelDisutility createTravelDisutility(TravelTime timeCalculator) {
 		if ( this.sigma != 0. ) {
-			if ( previousTravelDisutilityFactory instanceof TravelTimeAndDistanceBasedTravelDisutilityFactory) {
-				((TravelTimeAndDistanceBasedTravelDisutilityFactory) previousTravelDisutilityFactory).setSigma( this.sigma );
+			if ( previousTravelDisutilityFactory instanceof Builder) {
+				((Builder) previousTravelDisutilityFactory).setSigma( this.sigma );
 			} else {
 				throw new RuntimeException("cannot use sigma!=null together with provided travel disutility factory");
 			}
 		}
-		if (RoadPricingScheme.TOLL_TYPE_DISTANCE.equals(this.scheme.getType())
-				|| RoadPricingScheme.TOLL_TYPE_CORDON.equals(this.scheme.getType())
-				|| RoadPricingScheme.TOLL_TYPE_LINK.equals(this.scheme.getType()) ) {
-		// yy this is historically without area toll but it might be better to do it also with area toll
-		// when the randomizing router is used.  I do think, however, that the current specification
-		// of the area toll disutility will not work in that way.  kai, sep'14
-			return new TravelDisutilityIncludingToll(
-					previousTravelDisutilityFactory.createTravelDisutility(timeCalculator, cnScoringGroup),
-					this.scheme,
-					this.marginalUtilityOfMoney,
-					this.sigma
-			);
-		} else {
-			return previousTravelDisutilityFactory.createTravelDisutility(timeCalculator, cnScoringGroup);
-		}
+		return new TravelDisutilityIncludingToll(
+				previousTravelDisutilityFactory.createTravelDisutility(timeCalculator),
+				this.scheme,
+				this.marginalUtilityOfMoney,
+				this.sigma
+		);
 	}
 
 	public void setSigma( double val ) {

@@ -16,7 +16,6 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.vis.kml.NetworkFeatureFactory;
@@ -57,7 +56,7 @@ public class MyFeatureFactory extends NetworkFeatureFactory{
 
 	public AbstractFeatureType createPTLinkFeature(final Coord from, final Coord to, Leg leg, StyleType networkStyle) {
 		FolderType folder = this.kmlObjectFactory.createFolderType();
-		double dist = (leg.getRoute() instanceof NetworkRoute ? RouteUtils.calcDistance((NetworkRoute) leg.getRoute(), this.network) : Double.NaN);
+		double dist = (leg.getRoute() instanceof NetworkRoute ? RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) leg.getRoute(), this.network) : Double.NaN);
 		folder.setName(leg.getMode() + " mode, dur: " + Time.writeTime(leg.getTravelTime()) + ", dist: " + dist);
 
 		PlacemarkType p = this.kmlObjectFactory.createPlacemarkType();
@@ -65,7 +64,7 @@ public class MyFeatureFactory extends NetworkFeatureFactory{
 			p.setName(((GenericRouteImpl) leg.getRoute()).getRouteDescription());
 		}
 
-		Coord centerCoord = this.coordTransform.transform((new CoordImpl(from.getX() + (to.getX() - from.getX())/2, from.getY() + (to.getY() - from.getY())/2)));
+		Coord centerCoord = this.coordTransform.transform((new Coord(from.getX() + (to.getX() - from.getX()) / 2, from.getY() + (to.getY() - from.getY()) / 2)));
 
 		Coord fromCoord = this.coordTransform.transform(from);
 		Coord toCoord = this.coordTransform.transform(to);
@@ -126,7 +125,7 @@ public class MyFeatureFactory extends NetworkFeatureFactory{
 
 	public AbstractFeatureType createWalkLinkFeature(final Coord from, final Coord to, Leg leg, StyleType networkStyle) {
 		PlacemarkType p = this.kmlObjectFactory.createPlacemarkType();
-		double dist = (leg.getRoute() instanceof NetworkRoute ? RouteUtils.calcDistance((NetworkRoute) leg.getRoute(), this.network) : Double.NaN);
+		double dist = (leg.getRoute() instanceof NetworkRoute ? RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) leg.getRoute(), this.network) : Double.NaN);
 		p.setName(leg.getMode() + " mode, dur: " + Time.writeTime(leg.getTravelTime()) + ", dist: " + dist);
 
 		if(leg.getRoute() != null){

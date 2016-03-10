@@ -19,28 +19,19 @@
 
 package playground.johannes.gsv.synPop.osm;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
+import org.matsim.contrib.common.util.ProgressLogger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.network.LinkImpl;
-import org.matsim.core.network.NetworkImpl;
-import org.matsim.core.network.NetworkReaderMatsimV1;
-import org.matsim.core.network.NetworkUtils;
-import org.matsim.core.network.NetworkWriter;
+import org.matsim.core.network.*;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.core.utils.geometry.CoordImpl;
 
-import playground.johannes.sna.util.ProgressLogger;
+import java.util.*;
 
 /**
  * @author johannes
@@ -67,7 +58,7 @@ public class IntersectionSimplifier2 {
 		Config config = ConfigUtils.createConfig();
 		Scenario scenario = ScenarioUtils.createScenario(config);
 		
-		NetworkReaderMatsimV1 reader = new NetworkReaderMatsimV1(scenario);
+		NetworkReaderMatsimV1 reader = new NetworkReaderMatsimV1(scenario.getNetwork());
 		reader.parse("/home/johannes/gsv/osm/network/germany-20140909.3.xml");
 		
 		IntersectionSimplifier2 simplifier = new IntersectionSimplifier2();
@@ -142,7 +133,7 @@ public class IntersectionSimplifier2 {
 					Id<Node> id = Id.createNodeId(++maxNodeId);
 					double x = (pair.getFirst().getCoord().getX() + pair.getSecond().getCoord().getX()) / 2.0;
 					double y = (pair.getFirst().getCoord().getY() + pair.getSecond().getCoord().getY()) / 2.0;
-					Node newNode = network.getFactory().createNode(id, new CoordImpl(x, y));
+					Node newNode = network.getFactory().createNode(id, new Coord(x, y));
 					network.addNode(newNode);
 
 					for (Link link : keep) {
@@ -193,7 +184,7 @@ public class IntersectionSimplifier2 {
 				}
 
 				if (link != null) {
-					double d = NetworkUtils.getEuclidianDistance(node.getCoord(), seed.getCoord());
+					double d = NetworkUtils.getEuclideanDistance(node.getCoord(), seed.getCoord());
 					if (d < minDist) {
 						minDist = d;
 						nearest = node;

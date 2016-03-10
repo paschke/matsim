@@ -35,10 +35,14 @@ import org.matsim.api.core.v01.events.LinkEnterEvent;
 import org.matsim.api.core.v01.events.LinkLeaveEvent;
 import org.matsim.api.core.v01.events.PersonArrivalEvent;
 import org.matsim.api.core.v01.events.PersonDepartureEvent;
+import org.matsim.api.core.v01.events.VehicleLeavesTrafficEvent;
+import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
 import org.matsim.api.core.v01.events.handler.LinkLeaveEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonArrivalEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonDepartureEventHandler;
+import org.matsim.api.core.v01.events.handler.VehicleLeavesTrafficEventHandler;
+import org.matsim.api.core.v01.events.handler.VehicleEntersTrafficEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
@@ -48,12 +52,14 @@ import org.matsim.contrib.evacuation.analysis.control.vis.UtilizationVisualizer;
 import org.matsim.contrib.evacuation.analysis.data.Cell;
 import org.matsim.contrib.evacuation.analysis.data.ColorationMode;
 import org.matsim.contrib.evacuation.analysis.data.EventData;
+import org.matsim.core.events.algorithms.Vehicle2DriverEventHandler;
 import org.matsim.core.utils.collections.QuadTree;
 import org.matsim.core.utils.collections.QuadTree.Rect;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.vehicles.Vehicle;
 
-public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandler, PersonArrivalEventHandler, PersonDepartureEventHandler, Runnable {
+public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandler, PersonArrivalEventHandler, PersonDepartureEventHandler, 
+Runnable, VehicleEntersTrafficEventHandler, VehicleLeavesTrafficEventHandler {
 
 	private HashMap<Integer, int[]> networkLinks = null;
 
@@ -93,6 +99,8 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 	
 	private boolean useCellCount = true;
 	private double sampleSize = 0.1;
+
+	private Vehicle2DriverEventHandler delegate = new Vehicle2DriverEventHandler();
 
 	public EventHandler(boolean useCellCount, String eventFilename, Scenario sc, double cellSize, Thread readerThread) {
 		this.useCellCount = useCellCount;
@@ -164,7 +172,7 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 		for (double x = minX; x <= maxX; x += cellSize) {
 			for (double y = minY; y <= maxY; y += cellSize) {
 				Cell cell = new Cell(new LinkedList<Event>());
-				cell.setCoord(new CoordImpl(x, y));
+				cell.setCoord(new Coord(x, y));
 				this.cellTree.put(x, y, cell);
 				cellCount++;
 			}
@@ -191,7 +199,7 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 
 	@Override
 	public void reset(int iteration) {
-
+		delegate.reset(iteration);
 	}
 
 	@Override
@@ -206,7 +214,7 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 		PersonDepartureEvent departure = (PersonDepartureEvent) this.events.get(event.getPersonId());
 		Link link = this.network.getLinks().get(departure.getLinkId());
 		Coord c = link.getCoord();
-		Cell cell = this.cellTree.get(c.getX(), c.getY());
+		Cell cell = this.cellTree.getClosest(c.getX(), c.getY());
 
 		// get the cell data, store event to it
 		List<Event> cellEvents = cell.getData();
@@ -224,7 +232,7 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 		PersonDepartureEvent departure = (PersonDepartureEvent) this.events.get(event.getPersonId());
 		Link link = this.network.getLinks().get(departure.getLinkId());
 		Coord c = link.getCoord();
-		Cell cell = this.cellTree.get(c.getX(), c.getY());
+		Cell cell = this.cellTree.getClosest(c.getX(), c.getY());
 
 		// get the cell data, store event to it
 		List<Event> cellEvents = cell.getData();
@@ -262,17 +270,18 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 
 	@Override
 	public void handleEvent(LinkEnterEvent event) {
-		if (event.getPersonId().toString().contains("veh"))
+		Id<Person> personId = delegate.getDriverOfVehicle(event.getVehicleId());
+		
+		if (personId.toString().contains("veh"))
 			return;
 
 		// get link id
 		Id<Link> linkId = event.getLinkId();
-		Id<Person> personId = event.getPersonId();
-
+		
 		// get cell from person id
 		Link link = this.network.getLinks().get(linkId);
 		Coord c = link.getCoord();
-		Cell cell = this.cellTree.get(c.getX(), c.getY());
+		Cell cell = this.cellTree.getClosest(c.getX(), c.getY());
 
 		// do not consider the exit link
 		if ((ignoreExitLink) && (cell.getId().toString().equals("" + Cell.getCurrentId())))
@@ -302,12 +311,12 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 
 		// get link id
 		Id<Link> linkId = event.getLinkId();
-		Id<Person> personId = event.getPersonId();
+		Id<Person> personId = delegate.getDriverOfVehicle(event.getVehicleId());
 
 		// get cell from person id
 		Link link = this.network.getLinks().get(linkId);
 		Coord c = link.getCoord();
-		Cell cell = this.cellTree.get(c.getX(), c.getY());
+		Cell cell = this.cellTree.getClosest(c.getX(), c.getY());
 
 		// do not consider the exit link
 		if ((ignoreExitLink) && (cell.getId().toString().equals("" + Cell.getCurrentId())))
@@ -394,7 +403,7 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 				double latestTime = currentLinkLeaveTimes.get(confidentElementNo).getSecond();
 				maxClearingTime = Math.max(latestTime, maxClearingTime);
 
-				cellTree.get(boundary, cells);
+				cellTree.getRectangle(boundary, cells);
 
 				for (Cell cell : cells)
 					cell.updateClearanceTime(latestTime);
@@ -410,6 +419,16 @@ public class EventHandler implements LinkEnterEventHandler, LinkLeaveEventHandle
 	public void setTransparency(float cellTransparency) {
 		this.cellTransparency = cellTransparency;
 
+	}
+
+	@Override
+	public void handleEvent(VehicleLeavesTrafficEvent event) {
+		delegate.handleEvent(event);
+	}
+
+	@Override
+	public void handleEvent(VehicleEntersTrafficEvent event) {
+		delegate.handleEvent(event);
 	}
 
 }

@@ -19,7 +19,12 @@
 
 package playground.pbouman.crowdedness.test;
 
-import junit.framework.Assert;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+
+import com.google.inject.Provides;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.api.core.v01.Coord;
@@ -28,24 +33,40 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.NetworkFactory;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.*;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.PopulationFactory;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.config.groups.StrategyConfigGroup.StrategySettings;
+import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.functions.CharyparNagelScoringFunctionFactory;
-import org.matsim.pt.transitSchedule.api.*;
+import org.matsim.pt.transitSchedule.api.Departure;
+import org.matsim.pt.transitSchedule.api.TransitLine;
+import org.matsim.pt.transitSchedule.api.TransitRoute;
+import org.matsim.pt.transitSchedule.api.TransitRouteStop;
+import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.pt.transitSchedule.api.TransitScheduleFactory;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import org.matsim.testcases.MatsimTestUtils;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleCapacity;
 import org.matsim.vehicles.VehicleType;
 import org.matsim.vehicles.VehiclesFactory;
+
+import junit.framework.Assert;
 import playground.pbouman.crowdedness.CrowdedScoringFunctionFactory;
 import playground.pbouman.crowdedness.CrowdednessObserver;
 import playground.pbouman.crowdedness.events.CrowdedPenaltyEvent;
@@ -54,10 +75,8 @@ import playground.pbouman.crowdedness.events.PersonCrowdednessEvent;
 import playground.pbouman.crowdedness.events.PersonCrowdednessEventHandler;
 import playground.pbouman.crowdedness.rules.SimpleRule;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Provider;
 
 /**
  * 
@@ -79,96 +98,91 @@ public class CrowdednessTest
 	@Test
 	public final void testCrowdednessEvents()
 	{
-		final ScenarioImpl scen = generateScenario();
+		final MutableScenario scen = generateScenario();
 		scen.getConfig().controler().setLastIteration(0);
-				
+		scen.getConfig().controler().setOutputDirectory(utils.getOutputDirectory());
+
+		final ArrayList<CrowdedPenaltyEvent> cpes = new ArrayList<>();
 		Controler c = new Controler(scen) ;
-//		{
-//			@Override protected ScoringFunctionFactory loadScoringFunctionFactory()
-//			{
-//				return new CrowdedScoringFunctionFactory(super.loadScoringFunctionFactory(), getEvents());
-//			}
-//		};
+		c.addOverridingModule(new AbstractModule() {
+			@Override
+			public void install() {
+				addEventHandlerBinding().toProvider(new Provider<EventHandler>() {
 
-        c.setScoringFunctionFactory(
-				new CrowdedScoringFunctionFactory( 
-						new CharyparNagelScoringFunctionFactory(c.getConfig().planCalcScore(), c.getScenario().getNetwork()), c.getEvents()
-						)
-				) ;
-
-	
-		c.getConfig().controler().setOutputDirectory(utils.getOutputDirectory());
-		
-		//c.setOverwriteFiles(true);
-		
-		c.getEvents().addHandler(new CrowdednessObserver(scen,c.getEvents(), new SimpleRule()));
-		
-		c.getEvents().addHandler(
-				new PersonCrowdednessEventHandler()
-				{
+					@Inject
+					EventsManager eventsManager;
 
 					@Override
-					public void reset(int iteration) {}
+					public EventHandler get() {
+						return new CrowdednessObserver(scen, eventsManager, new SimpleRule());
+					}
+				});
+				PersonCrowdednessEventHandler personCrowdednessEventHandler = new PersonCrowdednessEventHandler() {
+
+					@Override
+					public void reset(int iteration) {
+					}
+
 					@Override
 					public void handleEvent(PersonCrowdednessEvent event) {
-						
-						if (scen.getPopulation().getPersons().get(event.getPersonId()) != null)
-						{
-						
+
+						if (scen.getPopulation().getPersons().get(event.getPersonId()) != null) {
+
 							Vehicle v = scen.getTransitVehicles().getVehicles().get(event.getVehicleId());
 							VehicleCapacity cap = v.getType().getCapacity();
-							
+
 							// As we create only 1 agent and there should be a driver in the vehicle,
 							// we know how crowded the vehicle should be when we know the capacity.
 							// Also, since we use the simple rule, both should be sitting if the seat
 							// capacity is larger than 1;
-							
+
 							int seats = cap.getSeats();
 							int stand = cap.getStandingRoom();
-						
+
 							int total = seats + stand;
-							
+
 							Assert.assertEquals("The crowdedness should be equal to 2 people divided by the capacity.", 2d / total, event.getTotalCrowdedness(), MatsimTestUtils.EPSILON);
-							
-							if (seats > 1)
-							{
+
+							if (seats > 1) {
 								Assert.assertEquals("The seat crowdedness should be equal to 2 divided by the number of seats.", 2d / seats, event.getSeatCrowdedness(), MatsimTestUtils.EPSILON);
 								Assert.assertEquals("Since no one should be sitting, the standing crowdedness should be 0.", 0d, event.getStandCrowdedness(), 0.0001);
 							}
-							
+
 						}
-						
+
 					}
-					
-				}
-		);
-		
-		final ArrayList<CrowdedPenaltyEvent> cpes = new ArrayList<CrowdedPenaltyEvent>();
-		
-		c.getEvents().addHandler(
-				new CrowdedPenaltyEventHandler()
-				{
+
+				};
+				addEventHandlerBinding().toInstance(personCrowdednessEventHandler);
+				CrowdedPenaltyEventHandler crowdedPenaltyEventHandler = new CrowdedPenaltyEventHandler() {
 
 					@Override
-					public void reset(int iteration) {}
+					public void reset(int iteration) {
+					}
 
 					@Override
-					public void handleEvent(CrowdedPenaltyEvent event)
-					{
-						if (scen.getPopulation().getPersons().containsKey(event.getPersonId()))
-						{
+					public void handleEvent(CrowdedPenaltyEvent event) {
+						if (scen.getPopulation().getPersons().containsKey(event.getPersonId())) {
 							//TODO: if we define a formal scoring function and have programmatic control
 							//      over the outcome of penalties, we should include them here.
 							//      For now, we can only assume that the penalty is nonnegative.
-							
+
 							Assert.assertTrue("The penalty for crowdedness cannot be negative", event.getPenalty() >= 0d);
 							cpes.add(event);
 						}
 					}
-					
-				}
-		);
-		
+
+				};
+				addEventHandlerBinding().toInstance(crowdedPenaltyEventHandler);
+
+			}
+
+			@Provides
+			ScoringFunctionFactory provideScoringFunctionFactory(EventsManager eventsManager) {
+				return new CrowdedScoringFunctionFactory(new CharyparNagelScoringFunctionFactory(scen), eventsManager);
+			}
+
+		});
 		c.run();
 		
 		// Since there is one agent that should make two trips using Public Transport,
@@ -179,7 +193,7 @@ public class CrowdednessTest
 	}
 
 	
-	private ScenarioImpl generateScenario()
+	private MutableScenario generateScenario()
 	{
 		Config config = ConfigUtils.createConfig();
 		config.transit().setUseTransit(true);
@@ -191,7 +205,7 @@ public class CrowdednessTest
 		HashSet<String> transitModes = new HashSet<String>();
 		transitModes.add("pt");
 		config.transit().setTransitModes(transitModes);
-		ScenarioImpl scen = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scen = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		
 		/* ******** *
@@ -218,15 +232,15 @@ public class CrowdednessTest
 		NetworkFactory nw = net.getFactory();
 		
 		Node a, b, c, u, v, w;
-		
+
 		Node [] nodes = new Node [] {
-				a = nw.createNode(Id.create("a", Node.class), scen.createCoord(boxSize/2 , boxSize / 2 - ySpan)),
-				b = nw.createNode(Id.create("b", Node.class), scen.createCoord(boxSize/2 , boxSize / 2 + ySpan)),
-				c = nw.createNode(Id.create("c", Node.class), scen.createCoord(boxSize/2, boxSize / 2)),
+				a = nw.createNode(Id.create("a", Node.class), new Coord(boxSize / 2, boxSize / 2 - ySpan)),
+				b = nw.createNode(Id.create("b", Node.class), new Coord(boxSize / 2, boxSize / 2 + ySpan)),
+				c = nw.createNode(Id.create("c", Node.class), new Coord(boxSize / 2, boxSize / 2)),
 		
-				u = nw.createNode(Id.create("u", Node.class), scen.createCoord(longDist + boxSize / 2, boxSize / 2 - ySpan)),
-				v = nw.createNode(Id.create("v", Node.class), scen.createCoord(longDist + boxSize / 2, boxSize / 2 + ySpan)),
-				w = nw.createNode(Id.create("w", Node.class), scen.createCoord(longDist + boxSize / 2, boxSize / 2)),
+				u = nw.createNode(Id.create("u", Node.class), new Coord(longDist + boxSize / 2, boxSize / 2 - ySpan)),
+				v = nw.createNode(Id.create("v", Node.class), new Coord(longDist + boxSize / 2, boxSize / 2 + ySpan)),
+				w = nw.createNode(Id.create("w", Node.class), new Coord(longDist + boxSize / 2, boxSize / 2)),
 		};
 		
 		for (Node n : nodes)

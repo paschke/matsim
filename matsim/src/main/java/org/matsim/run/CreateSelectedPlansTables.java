@@ -37,16 +37,13 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.network.MatsimNetworkReader;
-import org.matsim.core.population.MatsimPopulationReader;
-import org.matsim.core.population.PersonImpl;
-import org.matsim.core.population.PlanImpl;
-import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.population.*;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.households.Households;
-import org.matsim.lanes.data.v20.LaneDefinitions20;
+import org.matsim.lanes.data.v20.Lanes;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.Vehicles;
 
@@ -68,7 +65,7 @@ public class CreateSelectedPlansTables {
 
 	// true if there are two plans to evaluate (compare)
 	private boolean twoPlans;
-	private ScenarioImpl scenario;
+	private MutableScenario scenario;
 //	private NetworkLayer network;
 
 	private final double [] sumPlanTraveltime={0.0, 0.0};
@@ -113,13 +110,13 @@ public class CreateSelectedPlansTables {
 	}
 
 	private void init(final String networkPath) {
-		this.scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		this.scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 
 		this.plans0= ScenarioUtils.createScenario(ConfigUtils.createConfig()).getPopulation();
 		this.plans1= ScenarioUtils.createScenario(ConfigUtils.createConfig()).getPopulation();
 
 		System.out.println("  reading the network...");
-		new MatsimNetworkReader(this.scenario).readFile(networkPath);
+		new MatsimNetworkReader(this.scenario.getNetwork()).readFile(networkPath);
 	}
 
 	private void readPlansFile(final String plansfilePath, final Population plans) {
@@ -183,13 +180,13 @@ public class CreateSelectedPlansTables {
 
 				// method person.toString() not appropriate
 				out.write(person_id.toString()+"\t");
-				final PersonImpl person=(PersonImpl) this.plans0.getPersons().get(person_id);
-				out.write(person.getSex()+"\t");
-				out.write(person.getAge()+"\t");
-				out.write(person.getLicense()+"\t");
-				out.write(person.getCarAvail()+"\t");
-				if (person.isEmployed() != null)
-					out.write((person.isEmployed() ? "yes" : "no"));
+				final Person person= this.plans0.getPersons().get(person_id);
+				out.write(PersonUtils.getSex(person)+"\t");
+				out.write(PersonUtils.getAge(person)+"\t");
+				out.write(PersonUtils.getLicense(person)+"\t");
+				out.write(PersonUtils.getCarAvail(person)+"\t");
+				if (PersonUtils.isEmployed(person) != null)
+					out.write((PersonUtils.isEmployed(person) ? "yes" : "no"));
 				out.write("\t");
 
 				Plan selectedPlan = person.getSelectedPlan();
@@ -346,9 +343,8 @@ public class CreateSelectedPlansTables {
 			return this.myPopulation;
 		}
 
-		@Override
 		public Coord createCoord(double x, double y) {
-			return this.scenario.createCoord(x, y);
+			return new Coord(x, y);
 		}
 
 		@Override
@@ -377,11 +373,6 @@ public class CreateSelectedPlansTables {
 		}
 
 		@Override
-		public Object removeScenarioElement(String name) {
-			return scenario.removeScenarioElement(name);
-		}
-
-		@Override
 		public Object getScenarioElement(String name) {
 			return scenario.getScenarioElement(name);
 		}
@@ -397,7 +388,7 @@ public class CreateSelectedPlansTables {
 		}
 
 		@Override
-		public LaneDefinitions20 getLanes() {
+		public Lanes getLanes() {
 			return scenario.getLanes();
 		}
 

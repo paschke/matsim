@@ -19,10 +19,19 @@
  * *********************************************************************** */
 package playground.thibautd.geocoding;
 
+import org.matsim.api.core.v01.Coord;
+import org.matsim.core.utils.collections.MapUtils;
+import org.matsim.core.utils.geometry.CoordUtils;
+import org.matsim.core.utils.geometry.transformations.WGS84toCH1903LV03;
+import org.matsim.core.utils.io.IOUtils;
+import org.matsim.core.utils.io.UncheckedIOException;
+import playground.ivt.utils.ArgParser;
+import playground.thibautd.geocoding.MapquestResult.Result;
+import playground.thibautd.utils.CsvUtils;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,18 +39,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
-import org.matsim.api.core.v01.Coord;
-import org.matsim.core.utils.geometry.CoordImpl;
-import org.matsim.core.utils.geometry.CoordUtils;
-import org.matsim.core.utils.geometry.transformations.WGS84toCH1903LV03;
-import org.matsim.core.utils.io.IOUtils;
-import org.matsim.core.utils.io.UncheckedIOException;
-
-import playground.ivt.utils.ArgParser;
-import org.matsim.core.utils.collections.MapUtils;
-import playground.thibautd.geocoding.MapquestResult.Result;
-import playground.thibautd.utils.CsvUtils;
 
 /**
  * @author thibautd
@@ -194,7 +191,7 @@ public class GeolocalizeCsvDataWithMapquest {
 				fields[ 7 ] = result.getLongitude().toString();
 				fields[ 8 ] = result.getLatitude().toString();
 
-				final Coord wgsCoord = new CoordImpl( result.getLongitude() , result.getLatitude() );
+				final Coord wgsCoord = new Coord(result.getLongitude(), result.getLatitude());
 				final Coord chCoord = new WGS84toCH1903LV03().transform( wgsCoord );
 				fields[ 9 ] = ""+chCoord.getX();
 				fields[ 10 ] = ""+chCoord.getY();
@@ -293,7 +290,7 @@ public class GeolocalizeCsvDataWithMapquest {
 
 		for ( Result r : inStreet ) {
 			final Coord c = r.getCH03Coord();
-			final double dist = CoordUtils.calcDistance( c , center );
+			final double dist = CoordUtils.calcEuclideanDistance( c , center );
 			if ( dist < min ) {
 				min = dist;
 				closest = r;
@@ -317,7 +314,7 @@ public class GeolocalizeCsvDataWithMapquest {
 			maxY = Math.max( maxY , c.getY() );
 		}
 
-		return new CoordImpl( (minX + maxX) / 2 , (minY + maxY) / 2 );
+		return new Coord((minX + maxX) / 2, (minY + maxY) / 2);
 	}
 
 	private static void filterBadAddresses(
@@ -464,7 +461,8 @@ public class GeolocalizeCsvDataWithMapquest {
 				final int index ) {
 			try {
 				return
-					fields[ index ].isEmpty() ||
+					index == -1 ||
+						fields[ index ].isEmpty() ||
 					fields[ index ].equals( "NULL" ) ||
 					fields[ index ].equals( "NA" )?
 						null :

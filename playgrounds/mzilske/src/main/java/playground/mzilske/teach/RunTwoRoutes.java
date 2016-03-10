@@ -64,14 +64,14 @@ public class RunTwoRoutes {
             config.strategy().addStrategySettings(stratSets);
         }
         final Scenario scenario = ScenarioUtils.createScenario(config);
-        new MatsimNetworkReader(scenario).parse(this.getClass().getResourceAsStream("two-routes.xml"));
+        new MatsimNetworkReader(scenario.getNetwork()).parse(this.getClass().getResourceAsStream("two-routes.xml"));
         new MatsimPopulationReader(scenario).parse(this.getClass().getResourceAsStream("thirty.xml"));
         Controler controler = new Controler(scenario);
         controler.setScoringFunctionFactory(new ScoringFunctionFactory() {
             @Override
             public ScoringFunction createNewScoringFunction(Person person) {
                 SumScoringFunction sumScoringFunction = new SumScoringFunction();
-                sumScoringFunction.addScoringFunction(new CharyparNagelLegScoring(CharyparNagelScoringParameters.getBuilder(scenario.getConfig().planCalcScore()).create(), scenario.getNetwork()));
+                sumScoringFunction.addScoringFunction(new CharyparNagelLegScoring(new CharyparNagelScoringParameters.Builder(scenario.getConfig().planCalcScore(), scenario.getConfig().planCalcScore().getScoringParameters(null), scenario.getConfig().scenario()).build(), scenario.getNetwork()));
                 return sumScoringFunction;
             }
         });

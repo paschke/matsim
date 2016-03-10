@@ -20,13 +20,15 @@ package playground.thibautd.socnetsimusages.traveltimeequity;
 
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.array.TDoubleArrayList;
-import org.matsim.contrib.socnetsim.jointactivities.replanning.modules.prismiclocationchoice.PrismicLocationChoiceAlgorithm.Subchain;
 import org.matsim.contrib.socnetsim.jointactivities.replanning.modules.prismiclocationchoice.PrismicLocationChoiceAlgorithm.LocationChooser;
+import org.matsim.contrib.socnetsim.jointactivities.replanning.modules.prismiclocationchoice.PrismicLocationChoiceAlgorithm.Subchain;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Random;
 
 /**
  * @author thibautd
@@ -64,8 +66,8 @@ public class DistanceStandardDeviationLocationChooser implements LocationChooser
 
 		double avg = 0;
 		for ( Subchain s : subchains ) {
-			final double distance = CoordUtils.calcDistance( s.getStart().getCoord() , f.getCoord() ) +
-							CoordUtils.calcDistance( s.getEnd().getCoord() , f.getCoord() );
+			final double distance = CoordUtils.calcEuclideanDistance( s.getStart().getCoord() , f.getCoord() ) +
+							CoordUtils.calcEuclideanDistance( s.getEnd().getCoord() , f.getCoord() );
 			distances.add( distance );
 			avg += distance;
 		}

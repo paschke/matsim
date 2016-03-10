@@ -34,7 +34,6 @@ import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.PlanImpl;
 import org.matsim.core.utils.io.IOUtils;
 
@@ -79,6 +78,7 @@ public class LinkTablesEventHandler implements LinkLeaveEventHandler, ActivityEn
 	// event handlers
 	//////////////////////////////////////////////////////////////////////
 
+	@Override
 	public void handleEvent(LinkLeaveEvent event) {
 		try {
 			if ((currentBin+1)*timeBinSize<=event.getTime()) {
@@ -88,7 +88,7 @@ public class LinkTablesEventHandler implements LinkLeaveEventHandler, ActivityEn
 				out = IOUtils.getBufferedWriter(outdir+"/linkAnalysis_car_"+(currentBin*timeBinSize)+"-"+((currentBin+1)*timeBinSize)+".txt.gz");
 				out.write("lid\tpid\tfromActType\tfromActFid\ttoActType\ttoActFid\n");
 			}
-			Person p = population.getPersons().get(event.getPersonId());
+			Person p = population.getPersons().get(Id.create(event.getVehicleId(), Person.class));
 			Activity fromAct = fromActs.get(p.getId());
 			Leg leg = ((PlanImpl) p.getSelectedPlan()).getNextLeg(fromAct);
 			Activity toAct = ((PlanImpl) p.getSelectedPlan()).getNextActivity(leg);
@@ -99,6 +99,7 @@ public class LinkTablesEventHandler implements LinkLeaveEventHandler, ActivityEn
 		} catch (Exception e) { throw new RuntimeException(e); }
 	}
 
+	@Override
 	public void handleEvent(ActivityEndEvent event) {
 		Person p = population.getPersons().get(event.getPersonId());
 		if (!fromActs.containsKey(p.getId())) {
@@ -112,6 +113,7 @@ public class LinkTablesEventHandler implements LinkLeaveEventHandler, ActivityEn
 		}
 	}
 
+	@Override
 	public void reset(int iteration) {
 		currentBin = -1;
 		fromActs.clear();

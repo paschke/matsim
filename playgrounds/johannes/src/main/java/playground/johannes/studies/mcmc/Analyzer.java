@@ -19,23 +19,18 @@
  * *********************************************************************** */
 package playground.johannes.studies.mcmc;
 
-import java.io.IOException;
-
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.contrib.socnetgen.sna.graph.analysis.*;
+import org.matsim.contrib.socnetgen.sna.graph.social.SocialGraph;
+import org.matsim.contrib.socnetgen.sna.graph.social.analysis.SocialAnalyzerTask;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.analysis.ExtendedSpatialAnalyzerTask;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.analysis.SpatialAnalyzerTask;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.scenario.ScenarioUtils;
+import playground.johannes.studies.sbsurvey.io.SocialSparseGraphMLReader;
 
-import playground.johannes.sna.graph.analysis.GraphAnalyzer;
-import playground.johannes.socialnetworks.graph.analysis.AnalyzerTaskArray;
-import playground.johannes.socialnetworks.graph.analysis.AnalyzerTaskComposite;
-import playground.johannes.socialnetworks.graph.analysis.ExtendedTopologyAnalyzerTask;
-import playground.johannes.socialnetworks.graph.analysis.TopologyAnalyzerTask;
-import playground.johannes.socialnetworks.graph.social.SocialGraph;
-import playground.johannes.socialnetworks.graph.social.analysis.SocialAnalyzerTask;
-import playground.johannes.socialnetworks.graph.spatial.analysis.ExtendedSpatialAnalyzerTask;
-import playground.johannes.socialnetworks.graph.spatial.analysis.SpatialAnalyzerTask;
-import playground.johannes.socialnetworks.survey.ivt2009.graph.io.SocialSparseGraphMLReader;
+import java.io.IOException;
 
 /**
  * @author illenberger

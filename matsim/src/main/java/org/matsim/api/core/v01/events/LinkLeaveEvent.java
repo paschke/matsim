@@ -27,29 +27,23 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.vehicles.Vehicle;
 
-/**
- * Design considerations: <ul>
- * <li> This class deliberately does <i>not</i> implement HasPersonId.  One reason is that it does not really
- * belong at this level (since it is the vehicle that enters/leaves links); another reason is that this would
- * make an "instanceof HasPersonId" considerably more expensive. kai/dg, dec'12
- * </ul> 
- *
- */
 public class LinkLeaveEvent extends Event {
 
 	public static final String EVENT_TYPE = "left link";
-	public static final String ATTRIBUTE_PERSON = "person";
 	public static final String ATTRIBUTE_LINK = "link";
 	public static final String ATTRIBUTE_VEHICLE = "vehicle";
 	
-	private final Id<Person> personId;
 	private final Id<Link> linkId;
 	private final Id<Vehicle> vehicleId;
 
-	public LinkLeaveEvent(final double time, final Id<Person> agentId, final Id<Link> linkId, Id<Vehicle> vehicleId) {
+	final static String missingDriverIdMessage = "driver (or person) id does no longer exist in LinkEnter/LeaveEvent; use vehicle ID instead.  See Vehicle2DriverEventHandler for an approach to reconstruct the driver id.";
+
+	public LinkLeaveEvent(final double time, final Id<Vehicle> vehicleId, final Id<Link> linkId) {
 		super(time);
-		this.personId = agentId;
 		this.linkId = linkId;
+		if ( vehicleId==null ) {
+			throw new RuntimeException( LinkEnterEvent.missingVehicleIdMessage ) ;
+		}
 		this.vehicleId = vehicleId;
 	}
 
@@ -58,9 +52,13 @@ public class LinkLeaveEvent extends Event {
 		return EVENT_TYPE;
 	}
 
+	/**
+	 * Please use getVehicleId() instead. 
+	 * Vehicle-driver relations can be made by Wait2Link (now: VehicleEntersTraffic) and VehicleLeavesTraffic Events.
+	 */
 	@Deprecated
-	public Id<Person> getPersonId() {
-		return this.personId;
+	public Id<Person> getDriverId() {
+		throw new RuntimeException(missingDriverIdMessage ) ;
 	}
 
 	public Id<Link> getLinkId() {
@@ -74,11 +72,8 @@ public class LinkLeaveEvent extends Event {
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
-		attr.put(ATTRIBUTE_PERSON, this.personId.toString());
+		attr.put(ATTRIBUTE_VEHICLE, this.vehicleId.toString());
 		attr.put(ATTRIBUTE_LINK, this.linkId.toString());
-		if (this.vehicleId != null) {
-			attr.put(ATTRIBUTE_VEHICLE, this.vehicleId.toString());
-		}
 		return attr;
 	}
 }

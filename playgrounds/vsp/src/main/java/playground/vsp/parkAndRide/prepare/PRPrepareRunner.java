@@ -23,12 +23,12 @@
  */
 package playground.vsp.parkAndRide.prepare;
 
-import java.io.IOException;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
+
+import java.io.IOException;
 
 /**
  * @author Ihab
@@ -73,7 +73,7 @@ public class PRPrepareRunner {
 	private double length = 20;
 	private double nrOfLanes = 40;
 	
-	private ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+	private MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 
 	public static void main(String[] args) throws IOException {
 		
@@ -115,7 +115,6 @@ public class PRPrepareRunner {
 		config.transit().setTransitScheduleFile(scheduleFile);
 		config.transit().setVehiclesFile(vehiclesFile);
 		config.network().setInputFile(networkFile);
-		ScenarioLoaderImpl scenarioLoader = new ScenarioLoaderImpl(scenario);
-		scenarioLoader.loadScenario();		
+		ScenarioUtils.loadScenario(scenario);
 	}
 }

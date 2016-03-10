@@ -19,12 +19,15 @@
 
 package playground.johannes.gsv.synPop.analysis;
 
-import gnu.trove.TDoubleArrayList;
-import gnu.trove.TDoubleDoubleHashMap;
+import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-import playground.johannes.synpop.data.*;
-import playground.johannes.sna.util.TXTWriter;
-import playground.johannes.socialnetworks.statistics.Correlations;
+import org.matsim.contrib.common.stats.Correlations;
+import org.matsim.contrib.common.stats.StatsWriter;
+import playground.johannes.synpop.data.Attributable;
+import playground.johannes.synpop.data.CommonKeys;
+import playground.johannes.synpop.data.Episode;
+import playground.johannes.synpop.data.Person;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -55,10 +58,10 @@ public class DistanceStartTimeTask extends AnalyzerTask {
 
         if(outputDirectoryNotNull()) {
             try {
-                TDoubleDoubleHashMap corr = Correlations.mean(startVals.toNativeArray(), distVals.toNativeArray(), 3600);
-                TXTWriter.writeMap(corr, "startTime", "distance", getOutputDirectory() + "/distStartTime.txt");
+                TDoubleDoubleHashMap corr = Correlations.mean(startVals.toArray(), distVals.toArray(), 3600);
+                StatsWriter.writeHistogram(corr, "startTime", "distance", getOutputDirectory() + "/distStartTime.txt");
 
-                TXTWriter.writeScatterPlot(startVals, distVals, "startTime", "distance", getOutputDirectory() + "/distStartTime.scatter.txt");
+                StatsWriter.writeScatterPlot(startVals, distVals, "startTime", "distance", getOutputDirectory() + "/distStartTime.scatter.txt");
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -258,7 +258,7 @@ public class TwoDTree<T extends TwoDObject> {
 
 	}
 
-
+	/*
 	public static void main(String [] args) {
 		for (int i = 10000; i <= 10000; i++) {
 			System.out.println(i);
@@ -368,5 +368,5 @@ public class TwoDTree<T extends TwoDObject> {
 			return this.y;
 		}
 
-	}
+	}*/
 }

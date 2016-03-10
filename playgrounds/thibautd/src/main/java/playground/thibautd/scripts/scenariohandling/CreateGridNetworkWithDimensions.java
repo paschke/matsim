@@ -19,17 +19,25 @@
  * *********************************************************************** */
 package playground.thibautd.scripts.scenariohandling;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.network.*;
+import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.network.NetworkFactory;
+import org.matsim.api.core.v01.network.NetworkWriter;
+import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import playground.ivt.utils.ArgParser;
 import playground.ivt.utils.ArgParser.Args;
 import playground.thibautd.utils.UniqueIdFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * @author thibautd
@@ -190,7 +198,7 @@ public class CreateGridNetworkWithDimensions {
 			nodes.add(
 					factory.createNode(
 						nodeIdFactory.createNextId(Node.class),
-						new CoordImpl( i * length , y ) ) );
+							new Coord(i * length, y)) );
 		}
 		return nodes;
 	}

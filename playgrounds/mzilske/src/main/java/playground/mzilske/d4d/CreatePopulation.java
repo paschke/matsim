@@ -34,9 +34,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.PopulationWriter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.ShapeFileWriter;
 import org.matsim.core.utils.io.tabularFileParser.TabularFileHandler;
@@ -64,11 +63,11 @@ public class CreatePopulation {
 
 	private Random rnd = new Random();
 
-	private ScenarioImpl scenario;
+	private MutableScenario scenario;
 
 
-	private Coord min = D4DConsts.ct.transform(new CoordImpl(minLong, minLat));
-	private Coord max = D4DConsts.ct.transform(new CoordImpl(maxLong, maxLat));
+	private Coord min = D4DConsts.ct.transform(new Coord(minLong, minLat));
+	private Coord max = D4DConsts.ct.transform(new Coord(maxLong, maxLat));
 
 
 	public Scenario readScenario(Config config) throws FileNotFoundException  {
@@ -95,7 +94,7 @@ public class CreatePopulation {
 
 	public Map<Id, List<Sighting>> readNetworkAndSightings(Config config)
 			throws FileNotFoundException {
-		scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 		readNetwork();
 		readPosts();
 
@@ -123,7 +122,7 @@ public class CreatePopulation {
 
 			@Override
 			public void startRow(String[] row) {
-				CoordImpl longLat = new CoordImpl(Double.parseDouble(row[1]), Double.parseDouble(row[2]));
+				Coord longLat = new Coord(Double.parseDouble(row[1]), Double.parseDouble(row[2]));
 				Coord coord = D4DConsts.ct.transform(longLat);
 				if (Double.isNaN(coord.getX()) || Double.isNaN(coord.getY())) {
 					throw new RuntimeException("Bad latlong: " + coord);
@@ -143,7 +142,7 @@ public class CreatePopulation {
 
 	private void readNetwork() {
 		String filename = D4DConsts.WORK_DIR + "network-simplified.xml";
-		new MatsimNetworkReader(scenario).readFile(filename);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(filename);
 	}
 
 

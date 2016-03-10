@@ -10,13 +10,20 @@ import org.matsim.api.core.v01.events.LinkEnterEvent;
 import org.matsim.api.core.v01.events.LinkLeaveEvent;
 import org.matsim.api.core.v01.events.PersonArrivalEvent;
 import org.matsim.api.core.v01.events.PersonDepartureEvent;
-import org.matsim.api.core.v01.events.Wait2LinkEvent;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.gbl.MatsimRandom;
+import org.matsim.core.scenario.ScenarioUtils;
 
 public class EquilPlans1Test extends AbstractJDEQSimTest {
 
 	public void test_EmptyCarRoute() {
-		Scenario scenario = ScenarioLoaderImpl.createScenarioLoaderImplAndResetRandomSeed("test/scenarios/equil/config_plans1.xml").loadScenario();
+		Config config = ConfigUtils.loadConfig("test/scenarios/equil/config_plans1.xml");
+		MatsimRandom.reset(config.global().getRandomSeed());
+		Scenario scenario = ScenarioUtils.createScenario(config);
+		ScenarioUtils.loadScenario(scenario);
+
 		this.runJDEQSim(scenario);
 		
 		assertEquals(1, eventsByPerson.size());
@@ -33,7 +40,7 @@ public class EquilPlans1Test extends AbstractJDEQSimTest {
 			assertEquals(21600, list.get(index).getTime(), 0.9);
 			assertTrue(list.get(index++) instanceof ActivityEndEvent);
 			assertTrue(list.get(index++) instanceof PersonDepartureEvent);
-			assertTrue(list.get(index++) instanceof Wait2LinkEvent);
+			assertTrue(list.get(index++) instanceof VehicleEntersTrafficEvent);
 			assertTrue(list.get(index++) instanceof LinkLeaveEvent);
 			assertTrue(list.get(index++) instanceof LinkEnterEvent);
 			assertTrue(list.get(index++) instanceof LinkLeaveEvent);
@@ -48,7 +55,7 @@ public class EquilPlans1Test extends AbstractJDEQSimTest {
 			assertTrue(list.get(index++) instanceof ActivityStartEvent);
 			assertTrue(list.get(index++) instanceof ActivityEndEvent);
 			assertTrue(list.get(index++) instanceof PersonDepartureEvent);
-			assertTrue(list.get(index++) instanceof Wait2LinkEvent);
+			assertTrue(list.get(index++) instanceof VehicleEntersTrafficEvent);
 			assertTrue(list.get(index++) instanceof LinkLeaveEvent);
 			assertTrue(list.get(index++) instanceof LinkEnterEvent);
 			assertTrue(list.get(index++) instanceof LinkLeaveEvent);

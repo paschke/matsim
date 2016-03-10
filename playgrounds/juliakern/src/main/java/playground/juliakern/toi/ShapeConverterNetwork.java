@@ -32,6 +32,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.config.Config;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.network.algorithms.NetworkCleaner;
@@ -53,7 +54,7 @@ public class ShapeConverterNetwork {
 		
 		Config config = new Config();
 		config.addCoreModules();
-		Controler controler = new Controler(config);
+		MatsimServices controler = new Controler(config);
 		Scenario scenario = controler.getScenario();
 
 		ShapeFileReader sfr = new ShapeFileReader();
@@ -81,7 +82,7 @@ public class ShapeConverterNetwork {
 				// create from node (if it doesnt exist yet)
 				Double fromNodeX = (Double) sf.getAttribute("X_fra");
 				Double fromNodeY = (Double) sf.getAttribute("Y_fra");
-				Coord fromCoord = scenario.createCoord(fromNodeX, fromNodeY);
+				Coord fromCoord = new Coord(fromNodeX, fromNodeY);
 				Long fromNodeLong = (Long) sf.getAttribute("FNODE_");
 				String fromNode = Long.toString(fromNodeLong);
 				Node node1;
@@ -96,7 +97,7 @@ public class ShapeConverterNetwork {
 				// create to node (if it does not exist yet)
 				Double toNodeX = (Double) sf.getAttribute("X_til");
 				Double toNodeY = (Double) sf.getAttribute("Y_til");
-				Coord toCoord = scenario.createCoord(toNodeX, toNodeY);
+				Coord toCoord = new Coord(toNodeX, toNodeY);
 				Long toNodeLong = (Long) sf.getAttribute("TNODE_");
 				String toNode = Long.toString(toNodeLong);
 				Node node2;

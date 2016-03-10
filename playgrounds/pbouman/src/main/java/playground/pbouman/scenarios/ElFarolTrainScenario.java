@@ -43,7 +43,7 @@ import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.transitSchedule.api.Departure;
 import org.matsim.pt.transitSchedule.api.TransitLine;
@@ -68,12 +68,12 @@ import org.matsim.vehicles.VehiclesFactory;
 public class ElFarolTrainScenario
 {
 
-	public static ScenarioImpl generateScenario()
+	public static MutableScenario generateScenario()
 	{
 		return generateScenario(400,10,3, 12 * 60, 20, 20);
 	}
 	
-	public static ScenarioImpl generateScenario(int numAgents, int timeSlots, int intervalLength, double headWay, double popFrac)
+	public static MutableScenario generateScenario(int numAgents, int timeSlots, int intervalLength, double headWay, double popFrac)
 	{
 		
 		int importantSlots = timeSlots - intervalLength + 1;
@@ -85,7 +85,7 @@ public class ElFarolTrainScenario
 		
 	}
 	
-	public static ScenarioImpl generateScenario(int numAgents, int timeSlots, int intervalLength, double headWay, int seatCap, int standCap)
+	public static MutableScenario generateScenario(int numAgents, int timeSlots, int intervalLength, double headWay, int seatCap, int standCap)
 	{
 		Config config = ConfigUtils.createConfig();
 		config.transit().setUseTransit(true);
@@ -98,7 +98,7 @@ public class ElFarolTrainScenario
 		HashSet<String> transitModes = new HashSet<String>();
 		transitModes.add("pt");
 		config.transit().setTransitModes(transitModes);
-		ScenarioImpl scen = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scen = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		
 		/* ******** *
@@ -130,15 +130,15 @@ public class ElFarolTrainScenario
 		NetworkFactory nw = net.getFactory();
 		
 		Node a, b, c, u, v, w;
-		
+
 		Node [] nodes = new Node [] {
-				a = nw.createNode(Id.create("a", Node.class), scen.createCoord(boxSize/2 , boxSize / 2 - ySpan)),
-				b = nw.createNode(Id.create("b", Node.class), scen.createCoord(boxSize/2 , boxSize / 2 + ySpan)),
-				c = nw.createNode(Id.create("c", Node.class), scen.createCoord(boxSize/2, boxSize / 2)),
+				a = nw.createNode(Id.create("a", Node.class), new Coord(boxSize / 2, boxSize / 2 - ySpan)),
+				b = nw.createNode(Id.create("b", Node.class), new Coord(boxSize / 2, boxSize / 2 + ySpan)),
+				c = nw.createNode(Id.create("c", Node.class), new Coord(boxSize / 2, boxSize / 2)),
 		
-				u = nw.createNode(Id.create("u", Node.class), scen.createCoord(longDist + boxSize / 2, boxSize / 2 - ySpan)),
-				v = nw.createNode(Id.create("v", Node.class), scen.createCoord(longDist + boxSize / 2, boxSize / 2 + ySpan)),
-				w = nw.createNode(Id.create("w", Node.class), scen.createCoord(longDist + boxSize / 2, boxSize / 2)),
+				u = nw.createNode(Id.create("u", Node.class), new Coord(longDist + boxSize / 2, boxSize / 2 - ySpan)),
+				v = nw.createNode(Id.create("v", Node.class), new Coord(longDist + boxSize / 2, boxSize / 2 + ySpan)),
+				w = nw.createNode(Id.create("w", Node.class), new Coord(longDist + boxSize / 2, boxSize / 2)),
 		};
 		
 		for (Node n : nodes)
@@ -281,14 +281,14 @@ public class ElFarolTrainScenario
 			
 			Person p = popFac.createPerson(Id.create("Agent"+t, Person.class));
 			Plan plan = popFac.createPlan();
-			
-			ActivityImpl homeAct = (ActivityImpl) popFac.createActivityFromCoord("home", scen.createCoord(ran.nextDouble() * boxSize, ran.nextDouble() * boxSize));
+
+			ActivityImpl homeAct = (ActivityImpl) popFac.createActivityFromCoord("home", new Coord(ran.nextDouble() * boxSize, ran.nextDouble() * boxSize));
 			homeAct.setEndTime(workP[index].getOpeningTime() - longDist/speed - headWay);
 			plan.addActivity(homeAct);
 			plan.addLeg(popFac.createLeg(mode));
-			
+
 			ActivityImpl workAct = (ActivityImpl) popFac.createActivityFromCoord("work"+index,
-					scen.createCoord(longDist + boxSize + ran.nextDouble() * boxSize, ran.nextDouble() * boxSize));
+					new Coord(longDist + boxSize + ran.nextDouble() * boxSize, ran.nextDouble() * boxSize));
 			workAct.setEndTime(workP[index].getEarliestEndTime());
 			plan.addActivity(workAct);
 			plan.addLeg(popFac.createLeg(mode));

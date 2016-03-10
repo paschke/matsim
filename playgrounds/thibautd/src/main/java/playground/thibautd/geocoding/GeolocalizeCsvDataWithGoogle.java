@@ -19,20 +19,18 @@
  * *********************************************************************** */
 package playground.thibautd.geocoding;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
-
 import playground.ivt.utils.ArgParser;
 import playground.ivt.utils.ArgParser.Args;
 import playground.thibautd.utils.CsvUtils;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * @author thibautd
@@ -312,7 +310,8 @@ public class GeolocalizeCsvDataWithGoogle {
 				final int index ) {
 			try {
 				return
-					fields[ index ].isEmpty() ||
+					index == -1 ||
+							fields[ index ].isEmpty() ||
 					fields[ index ].equals( "NULL" ) ||
 					fields[ index ].equals( "NA" ) ?
 						null :

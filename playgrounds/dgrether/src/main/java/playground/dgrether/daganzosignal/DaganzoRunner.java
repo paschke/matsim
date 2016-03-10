@@ -23,8 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.contrib.signals.model.SignalSystem;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.events.ShutdownEvent;
@@ -32,10 +37,9 @@ import org.matsim.core.controler.events.StartupEvent;
 import org.matsim.core.controler.listener.IterationEndsListener;
 import org.matsim.core.controler.listener.ShutdownListener;
 import org.matsim.core.controler.listener.StartupListener;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.core.gbl.MatsimRandom;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
-import org.matsim.contrib.signals.model.SignalSystem;
 
 import playground.dgrether.analysis.charts.DgTravelTimeCalculatorChart;
 import playground.dgrether.analysis.charts.utils.DgChartWriter;
@@ -69,8 +73,11 @@ public class DaganzoRunner {
 		else {
 			conf = configFile;
 		}
-		ScenarioLoaderImpl scenarioLoader = ScenarioLoaderImpl.createScenarioLoaderImplAndResetRandomSeed(conf);
-		ScenarioImpl scenario = (ScenarioImpl) scenarioLoader.loadScenario();
+		
+		Config config = ConfigUtils.loadConfig(conf);
+		MatsimRandom.reset(config.global().getRandomSeed());
+		Scenario scenario = ScenarioUtils.createScenario(config);
+		ScenarioUtils.loadScenario(scenario);
 		
 //		if (scenario.getConfig().signalSystems().getSignalSystemConfigFile() == null){
 //			DaganzoScenarioGenerator scgenerator = new DaganzoScenarioGenerator();
@@ -83,13 +90,13 @@ public class DaganzoRunner {
 						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
 						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
 		this.addControlerListener(controler);
-//		this.addQSimListener(controler);
+//		this.addQSimListener(services);
 		controler.run();
 	}
 
 
-	private void addControlerListener(Controler c) {
-		//add some EventHandler to the EventsManager after the controler is started
+	private void addControlerListener(MatsimServices c) {
+		//add some EventHandler to the EventsManager after the services is started
 		handler3 = new TTInOutflowEventHandler(Id.create("3", Link.class), Id.create("5", Link.class));
 		handler4 = new TTInOutflowEventHandler(Id.create("4", Link.class));
 
@@ -102,9 +109,9 @@ public class DaganzoRunner {
 
 			@Override
 			public void notifyStartup(StartupEvent e) {
-				e.getControler().getEvents().addHandler(handler3);
-				e.getControler().getEvents().addHandler(handler4);
-				e.getControler().getEvents().addHandler(signalGreenSplitHandler);
+				e.getServices().getEvents().addHandler(handler3);
+				e.getServices().getEvents().addHandler(handler4);
+				e.getServices().getEvents().addHandler(signalGreenSplitHandler);
 			}
 		});
 		
@@ -120,14 +127,14 @@ public class DaganzoRunner {
 					TTGraphWriter ttWriter = new TTGraphWriter();
 					ttWriter.addTTEventHandler(handler3);
 					ttWriter.addTTEventHandler(handler4);
-					ttWriter.writeTTChart(e.getControler().getControlerIO().getIterationPath(e.getIteration()), e.getIteration());
+					ttWriter.writeTTChart(e.getServices().getControlerIO().getIterationPath(e.getIteration()), e.getIteration());
 
 					//				InOutGraphWriter inoutWriter = new InOutGraphWriter();
 					//				inoutWriter.addInOutEventHandler(handler3);
 					//				inoutWriter.addInOutEventHandler(handler4);
-					//				inoutWriter.writeInOutChart(e.getControler().getControlerIO().getIterationPath(e.getIteration()), e.getIteration());
+					//				inoutWriter.writeInOutChart(e.getServices().getControlerIO().getIterationPath(e.getIteration()), e.getIteration());
 
-					DgTravelTimeCalculatorChart ttcalcChart = new DgTravelTimeCalculatorChart((TravelTimeCalculator)e.getControler().getLinkTravelTimes());
+					DgTravelTimeCalculatorChart ttcalcChart = new DgTravelTimeCalculatorChart((TravelTimeCalculator)e.getServices().getLinkTravelTimes());
 					ttcalcChart.setStartTime(10.0);
 					ttcalcChart.setEndTime(3600.0 * 2.5);
 					List<Id<Link>> list = new ArrayList<>();
@@ -140,14 +147,14 @@ public class DaganzoRunner {
 					list.add(Id.create("3", Link.class));
 					list.add(Id.create("5", Link.class));
 					ttcalcChart.addLinkId(list);
-					DgChartWriter.writeChart(e.getControler().getControlerIO().getIterationFilename(e.getIteration(), "ttcalculator"), 
+					DgChartWriter.writeChart(e.getServices().getControlerIO().getIterationFilename(e.getIteration(), "ttcalculator"),
 							ttcalcChart.createChart());
 
 				if ( e.getIteration() % 10 == 0 ) {
-					DgCountPerIterationGraph chart = new DgCountPerIterationGraph(e.getControler().getConfig().controler());
+					DgCountPerIterationGraph chart = new DgCountPerIterationGraph(e.getServices().getConfig().controler());
 					chart.addCountEventHandler(handler3);
 					chart.addCountEventHandler(handler4);
-					DgChartWriter.writeChart(e.getControler().getControlerIO().getOutputFilename("countPerIteration"), chart.createChart());
+					DgChartWriter.writeChart(e.getServices().getControlerIO().getOutputFilename("countPerIteration"), chart.createChart());
 				}
 			}
 		});
@@ -155,31 +162,31 @@ public class DaganzoRunner {
 		c.addControlerListener(new ShutdownListener() {
 			@Override
 			public void notifyShutdown(ShutdownEvent e) {
-				DgCountPerIterationGraph chart = new DgCountPerIterationGraph(e.getControler().getConfig().controler());
+				DgCountPerIterationGraph chart = new DgCountPerIterationGraph(e.getServices().getConfig().controler());
 				chart.addCountEventHandler(handler3, "count on link 3 & 5");
 				chart.addCountEventHandler(handler4);
-				DgChartWriter.writeChart(e.getControler().getControlerIO().getOutputFilename("countPerIteration"), chart.createChart());
+				DgChartWriter.writeChart(e.getServices().getControlerIO().getOutputFilename("countPerIteration"), chart.createChart());
 
-				DgChartWriter.writeChart(e.getControler().getControlerIO().getOutputFilename("greensplit"), greenSplitPerIterationGraph.createChart());
+				DgChartWriter.writeChart(e.getServices().getControlerIO().getOutputFilename("greensplit"), greenSplitPerIterationGraph.createChart());
 			}
 		});
 	}
 
-//private void addQSimListener(final Controler controler) {
-//controler.getQueueSimulationListener().add(new SimulationInitializedListener<QSim>() {
+//private void addQSimListener(final Controler services) {
+//services.getQueueSimulationListener().add(new SimulationInitializedListener<QSim>() {
 //	//add the adaptive controller as events listener
 //	public void notifySimulationInitialized(SimulationInitializedEvent<QSim> e) {
 //		QSim qs = e.getQueueSimulation();
 //		AdaptiveController adaptiveController = (AdaptiveController) qs.getQSimSignalEngine().getSignalSystemControlerBySystemId().get(Id.create("1"));
-//		controler.getEvents().addHandler(adaptiveController);
+//		services.getEvents().addHandler(adaptiveController);
 //	}
 //});
 ////remove the adaptive controller
-//controler.getQueueSimulationListener().add(new SimulationBeforeCleanupListener<QSim>() {
+//services.getQueueSimulationListener().add(new SimulationBeforeCleanupListener<QSim>() {
 //	public void notifySimulationBeforeCleanup(SimulationBeforeCleanupEvent<QSim> e) {
 //		QSim qs = e.getQueueSimulation();
 //		AdaptiveController adaptiveController = (AdaptiveController) qs.getQSimSignalEngine().getSignalSystemControlerBySystemId().get(Id.create("1"));
-//		controler.getEvents().removeHandler(adaptiveController);
+//		services.getEvents().removeHandler(adaptiveController);
 //	}
 //});
 //}

@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Leg;
@@ -37,13 +38,10 @@ import org.matsim.contrib.matrixbasedptrouter.utils.CreateTestPopulation;
 import org.matsim.contrib.matrixbasedptrouter.utils.BoundingBox;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
-import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.IOException;
@@ -77,7 +75,7 @@ public class MatrixBasedPtRouterIntegrationTest {
 		new NetworkWriter(network).write(path+"network.xml");
 		
 		//a dummy population of one person is created and written into the output directory
-		Population population = CreateTestPopulation.createTestPtPopulation(1,new CoordImpl(0,0),new CoordImpl(0,200));
+		Population population = CreateTestPopulation.createTestPtPopulation(1, new Coord((double) 0, (double) 0), new Coord((double) 0, (double) 200));
 		new PopulationWriter(population, network).write(path+"plans.xml");
 		
 		//dummy csv files for pt stops, travel times and travel distances fitting into the dummy network are created
@@ -102,35 +100,27 @@ public class MatrixBasedPtRouterIntegrationTest {
 		config.controler().setMobsim("qsim");
 		config.controler().setFirstIteration(0);
 		config.controler().setLastIteration(0);
+		config.controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		config.network().setInputFile(path+"network.xml");
 		config.plans().setInputFile(path+"plans.xml");
 
-		Scenario scenario = ScenarioUtils.loadScenario(config);
-		
-		//set up controler
-		Controler controler = new Controler(scenario) ;
-		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
-
 		//add home and work activity to plansCalcScoreConfigGroup
-		PlanCalcScoreConfigGroup planCalcScore = controler.getScenario().getConfig().planCalcScore();
-		planCalcScore.addParam("activityType_0", "home");
-		planCalcScore.addParam("activityTypicalDuration_0", "43200");
-		planCalcScore.addParam("activityType_1", "work");
-		planCalcScore.addParam("activityTypicalDuration_1", "28800");
+		config.planCalcScore().addParam("activityType_0", "home");
+		config.planCalcScore().addParam("activityTypicalDuration_0", "43200");
+		config.planCalcScore().addParam("activityType_1", "work");
+		config.planCalcScore().addParam("activityTypicalDuration_1", "28800");
 
-		PlansCalcRouteConfigGroup plansCalcRoute = controler.getScenario().getConfig().plansCalcRoute();
-		
+
+		Scenario scenario = ScenarioUtils.loadScenario(config);
 		BoundingBox nbb = BoundingBox.createBoundingBox(network);
-		
-		//create new pt matrix
-		PtMatrix ptMatrix = PtMatrix.createPtMatrix(plansCalcRoute, nbb, ConfigUtils.addOrGetModule(controler.getScenario().getConfig(), MatrixBasedPtRouterConfigGroup.GROUP_NAME, MatrixBasedPtRouterConfigGroup.class));
-		controler.setTripRouterFactory( new MatrixBasedPtRouterFactoryImpl(controler.getScenario(), ptMatrix) ); // the car and pt router
+		final PtMatrix ptMatrix = PtMatrix.createPtMatrix(config.plansCalcRoute(), nbb, ConfigUtils.addOrGetModule(config, MatrixBasedPtRouterConfigGroup.GROUP_NAME, MatrixBasedPtRouterConfigGroup.class));
 
-		//execute MATSim run
+		Controler controler = new Controler(scenario) ;
+		controler.addOverridingModule(new MatrixBasedPtModule());
 		controler.run();
 		
 		// compute the travel time from home to work activity
-		double ttime = ptMatrix.getTotalTravelTime_seconds(new CoordImpl(0,0), new CoordImpl(0,200));
+		double ttime = ptMatrix.getTotalTravelTime_seconds(new Coord((double) 0, (double) 0), new Coord((double) 0, (double) 200));
 
 		// get the actual travel time from the person's plan
 		Person person = controler.getScenario().getPopulation().getPersons().values().iterator().next();
@@ -140,5 +130,5 @@ public class MatrixBasedPtRouterIntegrationTest {
 		Assert.assertEquals(ttime, actualTtime, 0);
 		
 	}
-	
+
 }

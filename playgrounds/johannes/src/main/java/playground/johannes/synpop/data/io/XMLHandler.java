@@ -22,7 +22,10 @@ package playground.johannes.synpop.data.io;
 import org.apache.log4j.Logger;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.xml.sax.Attributes;
-import playground.johannes.synpop.data.*;
+import playground.johannes.synpop.data.Episode;
+import playground.johannes.synpop.data.Factory;
+import playground.johannes.synpop.data.Person;
+import playground.johannes.synpop.data.Segment;
 
 import java.util.*;
 
@@ -59,7 +62,7 @@ public class XMLHandler extends MatsimXmlParser {
 	@Override
 	public void startTag(String name, Attributes atts, Stack<String> context) {
 		if (name.equalsIgnoreCase(Constants.PERSONS_TAG)) {
-			persons = new HashSet<>();
+			persons = new LinkedHashSet<>();
 
 		} else if (name.equalsIgnoreCase(Constants.PERSON_TAG)) {
 			person = factory.newPerson(getAttribute(Constants.ID_KEY, atts));

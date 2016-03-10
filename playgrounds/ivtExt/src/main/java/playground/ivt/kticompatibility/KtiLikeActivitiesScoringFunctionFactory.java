@@ -19,25 +19,21 @@
  * *********************************************************************** */
 package playground.ivt.kticompatibility;
 
-import java.util.Collection;
-
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.contrib.socnetsim.jointtrips.scoring.BlackListedActivityScoringFunction;
+import org.matsim.contrib.socnetsim.jointtrips.scoring.ElementalCharyparNagelLegScoringFunction;
+import org.matsim.contrib.socnetsim.jointtrips.scoring.ElementalCharyparNagelLegScoringFunction.LegScoringParameters;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.router.StageActivityTypes;
 import org.matsim.core.scoring.ScoringFunction;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.SumScoringFunction;
-import org.matsim.core.scoring.functions.CharyparNagelAgentStuckScoring;
-import org.matsim.core.scoring.functions.CharyparNagelMoneyScoring;
-import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
-
-import org.matsim.contrib.socnetsim.jointtrips.scoring.BlackListedActivityScoringFunction;
-import org.matsim.contrib.socnetsim.jointtrips.scoring.ElementalCharyparNagelLegScoringFunction;
-import org.matsim.contrib.socnetsim.jointtrips.scoring.ElementalCharyparNagelLegScoringFunction.LegScoringParameters;
+import org.matsim.core.scoring.functions.*;
 import playground.ivt.scoring.LineChangeScoringFunction;
+
+import java.util.Collection;
 
 /**
  * This factory creates "CharyparNagel" scoring functions, but with
@@ -55,7 +51,7 @@ public class KtiLikeActivitiesScoringFunctionFactory implements ScoringFunctionF
 
 	private final StageActivityTypes blackList;
 	private final KtiLikeScoringConfigGroup ktiConfig;
-	private final CharyparNagelScoringParameters params;
+	private final CharyparNagelScoringParametersForPerson parameters;
     private final Scenario scenario;
 
 	// /////////////////////////////////////////////////////////////////////////
@@ -64,10 +60,9 @@ public class KtiLikeActivitiesScoringFunctionFactory implements ScoringFunctionF
     public KtiLikeActivitiesScoringFunctionFactory(
 			final StageActivityTypes typesNotToScore,
 			final KtiLikeScoringConfigGroup ktiConfig,
-			final PlanCalcScoreConfigGroup config,
 			final Scenario scenario) {
 		this.ktiConfig = ktiConfig;
-		this.params = CharyparNagelScoringParameters.getBuilder(config).create();
+		this.parameters = new SubpopulationCharyparNagelScoringParameters( scenario );
 		this.scenario = scenario;
 		this.blackList = typesNotToScore;
 	}
@@ -75,6 +70,7 @@ public class KtiLikeActivitiesScoringFunctionFactory implements ScoringFunctionF
 	@Override
 	public ScoringFunction createNewScoringFunction(final Person person) {
 		SumScoringFunction scoringFunctionAccumulator = new SumScoringFunction();
+		final CharyparNagelScoringParameters params = parameters.getScoringParameters( person );
 
 		scoringFunctionAccumulator.addScoringFunction(
 				new BlackListedActivityScoringFunction(
@@ -93,7 +89,7 @@ public class KtiLikeActivitiesScoringFunctionFactory implements ScoringFunctionF
 					scenario.getNetwork()));
 		// KTI like consideration of influence of travel card
 		// (except that is was not expressed as a ratio)
-		final Collection<String> travelCards = ((PersonImpl) person).getTravelcards();
+		final Collection<String> travelCards = PersonUtils.getTravelcards(person);
 		final double utilityOfDistancePt =
 			travelCards == null || travelCards.isEmpty() ?
 				params.modeParams.get(TransportMode.pt).marginalUtilityOfDistance_m :

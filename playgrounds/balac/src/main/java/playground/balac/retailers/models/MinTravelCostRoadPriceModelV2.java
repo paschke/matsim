@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
@@ -16,11 +17,10 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
@@ -28,7 +28,6 @@ import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scoring.ScoringFunction;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.ActivityFacilityImpl;
@@ -44,7 +43,7 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
 
   private TreeMap<Id<Link>, LinkRetailersImpl> availableLinks = new TreeMap<Id<Link>, LinkRetailersImpl>();
 
-  public MinTravelCostRoadPriceModelV2(Controler controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities)
+  public MinTravelCostRoadPriceModelV2(MatsimServices controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities)
   {
     this.controler = controler;
     this.retailerFacilities = retailerFacilities;
@@ -52,7 +51,7 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
     this.shops = findScenarioShops(this.controlerFacilities.getFacilities().values());
 
       for (Person p : controler.getScenario().getPopulation().getPersons().values()) {
-      PersonImpl pi = (PersonImpl)p;
+      Person pi = p;
       this.persons.put(pi.getId(), pi);
     }
   }
@@ -77,12 +76,12 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
         LinkRetailersImpl link = new LinkRetailersImpl(this.controler.getScenario().getNetwork().getLinks().get(Id.create(linkId, Link.class)), this.controler.getScenario().getNetwork(), Double.valueOf(0.0D), Double.valueOf(0.0D));
         double centerX = 683217.0; 
         double centerY = 247300.0;
-        CoordImpl coord = new CoordImpl(centerX, centerY);
+		Coord coord = new Coord(centerX, centerY);
       
         boolean shopgroceryInside = false;
      
         
-        if (CoordUtils.calcDistance(link.getCoord(), coord) < 4000) {
+        if (CoordUtils.calcEuclideanDistance(link.getCoord(), coord) < 4000) {
 			shopgroceryInside = true;
 			
 		}
@@ -102,12 +101,12 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
         		if (pe instanceof Activity) {
     			
         			 if (!((Activity) pe).getType().equals("shopgrocery")) {
-                         if (CoordUtils.calcDistance(controler.getScenario().getNetwork().getLinks().get(((Activity)pe).getLinkId()).getCoord(), coord) < 4000)
+                         if (CoordUtils.calcEuclideanDistance(controler.getScenario().getNetwork().getLinks().get(((Activity)pe).getLinkId()).getCoord(), coord) < 4000)
         					lastPrimaryActivityInside = true;
         				else
             				lastPrimaryActivityInside = false;
 
-                         if(CoordUtils.calcDistance(controler.getScenario().getNetwork().getLinks().get(((Activity)pe).getLinkId()).getCoord(), link.getCoord()) < 3000) {
+                         if(CoordUtils.calcEuclideanDistance(controler.getScenario().getNetwork().getLinks().get(((Activity)pe).getLinkId()).getCoord(), link.getCoord()) < 3000) {
     						
         						lastPrimaryActivityInsideCatchmentArea = true;
 
@@ -130,13 +129,13 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
         					if (pe1 instanceof Activity) {
         						if (((Activity) pe1).getType().equals("home") || ((Activity) pe1).getType().startsWith("work") || ((Activity) pe1).getType().startsWith("education") ||((Activity) pe1).getType().startsWith("leisure") ) {
 
-                                    if (CoordUtils.calcDistance(controler.getScenario().getNetwork().getLinks().get(((Activity)pe1).getLinkId()).getCoord(), coord) < 4000) {
+                                    if (CoordUtils.calcEuclideanDistance(controler.getScenario().getNetwork().getLinks().get(((Activity)pe1).getLinkId()).getCoord(), coord) < 4000) {
         								nextPrimaryActivityInside = true;
     		    					
         							}
         							else
         								nextPrimaryActivityInside = false;
-                                    if(CoordUtils.calcDistance(controler.getScenario().getNetwork().getLinks().get(((Activity)pe1).getLinkId()).getCoord(), link.getCoord()) < 3000) {
+                                    if(CoordUtils.calcEuclideanDistance(controler.getScenario().getNetwork().getLinks().get(((Activity)pe1).getLinkId()).getCoord(), link.getCoord()) < 3000) {
     	    						
         								nextPrimaryActivityInsideCatchmentArea = true;
                                         linknpa = controler.getScenario().getNetwork().getLinks().get(((Activity)pe1).getLinkId());
@@ -158,7 +157,7 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
         					scoreTemp = 0;
                             Network network = this.controler.getScenario().getNetwork();
         					TravelTime travelTime = this.controler.getLinkTravelTimes();
-        					TravelDisutility travelCost = this.controler.getTravelDisutilityFactory().createTravelDisutility(travelTime, this.controler.getConfig().planCalcScore());
+        					TravelDisutility travelCost = this.controler.getTravelDisutilityFactory().createTravelDisutility(travelTime);
 
         					LeastCostPathCalculator routeAlgo = this.controler.getLeastCostPathCalculatorFactory().createPathCalculator(network, travelCost, travelTime);
 
@@ -188,7 +187,7 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
         					scoreTemp = 0;
                             Network network = this.controler.getScenario().getNetwork();
         					TravelTime travelTime = this.controler.getLinkTravelTimes();
-        					TravelDisutility travelCost = this.controler.getTravelDisutilityFactory().createTravelDisutility(travelTime, this.controler.getConfig().planCalcScore());
+        					TravelDisutility travelCost = this.controler.getTravelDisutilityFactory().createTravelDisutility(travelTime);
 
         					LeastCostPathCalculator routeAlgo = this.controler.getLeastCostPathCalculatorFactory().createPathCalculator(network, travelCost, travelTime);
 
@@ -245,7 +244,7 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
 
           LinkRetailersImpl link = new LinkRetailersImpl(this.controler.getScenario().getNetwork().getLinks().get(Id.create(linkId, Link.class)), this.controler.getScenario().getNetwork(), Double.valueOf(0.0D), Double.valueOf(0.0D));
 	      
-	      Collection<ActivityFacility> facilities = Utils.getShopsQuadTree().get(link.getCoord().getX(), link.getCoord().getY(), 3000.0D);
+	      Collection<ActivityFacility> facilities = Utils.getShopsQuadTree().getDisk(link.getCoord().getX(), link.getCoord().getY(), 3000.0D);
 	        
 	      int numberShops = facilities.size();
 	      
@@ -295,7 +294,7 @@ public class MinTravelCostRoadPriceModelV2 extends RetailerModelImpl
       route.setLinkIds(fromLink.getId(), NetworkUtils.getLinkIds(path.links), toLink.getId());
       route.setTravelTime((int)path.travelTime);
       route.setTravelCost(path.travelCost);
-      route.setDistance(RouteUtils.calcDistance(route, network));
+      route.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(route, network));
       leg.setRoute(route);
       travTime = (int)path.travelTime;
     }

@@ -19,16 +19,14 @@
  * *********************************************************************** */
 package playground.thibautd.geocoding;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import org.matsim.api.core.v01.Coord;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.WGS84toCH1903LV03;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * @author thibautd
@@ -152,7 +150,7 @@ public class MapquestResult implements GeolocalizationResult {
 
 		public Coord getCH03Coord() {
 			final CoordinateTransformation t = new WGS84toCH1903LV03();
-			final Coord wgs = new CoordImpl( getLongitude() , getLatitude() );
+			final Coord wgs = new Coord(getLongitude(), getLatitude());
 			return t.transform( wgs );
 		}
 

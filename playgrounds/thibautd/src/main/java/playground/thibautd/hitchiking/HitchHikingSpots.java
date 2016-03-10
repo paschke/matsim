@@ -19,15 +19,15 @@
  * *********************************************************************** */
 package playground.thibautd.hitchiking;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.utils.collections.QuadTree;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author thibautd
@@ -89,7 +89,7 @@ public class HitchHikingSpots {
 	}
 
 	public Link getNearestSpot(final Coord c) {
-		return quadTree.get( c.getX() , c.getY() );
+		return quadTree.getClosest(c.getX(), c.getY());
 	}
 
 	public Collection<Link> getSpots(final Coord c , final double distance) {
@@ -97,7 +97,7 @@ public class HitchHikingSpots {
 	}
 
 	public Collection<Link> getSpots(final double x , final double y , final double distance) {
-		return quadTree.get( x , y , distance );
+		return quadTree.getDisk(x, y, distance);
 	}
 }
 

@@ -25,15 +25,17 @@ import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.config.groups.ChangeLegModeConfigGroup;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PlanImpl;
-import org.matsim.core.utils.geometry.CoordImpl;
+import org.matsim.core.population.PopulationUtils;
 
 /**
  * @author mrieser
@@ -45,7 +47,7 @@ public class ChangeSingleLegModeTest {
 		Config config = ConfigUtils.createConfig();
 		config.global().setNumberOfThreads(0);
 
-		final ChangeSingleLegMode module = new ChangeSingleLegMode(config);
+		final ChangeSingleLegMode module = new ChangeSingleLegMode(config.global(), config.changeLegMode());
 		final String[] modes = new String[] {TransportMode.car, TransportMode.pt};
 		runTest(module, modes, 5);
 	}
@@ -54,9 +56,9 @@ public class ChangeSingleLegModeTest {
 	public void testWithConfig() {
 		Config config = ConfigUtils.createConfig();
 		config.global().setNumberOfThreads(0);
-		config.setParam(ChangeLegMode.CONFIG_MODULE, ChangeLegMode.CONFIG_PARAM_MODES, " car,pt ,bike,walk ");
+		config.setParam(ChangeLegModeConfigGroup.CONFIG_MODULE, ChangeLegModeConfigGroup.CONFIG_PARAM_MODES, " car,pt ,bike,walk ");
 
-		final ChangeSingleLegMode module = new ChangeSingleLegMode(config);
+		final ChangeSingleLegMode module = new ChangeSingleLegMode(config.global(), config.changeLegMode());
 		final String[] modes = new String[] {TransportMode.car, TransportMode.pt, TransportMode.bike, TransportMode.walk};
 		runTest(module, modes, 20);
 	}
@@ -72,19 +74,19 @@ public class ChangeSingleLegModeTest {
 	public void testWithConfig_withoutIgnoreCarAvailability() {
 		Config config = ConfigUtils.createConfig();
 		config.global().setNumberOfThreads(0);
-		config.setParam(ChangeLegMode.CONFIG_MODULE, ChangeLegMode.CONFIG_PARAM_MODES, "car,pt,walk");
-		config.setParam(ChangeLegMode.CONFIG_MODULE, ChangeLegMode.CONFIG_PARAM_IGNORECARAVAILABILITY, "false");
+		config.setParam(ChangeLegModeConfigGroup.CONFIG_MODULE, ChangeLegModeConfigGroup.CONFIG_PARAM_MODES, "car,pt,walk");
+		config.setParam(ChangeLegModeConfigGroup.CONFIG_MODULE, ChangeLegModeConfigGroup.CONFIG_PARAM_IGNORECARAVAILABILITY, "false");
 
-		final ChangeSingleLegMode module = new ChangeSingleLegMode(config);
+		final ChangeSingleLegMode module = new ChangeSingleLegMode(config.global(), config.changeLegMode());
 		final String[] modes = new String[] {TransportMode.car, TransportMode.pt, TransportMode.walk};
 
 		module.prepareReplanning(null);
-		PersonImpl person = new PersonImpl(Id.create(1, Person.class));
-		person.setCarAvail("never");
+		Person person = PopulationUtils.createPerson(Id.create(1, Person.class));
+		PersonUtils.setCarAvail(person, "never");
 		PlanImpl plan = new org.matsim.core.population.PlanImpl(person);
-		plan.createAndAddActivity("home", new CoordImpl(0, 0));
+		plan.createAndAddActivity("home", new Coord((double) 0, (double) 0));
 		Leg leg = plan.createAndAddLeg(TransportMode.pt);
-		plan.createAndAddActivity("work", new CoordImpl(0, 0));
+		plan.createAndAddActivity("work", new Coord((double) 0, (double) 0));
 
 		HashMap<String, Integer> counter = new HashMap<String, Integer>();
 		for (String mode : modes) {
@@ -103,9 +105,9 @@ public class ChangeSingleLegModeTest {
 		module.prepareReplanning(null);
 
 		PlanImpl plan = new org.matsim.core.population.PlanImpl(null);
-		plan.createAndAddActivity("home", new CoordImpl(0, 0));
+		plan.createAndAddActivity("home", new Coord((double) 0, (double) 0));
 		Leg leg = plan.createAndAddLeg(TransportMode.car);
-		plan.createAndAddActivity("work", new CoordImpl(0, 0));
+		plan.createAndAddActivity("work", new Coord((double) 0, (double) 0));
 
 		HashMap<String, Integer> counter = new HashMap<String, Integer>();
 		for (String mode : possibleModes) {

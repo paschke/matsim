@@ -20,12 +20,14 @@
 
 package org.matsim.core.scoring.functions;
 
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.scoring.ScoringFunction;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.SumScoringFunction;
+
+import javax.inject.Inject;
 
 /**
  * A factory to create scoring functions as described by D. Charypar and K. Nagel.
@@ -38,15 +40,19 @@ import org.matsim.core.scoring.SumScoringFunction;
  * 
  * @author rashid_waraich
  */
-public class CharyparNagelScoringFunctionFactory implements ScoringFunctionFactory {
-	// yy should be final.
+public final class CharyparNagelScoringFunctionFactory implements ScoringFunctionFactory {
 
 	protected Network network;
-	private final PlanCalcScoreConfigGroup config;
-	private CharyparNagelScoringParameters params = null;
 
-	public CharyparNagelScoringFunctionFactory(final PlanCalcScoreConfigGroup config, Network network) {
-		this.config = config;
+	private final CharyparNagelScoringParametersForPerson params;
+
+	public CharyparNagelScoringFunctionFactory( final Scenario sc ) {
+		this( new SubpopulationCharyparNagelScoringParameters( sc ) , sc.getNetwork() );
+	}
+
+	@Inject
+	CharyparNagelScoringFunctionFactory(final CharyparNagelScoringParametersForPerson params, Network network) {
+		this.params = params;
 		this.network = network;
 	}
 
@@ -70,21 +76,14 @@ public class CharyparNagelScoringFunctionFactory implements ScoringFunctionFacto
 	 */
 	@Override
 	public ScoringFunction createNewScoringFunction(Person person) {
-		if (this.params == null) {
-			/* lazy initialization of params. not strictly thread safe, as different threads could
-			 * end up with different params-object, although all objects will have the same
-			 * values in them due to using the same config. Still much better from a memory performance
-			 * point of view than giving each ScoringFunction its own copy of the params.
-			 */
-			this.params = CharyparNagelScoringParameters.getBuilder(this.config).create();
-		}
+
+		final CharyparNagelScoringParameters parameters = params.getScoringParameters( person );
 
 		SumScoringFunction sumScoringFunction = new SumScoringFunction();
-		sumScoringFunction.addScoringFunction(new CharyparNagelActivityScoring(this.params));
-		sumScoringFunction.addScoringFunction(new CharyparNagelLegScoring(this.params, this.network));
-		sumScoringFunction.addScoringFunction(new CharyparNagelMoneyScoring(this.params));
-		sumScoringFunction.addScoringFunction(new CharyparNagelAgentStuckScoring(this.params));
+		sumScoringFunction.addScoringFunction(new CharyparNagelActivityScoring( parameters ));
+		sumScoringFunction.addScoringFunction(new CharyparNagelLegScoring( parameters , this.network));
+		sumScoringFunction.addScoringFunction(new CharyparNagelMoneyScoring( parameters ));
+		sumScoringFunction.addScoringFunction(new CharyparNagelAgentStuckScoring( parameters ));
 		return sumScoringFunction;
 	}
-	
 }

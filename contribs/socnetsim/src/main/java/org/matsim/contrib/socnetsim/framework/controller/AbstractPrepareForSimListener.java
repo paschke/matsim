@@ -20,8 +20,10 @@
 package org.matsim.contrib.socnetsim.framework.controller;
 
 import java.util.Collection;
+import java.util.Map;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.config.groups.GlobalConfigGroup;
 import org.matsim.core.controler.events.StartupEvent;
 import org.matsim.core.controler.listener.StartupListener;
@@ -50,8 +52,8 @@ public abstract class AbstractPrepareForSimListener extends AbstractMultithreade
 	@Inject protected PlanRoutingAlgorithmFactory routingAlgoFactory;
 	@Inject protected ScoringFunctionFactory scoringFunctionFactory;
 	@Inject protected Provider<TripRouter> tripRouter;
-	@Inject protected TravelDisutilityFactory travelDisutility;
-	@Inject protected Provider<TravelTime> travelTime;
+	@Inject protected Map<String, TravelDisutilityFactory> travelDisutility;
+	@Inject protected Map<String, Provider<TravelTime>> travelTime;
 
 	public AbstractPrepareForSimListener( ) {
 		super( 1 );
@@ -68,27 +70,6 @@ public abstract class AbstractPrepareForSimListener extends AbstractMultithreade
 
 		// not nice, but replanningcontextimp wants iteration number...
 		final ReplanningContext context = new ReplanningContext() {
-
-			@Override
-			public TravelDisutility getTravelDisutility() {
-				return travelDisutility.createTravelDisutility( getTravelTime() , sc.getConfig().planCalcScore() );
-			}
-
-			@Override
-			public TravelTime getTravelTime() {
-				return travelTime.get();
-			}
-
-			@Override
-			public TripRouter getTripRouter() {
-				return tripRouter.get();
-			}
-
-			@Override
-			public ScoringFunctionFactory getScoringFunctionFactory() {
-				return scoringFunctionFactory;
-			}
-
 			@Override
 			public int getIteration() {
 				return 0;

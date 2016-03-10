@@ -1,9 +1,9 @@
 package playground.johannes.gsv.synPop.sim3;
 
-import java.util.Random;
+import org.matsim.contrib.common.util.XORShiftRandom;
+import playground.johannes.synpop.gis.DataPool;
 
-import playground.johannes.gsv.synPop.data.DataPool;
-import playground.johannes.socialnetworks.utils.XORShiftRandom;
+import java.util.Random;
 
 public class ActivityLocationMutatorFactory implements MutatorFactory {
 

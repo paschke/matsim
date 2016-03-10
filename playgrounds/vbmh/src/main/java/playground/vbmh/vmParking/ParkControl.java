@@ -7,9 +7,8 @@ import org.matsim.api.core.v01.events.ActivityStartEvent;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.PlanImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
@@ -60,7 +59,7 @@ public class ParkControl {
 	HashMap<Id, Double> personalBetaSOC = new HashMap<Id, Double>();
 	
 	
-	Controler controller;
+	MatsimServices controller;
 	public ParkingMap parkingMap = new ParkingMap(); //Beinhaltet alle Parkplaetze
 	PricingModels pricing = new PricingModels(); //Behinhaltet die Preismodelle
 	ParkHistoryWriter phwriter = new ParkHistoryWriter(); //Schreibt XML Datei mit Park events
@@ -74,7 +73,7 @@ public class ParkControl {
 	
 	
 	//--------------------------- S T A R T  U P---------------------------------------------
-	public int startup(String parkingFilename, String pricingFilename, Controler controller){
+	public int startup(String parkingFilename, String pricingFilename, MatsimServices controller){
 		this.controller=controller;
 		
 		System.out.println("Start up park control");
@@ -324,7 +323,7 @@ public class ParkControl {
 		choice.setRequiredRestOfDayBatPerc(neededBatteryPercentage);
 		
 		for(ParkingSpot spot : spotsInArea){
-			double distance = 2*CoordUtils.calcDistance(this.cordinate, spot.parking.getCoordinate()); //2 times >> return
+			double distance = 2*CoordUtils.calcEuclideanDistance(this.cordinate, spot.parking.getCoordinate()); //2 times >> return
 			double cost = pricing.calculateParkingPrice(duration, ev, spot);
 			double newStateOfChargePerc = 0.0;
 			if(cost==-1){ //this vehicle seems to be not allowed to park here
@@ -439,7 +438,7 @@ public class ParkControl {
 			//----
 			
 			double evRelatedScore = 0;
-			double distance = 2 * CoordUtils.calcDistance(this.cordinate, spot.parking.getCoordinate());
+			double distance = 2 * CoordUtils.calcEuclideanDistance(this.cordinate, spot.parking.getCoordinate());
 			double pricem = spot.parkingPriceM;
 			double cost = pricing.calculateParkingPrice(duration, ev, spot);
 			//System.out.println("Cost :"+ Double.toString(cost));
@@ -699,7 +698,7 @@ public class ParkControl {
 			scorekeeper = new VMScoreKeeper();
 			personAttributes.put("VMScoreKeeper", scorekeeper);
 		}
-		double distance = 2 * CoordUtils.calcDistance(this.cordinate, selectedSpot.parking.getCoordinate());
+		double distance = 2 * CoordUtils.calcEuclideanDistance(this.cordinate, selectedSpot.parking.getCoordinate());
 		double walkingTime = distance/VMConfig.walkingSpeed; 
 		//System.out.println("Walking Score :"+betaWalk*walkingTime);
 		scorekeeper.add(betaWalk*walkingTime);
@@ -843,7 +842,7 @@ public class ParkControl {
 		//[1]: Estimated distance to travel during rest of day
 
 
-        PersonImpl person = (PersonImpl) controller.getScenario().getPopulation().getPersons().get(event.getPersonId());
+        Person person = controller.getScenario().getPopulation().getPersons().get(event.getPersonId());
 		PlanImpl plan = (PlanImpl) person.getSelectedPlan();
 		double endTime=0;
 		int actCount = (Integer) person.getCustomAttributes().get("ActCounter");

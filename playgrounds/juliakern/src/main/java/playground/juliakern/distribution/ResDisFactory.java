@@ -19,10 +19,11 @@
 
 package playground.juliakern.distribution;
 
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.contrib.emissions.EmissionModule;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility.Builder;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.costcalculators.TravelTimeAndDistanceBasedTravelDisutilityFactory;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 
@@ -38,20 +39,22 @@ public class ResDisFactory implements TravelDisutilityFactory {
 	private EmissionControlerListener ecl;
 	private EmissionModule emissionModule;
 	private EmissionCostModule emissionCostModule;
+	private final PlanCalcScoreConfigGroup cnScoringGroup;
 
 	
-	public ResDisFactory(EmissionControlerListener ecl, EmissionModule emissionModule, EmissionCostModule emissionCostModule){
-		this.tdf  = new TravelTimeAndDistanceBasedTravelDisutilityFactory();
+	public ResDisFactory(EmissionControlerListener ecl, EmissionModule emissionModule, 
+			EmissionCostModule emissionCostModule, PlanCalcScoreConfigGroup cnScoringGroup){
+		this.tdf  = new Builder( TransportMode.car, cnScoringGroup );
 		this.ecl = ecl;
 		this.emissionModule = emissionModule;
 		this.emissionCostModule = emissionCostModule;
-	
+		this.cnScoringGroup = cnScoringGroup;
 	}
 	
 	@Override
-	public TravelDisutility createTravelDisutility( TravelTime timeCalculator,	 PlanCalcScoreConfigGroup cnScoringGroup) {
+	public TravelDisutility createTravelDisutility( TravelTime timeCalculator) {
 		double marginalutilityOfMoney = cnScoringGroup.getMarginalUtilityOfMoney();
-		final ResDisCalculator resdiscal = new ResDisCalculator(tdf.createTravelDisutility(timeCalculator, cnScoringGroup), ecl, marginalutilityOfMoney, this.emissionModule, this.emissionCostModule);
+		final ResDisCalculator resdiscal = new ResDisCalculator(tdf.createTravelDisutility(timeCalculator), ecl, marginalutilityOfMoney, this.emissionModule, this.emissionCostModule);
 		
 		return resdiscal;
 

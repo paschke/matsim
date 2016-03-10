@@ -20,10 +20,6 @@
 
 package playground.meisterk.kti.scoring;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.TreeSet;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Network;
@@ -33,15 +29,18 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PlanImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
-
 import playground.meisterk.kti.config.KtiConfigGroup;
 import playground.meisterk.kti.router.KtiPtRoute;
 import playground.meisterk.kti.router.PlansCalcRouteKti;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeSet;
 
 
 /**
@@ -112,7 +111,7 @@ public class LegScoringFunction extends org.matsim.core.scoring.functions.Charyp
 
 			if (this.params.modeParams.get(TransportMode.car).marginalUtilityOfDistance_m != 0.0) {
 				Route route = leg.getRoute();
-				dist = RouteUtils.calcDistance((NetworkRoute) route, network);
+				dist = RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) route, network);
 				tmpScore += this.params.modeParams.get(TransportMode.car).marginalUtilityOfDistance_m * ktiConfigGroup.getDistanceCostCar()/1000d * dist;
 			}
 			tmpScore += travelTime * this.params.modeParams.get(TransportMode.car).marginalUtilityOfTraveling_s;
@@ -220,7 +219,7 @@ public class LegScoringFunction extends org.matsim.core.scoring.functions.Charyp
 		double score = 0.0;
 
 		double distanceCost = 0.0;
-		TreeSet<String> travelCards = ((PersonImpl) this.plan.getPerson()).getTravelcards();
+		TreeSet<String> travelCards = PersonUtils.getTravelcards(this.plan.getPerson());
 		if (travelCards == null) {
 			distanceCost = this.ktiConfigGroup.getDistanceCostPtNoTravelCard();
 		} else if (travelCards.contains("unknown")) {

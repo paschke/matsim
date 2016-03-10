@@ -26,6 +26,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.NetworkFactory;
 import org.matsim.api.core.v01.network.Node;
+import org.matsim.core.utils.geometry.CoordUtils;
 
 /**
  * @author dgrether
@@ -56,21 +57,8 @@ public class NetworkFactoryImpl implements NetworkFactory {
 
 	@Override
 	public Link createLink(Id<Link> id, Node fromNode, Node toNode) {
-		return this.linkFactory.createLink(id, fromNode, toNode, this.network, 1.0, 1.0, 1.0, 1.0);
-	}
-
-	@Override
-	@Deprecated
-	public Link createLink(final Id<Link> id, final Id<Node> fromNodeId, final Id<Node> toNodeId) {
-		Node fromNode = this.network.getNodes().get(fromNodeId) ;
-		if ( fromNode==null ) {
-			log.error("could not find fromNodeId in network; this will probably fail downstream; have you added the node to the network?") ;
-		}
-		Node toNode = this.network.getNodes().get(toNodeId) ;
-		if ( toNode==null ) {
-			log.error("could not find toNodeId in network; this will probably fail downstream; have you added the node to the network?") ;
-		}
-		return createLink(id, fromNode, toNode);
+		return this.linkFactory.createLink(id, fromNode, toNode, 
+				this.network, CoordUtils.calcEuclideanDistance(fromNode.getCoord(), toNode.getCoord()), 1.0, 1.0, 1.0);
 	}
 
 	public Link createLink(final Id<Link> id, final Node from, final Node to,
@@ -97,9 +85,4 @@ public class NetworkFactoryImpl implements NetworkFactory {
 	public void setNetworkChangeEventFactory(NetworkChangeEventFactory networkChangeEventFactory) {
 		this.networkChangeEventFactory = networkChangeEventFactory;
 	}
-	
-	public boolean isTimeVariant() {
-		return (this.linkFactory instanceof TimeVariantLinkFactory);
-	}
-
 }

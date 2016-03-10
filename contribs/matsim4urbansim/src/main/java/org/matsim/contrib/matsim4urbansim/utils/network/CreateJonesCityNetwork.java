@@ -38,9 +38,8 @@ import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.network.NodeImpl;
 import org.matsim.core.network.algorithms.NetworkCleaner;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.facilities.ActivityFacility;
@@ -80,7 +79,7 @@ public class CreateJonesCityNetwork {
 		capacity 	= 500.;
 		lanes		= 1.;
 
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		scenario.getConfig().global().setCoordinateSystem(defaultCRS);
 		
 		// create empty network
@@ -164,8 +163,8 @@ public class CreateJonesCityNetwork {
 			// tnicolai remove the 1000.
 			double x = Double.parseDouble( parts[indexXCoodinate] );
 			double y = Double.parseDouble( parts[indexYCoodinate] );
-			
-			coord = new CoordImpl(x, y);
+
+			coord = new Coord(x, y);
 
 			// create a new node
 			NodeImpl node = (NodeImpl)network.createAndAddNode(Id.create(zoneID, Node.class), coord);
@@ -191,12 +190,12 @@ public class CreateJonesCityNetwork {
 			System.out.println("X-Coord:" + x);
 			for(double y = minValue; y < maxValue; y = y+length){
 				System.out.println("Y-Coord:" + y);
-				
-				Node currentNode = network.getNearestNode(new CoordImpl(x,y));
+
+				Node currentNode = network.getNearestNode(new Coord(x, y));
 				// add link to above neighbor
-				linkID = addLink(network, maxValue, linkID, currentNode, new CoordImpl(x, y + length ));
+				linkID = addLink(network, maxValue, linkID, currentNode, new Coord(x, y + length));
 				// add link to left neighbor
-				linkID = addLink(network, maxValue, linkID, currentNode, new CoordImpl(x + length, y));
+				linkID = addLink(network, maxValue, linkID, currentNode, new Coord(x + length, y));
 			}
 		}
 	}

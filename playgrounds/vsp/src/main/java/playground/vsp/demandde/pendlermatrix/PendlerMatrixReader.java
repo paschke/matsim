@@ -30,9 +30,8 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.core.utils.io.tabularFileParser.TabularFileHandler;
@@ -82,7 +81,7 @@ public class PendlerMatrixReader {
 
 	private void readShape() {
 		Collection<SimpleFeature> landkreise = ShapeFileReader.getAllFeatures(this.shapeFile);
-		ActivityFacilitiesFactory factory = ((ScenarioImpl)this.sc).getActivityFacilities().getFactory();
+		ActivityFacilitiesFactory factory = ((MutableScenario)this.sc).getActivityFacilities().getFactory();
 		for (SimpleFeature landkreis : landkreise) {
 			Integer gemeindeschluessel = Integer.parseInt((String) landkreis.getAttribute("gemeindesc"));
 			Geometry geo = (Geometry) landkreis.getDefaultGeometry();
@@ -90,7 +89,7 @@ public class PendlerMatrixReader {
 			Coordinate coordinate = point.getCoordinate();
 			Double xcoordinate = coordinate.x;
 			Double ycoordinate = coordinate.y;
-			Coord coord = new CoordImpl(xcoordinate.toString(), ycoordinate.toString());
+			Coord coord = new Coord(Double.parseDouble(xcoordinate.toString()), Double.parseDouble(ycoordinate.toString()));
 			ActivityFacility facility = factory.createActivityFacility(Id.create(gemeindeschluessel, ActivityFacility.class), coord);
 			{
 				ActivityOption option = factory.createActivityOption("work");

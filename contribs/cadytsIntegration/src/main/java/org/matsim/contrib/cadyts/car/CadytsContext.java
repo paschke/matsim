@@ -21,8 +21,8 @@
 package org.matsim.contrib.cadyts.car;
 
 import cadyts.calibrators.analytical.AnalyticalCalibrator;
-import cadyts.measurements.SingleLinkMeasurement.TYPE;
 import cadyts.supply.SimResults;
+
 import org.apache.log4j.Logger;
 import org.matsim.analysis.VolumesAnalyzer;
 import org.matsim.api.core.v01.Id;
@@ -30,8 +30,10 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.cadyts.general.*;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.BeforeMobsimEvent;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.events.StartupEvent;
@@ -40,8 +42,9 @@ import org.matsim.core.controler.listener.IterationEndsListener;
 import org.matsim.core.controler.listener.StartupListener;
 import org.matsim.core.replanning.PlanStrategy;
 import org.matsim.counts.Counts;
-import org.matsim.counts.MatsimCountsReader;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
@@ -58,83 +61,75 @@ public class CadytsContext implements CadytsContextI<Link>, StartupListener, Ite
 	private static final String FLOWANALYSIS_FILENAME = "flowAnalysis.txt";
 	
 	private final double countsScaleFactor;
-	private final Counts counts;
+	private final Counts<Link> calibrationCounts;
 	private final boolean writeAnalysisFile;
 
 	private AnalyticalCalibrator<Link> calibrator;
-	private PlanToPlanStepBasedOnEvents planToPlanStep;
-	private SimResultsContainerImpl simResults;
-	
-	public CadytsContext(Config config, Counts counts ) {
-		
+	private PlansTranslatorBasedOnEvents plansTranslator;
+	private SimResults<Link> simResults;
+	private Scenario scenario;
+	private EventsManager eventsManager;
+	private VolumesAnalyzer volumesAnalyzer;
+	private OutputDirectoryHierarchy controlerIO;
+
+	@Inject
+	CadytsContext(Config config, Scenario scenario, @Named("calibration") Counts<Link> calibrationCounts, EventsManager eventsManager, VolumesAnalyzer volumesAnalyzer, OutputDirectoryHierarchy controlerIO) {
+		this.scenario = scenario;
+		this.calibrationCounts = calibrationCounts;
+		this.eventsManager = eventsManager;
+		this.volumesAnalyzer = volumesAnalyzer;
+		this.controlerIO = controlerIO;
 		this.countsScaleFactor = config.counts().getCountsScaleFactor();
 
-		CadytsConfigGroup cadytsConfig = new CadytsConfigGroup();
-		config.addModule(cadytsConfig);
+		CadytsConfigGroup cadytsConfig = ConfigUtils.addOrGetModule(config, CadytsConfigGroup.GROUP_NAME, CadytsConfigGroup.class);
 		// addModule() also initializes the config group with the values read from the config file
 		cadytsConfig.setWriteAnalysisFile(true);
-		
-		if ( counts==null ) {
-			this.counts = new Counts();
-			String occupancyCountsFilename = config.counts().getCountsFileName();
-			new MatsimCountsReader(this.counts).readFile(occupancyCountsFilename);
-		} else {
-			this.counts = counts ;
+
+
+		Set<String> countedLinks = new TreeSet<>();
+		for (Id<Link> id : this.calibrationCounts.getCounts().keySet()) {
+			countedLinks.add(id.toString());
 		}
-		
-		Set<Id<Link>> countedLinks = new TreeSet<>();
-		for (Id<Link> id : this.counts.getCounts().keySet()) {
-			countedLinks.add(id);
-		}
-		
+
 		cadytsConfig.setCalibratedItems(countedLinks);
-		
+
 		this.writeAnalysisFile = cadytsConfig.isWriteAnalysisFile();
-	}
-	
-	public CadytsContext(Config config ) {
-		this( config, null ) ;
 	}
 
 	@Override
 	public PlansTranslator<Link> getPlansTranslator() {
-		return this.planToPlanStep;
+		return this.plansTranslator;
 	}
 	
 	@Override
 	public void notifyStartup(StartupEvent event) {
-		
-		Scenario scenario = event.getControler().getScenario();
-		
-		VolumesAnalyzer volumesAnalyzer = event.getControler().getVolumes();
-		
 		this.simResults = new SimResultsContainerImpl(volumesAnalyzer, this.countsScaleFactor);
 		
 		// this collects events and generates cadyts plans from it
-		this.planToPlanStep = new PlanToPlanStepBasedOnEvents(scenario);
-		event.getControler().getEvents().addHandler(planToPlanStep);
+		this.plansTranslator = new PlansTranslatorBasedOnEvents(scenario);
+		this.eventsManager.addHandler(plansTranslator);
 
-		this.calibrator = CadytsBuilder.buildCalibrator(scenario.getConfig(), this.counts , new LinkLookUp(scenario) /*, cadytsConfig.getTimeBinSize()*/, Link.class);
+		this.calibrator = CadytsBuilder.buildCalibratorAndAddMeasurements(scenario.getConfig(), this.calibrationCounts , new LinkLookUp(scenario) /*, cadytsConfig.getTimeBinSize()*/, Link.class);
 	}
 
-    @Override
-    public void notifyBeforeMobsim(BeforeMobsimEvent event) {
+	@Override
+	public void notifyBeforeMobsim(BeforeMobsimEvent event) {
 		// Register demand for this iteration with Cadyts.
 		// Note that planToPlanStep will return null for plans which have never been executed.
 		// This is fine, since the number of these plans will go to zero in normal simulations,
 		// and Cadyts can handle this "noise". Checked this with Gunnar.
 		// mz 2015
-        for (Person person : event.getControler().getScenario().getPopulation().getPersons().values()) {
-            this.calibrator.addToDemand(planToPlanStep.getPlanSteps(person.getSelectedPlan()));
-        }
-    }
+		for (Person person : scenario.getPopulation().getPersons().values()) {
+			this.calibrator.addToDemand(plansTranslator.getCadytsPlan(person.getSelectedPlan()));
+		}
+	}
 
 	@Override
 	public void notifyIterationEnds(final IterationEndsEvent event) {
 		if (this.writeAnalysisFile) {
 			String analysisFilepath = null;
-			if (isActiveInThisIteration(event.getIteration(), event.getControler())) {
-				analysisFilepath = event.getControler().getControlerIO().getIterationFilename(event.getIteration(), FLOWANALYSIS_FILENAME);
+			if (isActiveInThisIteration(event.getIteration(), scenario.getConfig())) {
+				analysisFilepath = controlerIO.getIterationFilename(event.getIteration(), FLOWANALYSIS_FILENAME);
 			}
 			this.calibrator.setFlowAnalysisFile(analysisFilepath);
 		}
@@ -142,9 +137,9 @@ public class CadytsContext implements CadytsContextI<Link>, StartupListener, Ite
 		this.calibrator.afterNetworkLoading(this.simResults);
 
 		// write some output
-		String filename = event.getControler().getControlerIO().getIterationFilename(event.getIteration(), LINKOFFSET_FILENAME);
+		String filename = controlerIO.getIterationFilename(event.getIteration(), LINKOFFSET_FILENAME);
 		try {
-			new CadytsCostOffsetsXMLFileIO<Link>(new LinkLookUp(event.getControler().getScenario()), Link.class)
+			new CadytsCostOffsetsXMLFileIO<>(new LinkLookUp(scenario), Link.class)
    			   .write(filename, this.calibrator.getLinkCostOffsets());
 		} catch (IOException e) {
 			log.error("Could not write link cost offsets!", e);
@@ -162,83 +157,7 @@ public class CadytsContext implements CadytsContextI<Link>, StartupListener, Ite
 	// ===========================================================================================================================
 	// private methods & pure delegate methods only below this line
 
-	@SuppressWarnings("static-method")
-	private boolean isActiveInThisIteration(final int iter, final Controler controler) {
-		return (iter > 0 && iter % controler.getConfig().counts().getWriteCountsInterval() == 0);
-//		return (iter % controler.getConfig().counts().getWriteCountsInterval() == 0);
-	}
-	
-	/*package*/ static class SimResultsContainerImpl implements SimResults<Link> {
-		private static final long serialVersionUID = 1L;
-		private final VolumesAnalyzer volumesAnalyzer;
-		private final double countsScaleFactor;
-
-		SimResultsContainerImpl(final VolumesAnalyzer volumesAnalyzer, final double countsScaleFactor) {
-			this.volumesAnalyzer = volumesAnalyzer;
-			this.countsScaleFactor = countsScaleFactor;
-		}
-
-		@Override
-		public double getSimValue(final Link link, final int startTime_s, final int endTime_s, final TYPE type) { // stopFacility or link
-
-			Id<Link> linkId = link.getId();
-			double[] values = volumesAnalyzer.getVolumesPerHourForLink(linkId);
-			
-			if (values == null) {
-				return 0;
-			}
-			
-			int startHour = startTime_s / 3600;
-			int endHour = (endTime_s-3599)/3600 ;
-			// (The javadoc specifies that endTime_s should be _exclusive_.  However, in practice I find 7199 instead of 7200.  So
-			// we are giving it an extra second, which should not do any damage if it is not used.) 
-			if (endHour < startHour) {
-				System.err.println(" startTime_s: " + startTime_s + "; endTime_s: " + endTime_s + "; startHour: " + startHour + "; endHour: " + endHour );
-				throw new RuntimeException("this should not happen; check code") ;
-			}
-			double sum = 0. ;
-			for ( int ii=startHour; ii<=endHour; ii++ ) {
-				sum += values[startHour] ;
-			}
-			switch(type){
-			case COUNT_VEH:
-				return sum * this.countsScaleFactor ;
-			case FLOW_VEH_H:
-				return 3600*sum / (endTime_s - startTime_s) * this.countsScaleFactor ;
-			default:
-				throw new RuntimeException("count type not implemented") ;
-			}
-
-		}
-
-		@Override
-		public String toString() {
-			final StringBuffer stringBuffer2 = new StringBuffer();
-			final String LINKID = "linkId: ";
-			final String VALUES = "; values:";
-			final char TAB = '\t';
-			final char RETURN = '\n';
-
-			for (Id linkId : this.volumesAnalyzer.getLinkIds()) { // Only occupancy!
-				StringBuffer stringBuffer = new StringBuffer();
-				stringBuffer.append(LINKID);
-				stringBuffer.append(linkId);
-				stringBuffer.append(VALUES);
-
-				boolean hasValues = false; // only prints stops with volumes > 0
-				int[] values = this.volumesAnalyzer.getVolumesForLink(linkId);
-
-				for (int ii = 0; ii < values.length; ii++) {
-					hasValues = hasValues || (values[ii] > 0);
-
-					stringBuffer.append(TAB);
-					stringBuffer.append(values[ii]);
-				}
-				stringBuffer.append(RETURN);
-				if (hasValues) stringBuffer2.append(stringBuffer.toString());
-			}
-			return stringBuffer2.toString();
-		}
-
+	private static boolean isActiveInThisIteration(final int iter, final Config config) {
+		return (iter > 0 && iter % config.counts().getWriteCountsInterval() == 0);
 	}
 }

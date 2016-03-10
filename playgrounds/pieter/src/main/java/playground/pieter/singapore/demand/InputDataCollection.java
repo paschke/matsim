@@ -17,10 +17,10 @@ import javax.management.timer.Timer;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.facilities.ActivityFacilitiesImpl;
@@ -30,7 +30,6 @@ import org.matsim.facilities.ActivityOptionImpl;
 import org.matsim.facilities.FacilitiesWriter;
 import org.matsim.facilities.MatsimFacilitiesReader;
 import org.matsim.facilities.OpeningTimeImpl;
-import org.matsim.facilities.OpeningTime.DayType;
 
 import others.sergioo.util.dataBase.DataBaseAdmin;
 import others.sergioo.util.dataBase.NoConnectionException;
@@ -60,13 +59,13 @@ class InputDataCollection implements Serializable {
 	private final HashMap<Integer, HashMap<Integer, HashMap<String, HashMap<String, Double>>>> bizActFrequencies = new HashMap<>();
 	private final HashMap<Integer, HashMap<Integer, HashMap<String, HashMap<String, Double>>>> leisureActFrequencies = new HashMap<>();
 
-	private transient ScenarioImpl scenario;
+	private transient MutableScenario scenario;
 	private transient Logger inputLog;
 	HashMap<Integer, HashMap<String, LocationSampler>> subDGPActivityLocationSamplers;
 	HashMap<String, Integer> facilityToSubDGP;
 
 	public InputDataCollection(DataBaseAdmin dba,
-			Properties diverseScriptProperties, ScenarioImpl scenario,
+			Properties diverseScriptProperties, MutableScenario scenario,
 			boolean facilitiesAllInOneXML) throws SQLException,
 			NoConnectionException {
 		inputLog = Logger.getLogger("InputData");
@@ -332,9 +331,9 @@ class InputDataCollection implements Serializable {
 						double startCap = facility.getActivityOptions()
 								.get("home").getCapacity();
 						ActivityOptionImpl option = facility
-								.createActivityOption(activityType);
+								.createAndAddActivityOption(activityType);
 						option.addOpeningTime(new OpeningTimeImpl(
-								DayType.wkday, Time.parseTime("10:00:00"), Time
+								Time.parseTime("10:00:00"), Time
 										.parseTime("22:00:00")));
 						option.setCapacity(secondaryCapacities
 								.get(activityType) * startCap);
@@ -344,9 +343,9 @@ class InputDataCollection implements Serializable {
 
 					for (String activityType : secondaryCapacities.keySet()) {
 						ActivityOptionImpl option = facility
-								.createActivityOption(activityType);
+								.createAndAddActivityOption(activityType);
 						option.addOpeningTime(new OpeningTimeImpl(
-								DayType.wkday, Time.parseTime("10:00:00"), Time
+								Time.parseTime("10:00:00"), Time
 										.parseTime("22:00:00")));
 						option.setCapacity(secondaryCapacities
 								.get(activityType));
@@ -459,8 +458,7 @@ class InputDataCollection implements Serializable {
 					secondaryFacilitiesTable));
 			int counter = 1;
 			while (rs.next()) {
-				CoordImpl coord = new CoordImpl(rs.getDouble("longitude"),
-						rs.getDouble("latitude"));
+				Coord coord = new Coord(rs.getDouble("longitude"), rs.getDouble("latitude"));
 				ActivityFacilityImpl facility = ((ActivityFacilitiesImpl) scenario
 						.getActivityFacilities())
 						.createAndAddFacility(
@@ -484,12 +482,12 @@ class InputDataCollection implements Serializable {
 						.getActivityFacilities()).createAndAddFacility(
 								Id.create("home_"
                                         + rs.getInt("id_res_facility"), ActivityFacility.class),
-								new CoordImpl(rs.getDouble("x_utm48n"), rs
-										.getDouble("y_utm48n")));
+						new Coord(rs.getDouble("x_utm48n"), rs
+								.getDouble("y_utm48n")));
 				facility.setDesc(rs.getString("property_type"));
 				ActivityOptionImpl actOption = facility
-						.createActivityOption("home");
-				actOption.setCapacity((double) rs.getInt("units"));
+						.createAndAddActivityOption("home");
+				actOption.setCapacity(rs.getInt("units"));
 
 			}
 		} catch (SQLException | NoConnectionException e) {
@@ -676,8 +674,8 @@ class InputDataCollection implements Serializable {
 					double timePastSec = (double) timePastLong
 							/ (double) Timer.ONE_SECOND;
 					int agentsToGo = householdCount - counter;
-					double agentsPerSecond = (double) counter / timePastSec;
-					long timeToGo = (long) ((double) agentsToGo / agentsPerSecond);
+					double agentsPerSecond = counter / timePastSec;
+					long timeToGo = (long) (agentsToGo / agentsPerSecond);
 					inputLog.info(String
 							.format("%6d of %8d households done in %.3f seconds at %.3f hhs/sec, %s sec to go.",
 									counter, householdCount,
@@ -762,7 +760,7 @@ class InputDataCollection implements Serializable {
 //		inputLog.info("DONE: Loading occupation vs masterplan landuse type frequencies");
 //	}
 
-	public void restoreIfDeserialized(ScenarioImpl scenario, DataBaseAdmin dba,
+	public void restoreIfDeserialized(MutableScenario scenario, DataBaseAdmin dba,
 			Properties p) {
 		this.setScenario(scenario);
 		this.setDiverseScriptProperties(p);
@@ -778,7 +776,7 @@ class InputDataCollection implements Serializable {
 		this.diverseScriptProperties = diverseScriptProperties;
 	}
 
-	void setScenario(ScenarioImpl scenario) {
+	void setScenario(MutableScenario scenario) {
 		this.scenario = scenario;
 	}
 

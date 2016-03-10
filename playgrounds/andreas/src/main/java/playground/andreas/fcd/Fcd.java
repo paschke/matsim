@@ -34,9 +34,8 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.network.algorithms.NetworkTransform;
 import org.matsim.core.population.*;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.geotools.MGC;
@@ -76,8 +75,8 @@ public class Fcd {
 	}
 	
 	public static Set<String> readFcdReturningLinkIdsUsed(String fcdNetInFile, String fcdEventsInFile, String outDir, String matsimNetwork, double minDistanceBetweenTwoActs){
-		ScenarioImpl sc = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		NetworkReaderMatsimV1 reader = new NetworkReaderMatsimV1(sc);
+		MutableScenario sc = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		NetworkReaderMatsimV1 reader = new NetworkReaderMatsimV1(sc.getNetwork());
 		reader.parse(matsimNetwork);
 		
 		Fcd fcd = new Fcd(fcdNetInFile, fcdEventsInFile, minDistanceBetweenTwoActs);
@@ -99,8 +98,8 @@ public class Fcd {
 		String matsimNetwork = "D:\\Berlin\\DLR_FCD\\20110207_Analysis\\counts_network.xml";
 		String linksUsed = "D:\\Berlin\\DLR_FCD\\20110207_Analysis\\linksUsed.txt";
 		
-		ScenarioImpl sc = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		NetworkReaderMatsimV1 reader = new NetworkReaderMatsimV1(sc);
+		MutableScenario sc = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		NetworkReaderMatsimV1 reader = new NetworkReaderMatsimV1(sc.getNetwork());
 		reader.parse(matsimNetwork);
 		
 		Fcd fcd = new Fcd(netInFile, fcdEventsInFile, 0.0);
@@ -129,7 +128,7 @@ public class Fcd {
 	private void writeSimplePlansFromEvents(String plansOutFile) {
 		log.info("Creating plans from fcd events...");
 		int numberOfPlans = 1;
-        ScenarioImpl sc = ((ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig()));
+        MutableScenario sc = ((MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig()));
         Population pop = PopulationUtils.createPopulation(sc.getConfig(), sc.getNetwork());
 		
 		FcdEvent lastEvent = null;
@@ -140,7 +139,7 @@ public class Fcd {
 			
 			if(lastEvent == null){
 				lastEvent = currentEvent;
-				currentPerson = new PersonImpl(Id.create(numberOfPlans + "-" + currentEvent.getVehId().toString(), Person.class));
+				currentPerson = PopulationUtils.createPerson(Id.create(numberOfPlans + "-" + currentEvent.getVehId().toString(), Person.class));
 				pop.addPerson(currentPerson);
 				numberOfPlans++;
 				currentPerson.addPlan(new PlanImpl());
@@ -155,7 +154,7 @@ public class Fcd {
 				
 			} else {
 				// different one, new person
-				currentPerson = new PersonImpl(Id.create(numberOfPlans + "-" + currentEvent.getVehId().toString(), Person.class));
+				currentPerson = PopulationUtils.createPerson(Id.create(numberOfPlans + "-" + currentEvent.getVehId().toString(), Person.class));
 				pop.addPerson(currentPerson);
 				numberOfPlans++;
 				currentPerson.addPlan(new PlanImpl());
@@ -167,7 +166,7 @@ public class Fcd {
 		
 		log.info("...done");
 		
-		PopulationWriter writer = new PopulationWriter(pop, ((ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig())).getNetwork());
+		PopulationWriter writer = new PopulationWriter(pop, ((MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig())).getNetwork());
 		writer.write(plansOutFile);
 		log.info(pop.getPersons().size() + " plans written to " + plansOutFile);
 	}
@@ -175,7 +174,7 @@ public class Fcd {
 	private void writeComplexPlansFromEvents(String plansOutFile, NetworkImpl net) {
 		log.info("Creating plans from fcd events...");
 		int numberOfPlans = 1;
-        ScenarioImpl sc = ((ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig()));
+        MutableScenario sc = ((MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig()));
         Population pop = PopulationUtils.createPopulation(sc.getConfig(), sc.getNetwork());
 		
 		FcdEvent lastEvent = null;
@@ -198,7 +197,7 @@ public class Fcd {
 			}
 			
 			if(lastLink != null){
-				if(CoordUtils.calcDistance(link.getCoord(), lastLink.getCoord()) < this.minDistanceBetweenTwoActs){
+				if(CoordUtils.calcEuclideanDistance(link.getCoord(), lastLink.getCoord()) < this.minDistanceBetweenTwoActs){
 					lastEvent = currentEvent;
 					continue;
 				}
@@ -208,7 +207,7 @@ public class Fcd {
 			
 			if(lastEvent == null){
 				lastEvent = currentEvent;
-				currentPerson = new PersonImpl(Id.create(numberOfPlans + "-" + currentEvent.getVehId().toString(), Person.class));
+				currentPerson = PopulationUtils.createPerson(Id.create(numberOfPlans + "-" + currentEvent.getVehId().toString(), Person.class));
 				pop.addPerson(currentPerson);
 				numberOfPlans++;
 				currentPerson.addPlan(new PlanImpl());
@@ -225,7 +224,7 @@ public class Fcd {
 				
 			} else {
 				// different one, new person
-				currentPerson = new PersonImpl(Id.create(numberOfPlans + "-" + currentEvent.getVehId().toString(), Person.class));
+				currentPerson = PopulationUtils.createPerson(Id.create(numberOfPlans + "-" + currentEvent.getVehId().toString(), Person.class));
 				pop.addPerson(currentPerson);
 				numberOfPlans++;
 				currentPerson.addPlan(new PlanImpl());
@@ -238,7 +237,7 @@ public class Fcd {
 		
 		log.info("...done");
 		
-		PopulationWriter writer = new PopulationWriter(pop, ((ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig())).getNetwork());
+		PopulationWriter writer = new PopulationWriter(pop, ((MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig())).getNetwork());
 		writer.write(plansOutFile);
 		log.info(pop.getPersons().size() + " plans written to " + plansOutFile);
 	}
@@ -331,7 +330,7 @@ public class Fcd {
 	public static Link getNearestLinkWithRightDirection(NetworkImpl net, Coord coord, double direction) {
 		Link link = NetworkUtils.getNearestLink(net, coord);
 		double directionGiven_rad = direction * 2 * Math.PI / 360.0;
-		Coord vectorGiven = new CoordImpl(Math.cos(directionGiven_rad), Math.sin(directionGiven_rad));
+		Coord vectorGiven = new Coord(Math.cos(directionGiven_rad), Math.sin(directionGiven_rad));
 		// could be done without converting to a vector
 		
 		if(angleIsWithinEpsilon(getVector(link), vectorGiven)){
@@ -372,8 +371,8 @@ public class Fcd {
 	
 	private static Coord getVector(Link link){
 		double x = link.getToNode().getCoord().getX() - link.getFromNode().getCoord().getX();
-		double y = link.getToNode().getCoord().getY() - link.getFromNode().getCoord().getY();		
-		return new CoordImpl(x, y);
+		double y = link.getToNode().getCoord().getY() - link.getFromNode().getCoord().getY();
+		return new Coord(x, y);
 	}
 
 }

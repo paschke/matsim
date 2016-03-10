@@ -19,18 +19,18 @@
 
 package herbie.running.pt;
 
-import java.util.List;
-
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Route;
-import org.matsim.core.population.routes.GenericRoute;
+import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.pt.routes.ExperimentalTransitRoute;
+
+import java.util.List;
 
 public class DistanceCalculations {
 
@@ -41,7 +41,7 @@ public class DistanceCalculations {
 		double distance = 0.0;
 		
 		for (int i = 0; i < ids.size(); i++) {
-			Double dist = network.getLinks().get(ids.get(i)).getLength();
+			double dist = network.getLinks().get(ids.get(i)).getLength();
 			
 			distance += network.getLinks().get(ids.get(i)).getLength();
 		}
@@ -54,12 +54,12 @@ public class DistanceCalculations {
 		return distance;
 	}
 	
-	public static double getLegDistance(GenericRoute route, Network network){
+	public static double getLegDistance(GenericRouteImpl route, Network network){
 		
 		double distance = 0.0;
 		
-		Double dist = route.getDistance();
-		if(!dist.isNaN()) return route.getDistance();
+		double dist = route.getDistance();
+		if(!Double.isNaN(dist)) return route.getDistance();
 		
 		String routeDescription = route.getRouteDescription();
 		// events to legs generates a genericRoute with no description
@@ -79,7 +79,7 @@ public class DistanceCalculations {
 				System.out.println("could not find node with id " + nodeIDs[i+1]);
 			}
 			
-			distance += (CoordUtils.calcDistance(node1.getCoord(), node2.getCoord()));
+			distance += (CoordUtils.calcEuclideanDistance(node1.getCoord(), node2.getCoord()));
 		}
 		
 		Link startLink = network.getLinks().get(route.getStartLinkId());
@@ -108,15 +108,15 @@ public class DistanceCalculations {
 			return getLegDistance((ExperimentalTransitRoute) route, network);
 		}
 		else {
-			return getLegDistance((GenericRoute) route, network);
+			return getLegDistance((GenericRouteImpl) route, network);
 		}
 	}
 	
 
-	public static double getWalkDistance(GenericRoute route, Network network) {
+	public static double getWalkDistance(Route route, Network network) {
 		Coord fromCoord = network.getLinks().get(route.getStartLinkId()).getCoord();
 		Coord toCoord = network.getLinks().get(route.getEndLinkId()).getCoord();
-		return CoordUtils.calcDistance(fromCoord, toCoord);
+		return CoordUtils.calcEuclideanDistance(fromCoord, toCoord);
 	}
 
 	public static double getLegDistance(ExperimentalTransitRoute route, Network network) {
@@ -124,7 +124,7 @@ public class DistanceCalculations {
 		Coord startLinkCoord = network.getLinks().get(route.getStartLinkId()).getCoord();
 		Coord endLinkCoord = network.getLinks().get(route.getEndLinkId()).getCoord();
 		
-		return CoordUtils.calcDistance(startLinkCoord, endLinkCoord);
+		return CoordUtils.calcEuclideanDistance(startLinkCoord, endLinkCoord);
 		
 //		Double routeDist = route.getDistance();
 //		if(!routeDist.isNaN()){

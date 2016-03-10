@@ -13,9 +13,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkReaderMatsimV1;
 import org.matsim.core.network.NetworkWriter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
 import org.matsim.pt.transitSchedule.api.TransitScheduleWriter;
@@ -29,10 +28,10 @@ public class BuslaneGenerator_fullPriority {
 		String outputNetworkPath = args[2];
 		String outputTransitSchedule = args[3];
 
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		scenario.getConfig().transit().setUseTransit(true);
 
-		new NetworkReaderMatsimV1(scenario).parse(networkPath);
+		new NetworkReaderMatsimV1(scenario.getNetwork()).parse(networkPath);
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 
 		new TransitScheduleReader(scenario).readFile(transitSchedulePath);
@@ -72,8 +71,7 @@ public class BuslaneGenerator_fullPriority {
 						network.getLinks().get(link).setAllowedModes(allowedModesPrivate);
 
 						Id<Node> newNodeId = Id.create(network.getLinks().get(link).getToNode().getId().toString() + "b", Node.class);
-						Coord newBusNodeCoord = new CoordImpl(network.getLinks().get(link).getToNode().getCoord().getX() + 0.1,
-								network.getLinks().get(link).getToNode().getCoord().getY() + 0.1);
+						Coord newBusNodeCoord = new Coord(network.getLinks().get(link).getToNode().getCoord().getX() + 0.1, network.getLinks().get(link).getToNode().getCoord().getY() + 0.1);
 
 						if (link.toString().equals(lastLinkId.toString())) {
 							newNodeId = network.getLinks().get(link).getToNode().getId();

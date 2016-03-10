@@ -19,6 +19,7 @@
  * *********************************************************************** */
 package playground.dgrether.signalsystems;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -34,12 +35,12 @@ import org.matsim.core.config.ConfigWriter;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.config.groups.QSimConfigGroup.SnapshotStyle;
 import org.matsim.contrib.signals.SignalSystemsConfigGroup;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.lanes.data.v11.LaneDefinitionsV11ToV20Conversion;
 import org.matsim.lanes.data.v11.*;
 import org.matsim.lanes.data.v20.Lane;
-import org.matsim.lanes.data.v20.LaneDefinitions20;
+import org.matsim.lanes.data.v20.Lanes;
 import org.matsim.contrib.signals.data.SignalsData;
 import org.matsim.contrib.signals.data.ambertimes.v10.AmberTimesData;
 import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemData;
@@ -70,7 +71,7 @@ public class PoznanNetwork
 {
     private static Network network;
     private static NetworkFactory netFactory;
-    private static ScenarioImpl scenario;
+    private static MutableScenario scenario;
     private static LaneDefinitions11 lanes;
     private static LaneDefinitionsFactory11 laneFactory;
     private static SignalGroupsDataFactory gf;
@@ -400,7 +401,7 @@ public class PoznanNetwork
 
     private static Node createAndAddNode(String id, double x, double y)
     {
-        Node node = netFactory.createNode(Id.create(id, Node.class), scenario.createCoord(x, y));
+        Node node = netFactory.createNode(Id.create(id, Node.class), new Coord(x, y));
         network.addNode(node);
         return node;
     }
@@ -537,7 +538,7 @@ public class PoznanNetwork
     }
 
 
-    private static void createPopulation(ScenarioImpl scenario)
+    private static void createPopulation(MutableScenario scenario)
     {
         Population pop = scenario.getPopulation();
         PopulationFactory pf = pop.getFactory();
@@ -572,12 +573,12 @@ public class PoznanNetwork
         otfconfig.setMapOverlayMode(false);
         config.qsim().setNodeOffset(30);
         ConfigUtils.addOrGetModule(config, SignalSystemsConfigGroup.GROUPNAME, SignalSystemsConfigGroup.class).setUseAmbertimes(true);
-        scenario = (ScenarioImpl)ScenarioUtils.createScenario(config);
+        scenario = (MutableScenario)ScenarioUtils.createScenario(config);
         scenario.addScenarioElement(SignalsData.ELEMENT_NAME, new SignalsDataImpl(ConfigUtils.addOrGetModule(config, SignalSystemsConfigGroup.GROUPNAME, SignalSystemsConfigGroup.class)));
 
         // create network lanes and signals
         createPhysics();
-        LaneDefinitions20 lanes20 = LaneDefinitionsV11ToV20Conversion.convertTo20(
+        Lanes lanes20 = LaneDefinitionsV11ToV20Conversion.convertTo20(
                 lanes, scenario.getNetwork());
         LanesConsistencyChecker lcc = new LanesConsistencyChecker(scenario.getNetwork(), lanes20);
         lcc.checkConsistency();
@@ -615,7 +616,7 @@ public class PoznanNetwork
         String amberTimesFile = baseDir + "amber_times.xml";
         signalsWriter.setAmberTimesOutputFilename(amberTimesFile);
         ConfigUtils.addOrGetModule(config, SignalSystemsConfigGroup.GROUPNAME, SignalSystemsConfigGroup.class).setAmberTimesFile(amberTimesFile);
-        signalsWriter.writeSignalsData((SignalsData) scenario.getScenarioElement(SignalsData.ELEMENT_NAME));
+        signalsWriter.writeSignalsData(scenario);
 
         String lanesOutputFile = baseDir + "lanes.xml";
         // String lanesOutputFile = "d:\\PP-dyplomy\\2010_11-inz\\MATSim\\lanes.xml";

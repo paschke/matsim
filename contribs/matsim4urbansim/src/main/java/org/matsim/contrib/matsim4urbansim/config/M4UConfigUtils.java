@@ -37,7 +37,7 @@ import org.matsim.core.config.groups.*;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.config.groups.StrategyConfigGroup.StrategySettings;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup.VspDefaultsCheckingLevel;
-import org.matsim.core.replanning.DefaultPlanStrategiesModule;
+import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.utils.io.UncheckedIOException;
 
 import java.io.File;
@@ -203,26 +203,6 @@ public class M4UConfigUtils {
 //		InternalConstants.MATSIM_4_OPUS_TEMP = Paths.checkPathEnding(module.getMATSim4OpusTemp());
 //		InternalConstants.MATSIM_4_OPUS_BACKUP = Paths.checkPathEnding(module.getMATSim4OpusBackup());
 	}
-	
-	/**
-	 * @param matsim4urbansimConfigPart1
-	 * @throws UncheckedIOException
-	 */
-	 static ConfigGroup getM4UModuleFromExternalConfig(String externalMATSimConfigFilename) throws UncheckedIOException {
-
-		if(externalMATSimConfigFilename != null && Paths.pathExsits(externalMATSimConfigFilename)){
-			Config tempConfig = ConfigUtils.loadConfig( externalMATSimConfigFilename.trim() );
-
-			// loading additional matsim4urbansim parameter settings from external config file
-			ConfigGroup module = tempConfig.getModule(MATSIM4URBANSIM_MODULE_EXTERNAL_CONFIG);
-			if(module == null)
-				log.info("No \""+ MATSIM4URBANSIM_MODULE_EXTERNAL_CONFIG + "\" settings found in " + externalMATSimConfigFilename);
-			else
-				log.info("Found \""+ MATSIM4URBANSIM_MODULE_EXTERNAL_CONFIG + "\" settings in " + externalMATSimConfigFilename);
-			return module ;
-		}
-		return null ;
-	}
 
 	/**
 	 * setting MATSim network
@@ -316,7 +296,6 @@ public class M4UConfigUtils {
 		// storage capacity == 1).			tnicolai nov'11
 		if(popSampling <= 0.){
 			// yyyyyy how can this happen???? kai, apr'13
-			// yyyyyy if this has happens, it is plausible that the flow cap factor is NOT corrected??? kai, apr'13
 			double popSamplingBefore = popSampling ;
 			popSampling = 0.01;
 			log.warn("Raised popSampling rate from " + popSamplingBefore + 
@@ -327,9 +306,9 @@ public class M4UConfigUtils {
 		// setting FlowCapFactor == population sampling rate (no correction factor needed here)
 		qsimCG.setFlowCapFactor( popSampling );	
 		
-		double storageCapCorrectionFactor = Math.pow(popSampling, -0.25);	// same as: / Math.sqrt(Math.sqrt(sample))
-		// setting StorageCapFactor
-		qsimCG.setStorageCapFactor( popSampling * storageCapCorrectionFactor );	
+			
+		qsimCG.setStorageCapFactor( popSampling * Math.pow(popSampling, -0.25) ) ;   // same as: sample / Math.sqrt(Math.sqrt(sample))
+		// yy and same as Math.pow( popSampling, 0.75 ), isn't it? 
 
 		qsimCG.setRemoveStuckVehicles( false );
 		qsimCG.setStuckTime(10.);
@@ -338,13 +317,13 @@ public class M4UConfigUtils {
 		log.info("...done!");
 	}
 
-// tn june'13 this does no longer exist in the MATSim4UrbanSim configuration and can be removed from here 
-	// looks like tn never tried this out: still need to set this!!
-	/**
-	 * setting strategy
-	 * @param config TODO
-	 */
 	static void initStrategy(Config config){
+		// It is no longer possible to configure any of this from the urbansim side.  However, something still needs to be set for
+		// matsim, which is defined here.  
+		// Unfortunately, this makes it a bit tricky to use your own matsim config, since depending on the strategy settings id one
+		// either adds to these strategy settings, or overrides them, or modifies them.  It is, however, also unclear what else to do; this
+		// is just the standard matsim behavior.  kai, aug'15
+		
 		log.info("Setting StrategyConfigGroup to config...");
 
 		config.strategy().setMaxAgentPlanMemorySize( 5 );
@@ -357,22 +336,23 @@ public class M4UConfigUtils {
 		StrategyConfigGroup.StrategySettings timeAlocationMutator = new StrategyConfigGroup.StrategySettings(Id.create(2, StrategySettings.class));
 		timeAlocationMutator.setStrategyName(DefaultPlanStrategiesModule.DefaultStrategy.TimeAllocationMutator.toString());
 		timeAlocationMutator.setWeight( 0.1 ); 
-		timeAlocationMutator.setDisableAfter(disableStrategyAfterIteration(config)); // just to be sure
+//		timeAlocationMutator.setDisableAfter(disableStrategyAfterIteration(config)); // now matsim default
 		config.strategy().addStrategySettings(timeAlocationMutator);
 		config.timeAllocationMutator().setMutationRange(7200.) ;
 
 		StrategyConfigGroup.StrategySettings reroute = new StrategyConfigGroup.StrategySettings(Id.create(3, StrategySettings.class));
 		reroute.setStrategyName(DefaultPlanStrategiesModule.DefaultStrategy.ReRoute.toString());
 		reroute.setWeight( 0.1 );
-		reroute.setDisableAfter(disableStrategyAfterIteration(config));
+//		reroute.setDisableAfter(disableStrategyAfterIteration(config)); // now matsim default
 		config.strategy().addStrategySettings(reroute);
 
 		log.info("...done!");
 	}
 
-	private static int disableStrategyAfterIteration(Config config) {
-		return (int) Math.ceil(config.controler().getLastIteration() * 0.8);
-	}
+//	private static int disableStrategyAfterIteration(Config config) {
+//		return (int) Math.ceil(config.controler().getLastIteration() * 0.8);
+//	}
+	// no longer needed. kai, aug'15
 	
 	/**
 	 * loads the external config into a temporary structure

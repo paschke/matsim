@@ -28,7 +28,6 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.functions.CharyparNagelOpenTimesScoringFunctionFactory;
 import org.matsim.facilities.ActivityFacilities;
-
 import playground.thibautd.analysis.listeners.ModeAnalysis;
 
 /**
@@ -63,9 +62,7 @@ public class RunIndivSimulation {
 			PlanCalcScoreConfigGroup planCalcScoreConfigGroup = 
 				controler.getConfig().planCalcScore();
 			ScoringFunctionFactory factory =
-				new CharyparNagelOpenTimesScoringFunctionFactory(
-						planCalcScoreConfigGroup,
-						controler.getScenario());
+				new CharyparNagelOpenTimesScoringFunctionFactory( controler.getScenario() );
 			controler.setScoringFunctionFactory(factory);
 		}
 	}

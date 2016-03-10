@@ -19,13 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.analysis.joinabletripsidentifier;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -37,6 +30,13 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.utils.collections.QuadTree;
 import org.matsim.core.utils.geometry.CoordUtils;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Final data structure of the event analysis, containing information
@@ -133,8 +133,8 @@ public class JoinableTrips {
 					double eventTime = event.getTime();
 
 					currentCoord = links.get(((LinkLeaveEvent) event).getLinkId()).getCoord();
-					neighbourInformations = linkInformation.get(
-							currentCoord.getX(), 
+					neighbourInformations = linkInformation.getDisk(
+							currentCoord.getX(),
 							currentCoord.getY(),
 							distanceRadius);
 
@@ -152,7 +152,7 @@ public class JoinableTrips {
 										entry.getTripId());
 								currentJoinableTrip.addPassage(
 										Passage.Type.pickUp,
-										CoordUtils.calcDistance(currentCoord, info.getCoord()),
+										CoordUtils.calcEuclideanDistance(currentCoord, info.getCoord()),
 										eventTime - entry.getDepartureTime());
 							}
 						}
@@ -163,8 +163,8 @@ public class JoinableTrips {
 					double eventTime = event.getTime();
 
 					currentCoord = links.get(((LinkEnterEvent) event).getLinkId()).getCoord();
-					neighbourInformations = linkInformation.get(
-							currentCoord.getX(), 
+					neighbourInformations = linkInformation.getDisk(
+							currentCoord.getX(),
 							currentCoord.getY(),
 							distanceRadius);
 
@@ -182,7 +182,7 @@ public class JoinableTrips {
 										entry.getTripId());
 								currentJoinableTrip.addPassage(
 										Passage.Type.dropOff,
-										CoordUtils.calcDistance(currentCoord, info.getCoord()),
+										CoordUtils.calcEuclideanDistance(currentCoord, info.getCoord()),
 										eventTime - entry.getArrivalTime());
 							}
 						}
@@ -439,7 +439,7 @@ public class JoinableTrips {
 		 */
 		public double getDistance(final Network network) {
 			if (distance == UNDEFINED_DISTANCE) {
-				distance = CoordUtils.calcDistance(
+				distance = CoordUtils.calcEuclideanDistance(
 						network.getLinks().get(originLinkId).getCoord(),
 						network.getLinks().get(destinationLinkId).getCoord());
 			}

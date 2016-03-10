@@ -6,8 +6,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.network.Node;
-import org.matsim.contrib.accessibility.interfaces.ZoneDataExchangeInterface;
+import org.matsim.contrib.accessibility.interfaces.FacilityDataExchangeInterface;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.facilities.ActivityFacility;
 
@@ -19,20 +18,22 @@ import org.matsim.facilities.ActivityFacility;
  * @author thomas
  *
  */
-public final class UrbanSimZoneCSVWriterV2 implements ZoneDataExchangeInterface {
+public final class UrbanSimZoneCSVWriterV2 implements FacilityDataExchangeInterface {
 	
 	private static final Logger log 	= Logger.getLogger(UrbanSimZoneCSVWriterV2.class);
 	private BufferedWriter zoneWriter = null;
 	public static final String FILE_NAME= "zones.csv";
 	private  String matsim4opusTempDirectory ;
-	
+	private String matsimOutputDirectory;
+
 	/**
 	 * writes the header for zones csv file
 	 */
-	public UrbanSimZoneCSVWriterV2(String matsim4opusTempDirectory){
+	public UrbanSimZoneCSVWriterV2(String matsim4opusTempDirectory, String matsimOutputDirectory){
 		
 		this.matsim4opusTempDirectory = matsim4opusTempDirectory;
-		
+		this.matsimOutputDirectory = matsimOutputDirectory;
+
 		try{
 			log.info("Initializing UrbanSimZoneCSVWriterV2 ...");
 			zoneWriter = IOUtils.getBufferedWriter( matsim4opusTempDirectory + FILE_NAME );
@@ -56,11 +57,10 @@ public final class UrbanSimZoneCSVWriterV2 implements ZoneDataExchangeInterface 
 	
 	/**
 	 * writing the accessibility measures into csv file
-	 * 
 	 * @param startZone
 	 */
 	@Override
-	public void setZoneAccessibilities( ActivityFacility startZone, Node from, Map<Modes4Accessibility,Double> accessibilities ) {
+	public void setFacilityAccessibilities( ActivityFacility startZone, Double timeOfDay, Map<Modes4Accessibility,Double> accessibilities ) {
 		// (this is what, I think, writes the urbansim data, and should thus better not be touched. kai, feb'14)
 
 		try{
@@ -76,25 +76,27 @@ public final class UrbanSimZoneCSVWriterV2 implements ZoneDataExchangeInterface 
 			throw new RuntimeException("io did not work") ;
 		}
 	}
-	
+
 	/**
 	 * finalize and close csv file
 	 */
-	public void close(String matsimOutputDirectory){
+	@Override
+	public void finish() {
 		try {
 			log.info("Closing UrbanSimZoneCSVWriterV2 ...");
 			assert(zoneWriter != null);
 			zoneWriter.flush();
 			zoneWriter.close();
-			
+
 			// copy the zones file to the outputfolder...
 			log.info("Copying " + matsim4opusTempDirectory + FILE_NAME + " to " + matsimOutputDirectory + FILE_NAME);
 			IOUtils.copyFile(new File( matsim4opusTempDirectory + FILE_NAME),	new File( matsimOutputDirectory + FILE_NAME));
-			
+
 			log.info("... done!");
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException("io did not work") ;
-		}	
+		}
 	}
+
 }

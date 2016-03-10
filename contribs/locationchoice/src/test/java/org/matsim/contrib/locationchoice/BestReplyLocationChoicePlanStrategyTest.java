@@ -23,11 +23,9 @@ package org.matsim.contrib.locationchoice;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.replanning.ReplanningContext;
-import org.matsim.core.router.RoutingContext;
-import org.matsim.core.router.TripRouter;
-import org.matsim.core.router.TripRouterFactory;
-import org.matsim.core.router.TripRouterFactoryBuilderWithDefaults;
+import org.matsim.core.router.*;
 import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
@@ -35,6 +33,8 @@ import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.functions.CharyparNagelScoringFunctionFactory;
 import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
 import org.matsim.testcases.MatsimTestUtils;
+
+import javax.inject.Provider;
 
 public class BestReplyLocationChoicePlanStrategyTest {
 	
@@ -69,55 +69,5 @@ public class BestReplyLocationChoicePlanStrategyTest {
 //
 //		for (Person person : scenario.getPopulation().getPersons().values()) planStrategy.run(person);
 	}
-	
-	private static class ReplanningContextImpl implements ReplanningContext {
-		
-		private final TravelTime travelTime;
-		private final TravelDisutility travelDisutility;
-		private final ScoringFunctionFactory scoringFunctionFactory;
-		private final TripRouterFactory tripRouterFactory;
-		
-		public ReplanningContextImpl(Scenario scenario) {
-			this.travelTime = new FreeSpeedTravelTime();
-			this.travelDisutility = new RandomizingTimeDistanceTravelDisutility.Builder().createTravelDisutility(this.travelTime, scenario.getConfig().planCalcScore());
-			this.scoringFunctionFactory = new CharyparNagelScoringFunctionFactory(scenario.getConfig().planCalcScore(), scenario.getNetwork());
-			this.tripRouterFactory = new TripRouterFactoryBuilderWithDefaults().build(scenario);
-		}
-				
-		@Override
-		public TravelDisutility getTravelDisutility() {
-			return this.travelDisutility;
-		}
 
-		@Override
-		public TravelTime getTravelTime() {
-			return this.travelTime;
-		}
-
-		@Override
-		public ScoringFunctionFactory getScoringFunctionFactory() {
-			return this.scoringFunctionFactory;
-		}
-
-		@Override
-		public int getIteration() {
-			return 0;
-		}
-
-		@Override
-		public TripRouter getTripRouter() {
-			return this.tripRouterFactory.instantiateAndConfigureTripRouter(new RoutingContext() {
-
-				@Override
-				public TravelDisutility getTravelDisutility() {
-					return travelDisutility;
-				}
-
-				@Override
-				public TravelTime getTravelTime() {
-					return travelTime;
-				}
-			});
-		}
-	}
 }

@@ -31,7 +31,6 @@ import java.util.Set;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.PersonArrivalEvent;
 import org.matsim.api.core.v01.events.PersonDepartureEvent;
@@ -46,7 +45,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.events.IterationStartsEvent;
@@ -83,7 +82,7 @@ LinkEnterEventHandler, LinkLeaveEventHandler {
 	private int numSlots;
 	private Network network;
 	private EventsManager events;
-	private Controler controler;
+	private MatsimServices controler;
 	private TravelTime travelTime;
 	private double endTime = 48 * 3600;
 
@@ -125,15 +124,15 @@ LinkEnterEventHandler, LinkLeaveEventHandler {
 	private List<Double> quantil25PctNormalizedSocialCosts = new ArrayList<Double>();
 	private List<Double> quantil75PctNormalizedSocialCosts = new ArrayList<Double>();
 
-	public SocialCostCalculator(final Network network, EventsManager events, TravelTime travelTime, Controler controler, double blendFactor) {
+	public SocialCostCalculator(final Network network, EventsManager events, TravelTime travelTime, MatsimServices controler, double blendFactor) {
 		this(network, 5 * 60, 30 * 3600, events, travelTime, controler, blendFactor); // default timeslot-duration: 15 minutes
 	}
 
-	public SocialCostCalculator(final Network network, final int timeslice, EventsManager events, TravelTime travelTime, Controler controler, double blendFactor) {
+	public SocialCostCalculator(final Network network, final int timeslice, EventsManager events, TravelTime travelTime, MatsimServices controler, double blendFactor) {
 		this(network, timeslice, 30 * 3600, events, travelTime, controler, blendFactor); // default: 30 hours at most
 	}
 
-	public SocialCostCalculator(Network network, int timeslice, int maxTime, EventsManager events, TravelTime travelTime, Controler controler, double blendFactor) {
+	public SocialCostCalculator(Network network, int timeslice, int maxTime, EventsManager events, TravelTime travelTime, MatsimServices controler, double blendFactor) {
 		this.travelTimeBinSize = timeslice;
 		this.numSlots = (maxTime / this.travelTimeBinSize) + 1;
 		this.network = network;
@@ -143,7 +142,7 @@ LinkEnterEventHandler, LinkLeaveEventHandler {
 		this.blendFactor = blendFactor;
 
 		this.marginalUtilityOfMoney = controler.getConfig().planCalcScore().getMarginalUtilityOfMoney();
-		this.opportunityCostOfCarTravel = - controler.getConfig().planCalcScore().getTraveling_utils_hr() + controler.getConfig().planCalcScore().getPerforming_utils_hr();
+		this.opportunityCostOfCarTravel = -controler.getConfig().planCalcScore().getModes().get(TransportMode.car).getMarginalUtilityOfTraveling() + controler.getConfig().planCalcScore().getPerforming_utils_hr();
 
 		init();
 	}
@@ -206,19 +205,19 @@ LinkEnterEventHandler, LinkLeaveEventHandler {
 		/*
 		 * Return, if the Agent is on a Leg which does not create congestion.
 		 */
-		if (!activeAgents.contains(event.getPersonId())) return;
+		if (!activeAgents.contains(event.getDriverId())) return;
 
 		LinkTrip linkTrip = new LinkTrip();
-		linkTrip.person_id = event.getPersonId();
+		linkTrip.person_id = event.getDriverId();
 		linkTrip.link_id = event.getLinkId();
 		linkTrip.enterTime = event.getTime();
 
-		activeTrips.put(event.getPersonId(), linkTrip);
+		activeTrips.put(event.getDriverId(), linkTrip);
 
 		/*
 		 * Analysis
 		 */
-		LegTrip legTrip = activeLegs.get(event.getPersonId());
+		LegTrip legTrip = activeLegs.get(event.getDriverId());
 		if (legTrip == null) {
 			log.error("LegTrip was not found!");
 			return;
@@ -231,9 +230,9 @@ LinkEnterEventHandler, LinkLeaveEventHandler {
 		/*
 		 * Return, if the Agent is on a Leg which does not create congestion.
 		 */
-		if (!activeAgents.contains(event.getPersonId())) return;
+		if (!activeAgents.contains(event.getDriverId())) return;
 
-		LinkTrip linkTrip = activeTrips.get(event.getPersonId());
+		LinkTrip linkTrip = activeTrips.get(event.getDriverId());
 
 		if (linkTrip == null) {
 			log.error("LinkTrip was not found!");
@@ -496,7 +495,7 @@ LinkEnterEventHandler, LinkLeaveEventHandler {
 			quantil75Data[i] = quantil75PctSocialCosts.get(i);
 		}
 
-		fileName = event.getControler().getControlerIO().getOutputFilename("socialCosts");
+		fileName = event.getServices().getControlerIO().getOutputFilename("socialCosts");
 		writer.writeGraphic(fileName + ".png", "social costs (money units per leg)", meanData, medianData, quantil25Data, quantil75Data);
 		writer.writeTable(fileName + ".txt", meanData, medianData, quantil25Data, quantil75Data);
 
@@ -508,7 +507,7 @@ LinkEnterEventHandler, LinkLeaveEventHandler {
 			quantil75Data[i] = quantil75PctNormalizedSocialCosts.get(i);
 		}
 
-		fileName = event.getControler().getControlerIO().getOutputFilename("normalizedSocialCosts");
+		fileName = event.getServices().getControlerIO().getOutputFilename("normalizedSocialCosts");
 		writer.writeGraphic(fileName + ".png", "social costs (money units per leg, normalized)", meanData, medianData, quantil25Data, quantil75Data);
 		writer.writeTable(fileName + ".txt", meanData, medianData, quantil25Data, quantil75Data);
 

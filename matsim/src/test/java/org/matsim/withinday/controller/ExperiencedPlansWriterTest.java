@@ -24,6 +24,7 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -36,6 +37,7 @@ import org.matsim.api.core.v01.population.*;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
+import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.StartupEvent;
@@ -44,7 +46,6 @@ import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.qsim.ActivityEndRescheduler;
 import org.matsim.core.mobsim.qsim.agents.WithinDayAgentUtils;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteFactory;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteFactory;
@@ -54,10 +55,12 @@ import org.matsim.withinday.mobsim.WithinDayEngine;
 import org.matsim.withinday.replanning.identifiers.ActivityEndIdentifierFactory;
 import org.matsim.withinday.replanning.identifiers.interfaces.AgentFilter;
 import org.matsim.withinday.replanning.identifiers.interfaces.AgentFilterFactory;
+import org.matsim.withinday.replanning.identifiers.tools.ActivityReplanningMap;
 import org.matsim.withinday.replanning.replanners.interfaces.WithinDayDuringActivityReplanner;
 import org.matsim.withinday.replanning.replanners.interfaces.WithinDayDuringActivityReplannerFactory;
 import org.matsim.withinday.replanning.replanners.interfaces.WithinDayReplanner;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.util.*;
 
@@ -95,27 +98,21 @@ private static final Logger log = Logger.getLogger(ExperiencedPlansWriterTest.cl
 		population.addPerson(createPerson(scenario, "p02"));
 		
 		Controler controler = new Controler(scenario);
-		controler.addOverridingModule(new WithinDayModule());
         controler.getConfig().controler().setCreateGraphs(false);
-        controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.getConfig().controler().setWriteEventsInterval(0);
 		controler.getConfig().controler().setOverwriteFileSetting(
-				true ?
-						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
-
-		WithinDayControlerListener withinDayControlerListener = new WithinDayControlerListener();
-
-		/*
-		 * ExperiencedPlansWriter cannot be initialized before the WithinDayControlerListener
-		 * has processed the StartupEvent. Note that added listeners are processed in reverse order!
-		 */
-		controler.addControlerListener(new WriterInitializer(withinDayControlerListener));
-		controler.addControlerListener(withinDayControlerListener);
-		
-		// only for debugging
-		controler.getEvents().addHandler(new EventsPrinter());
-		
+				OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
+		controler.addOverridingModule(new AbstractModule() {
+			@Override
+			public void install() {
+				install(new WithinDayModule());
+				addControlerListenerBinding().to(WriterInitializer.class);
+				addControlerListenerBinding().to(ExperiencedPlansWriter.class);
+				// only for debugging
+				addEventHandlerBinding().toInstance(new EventsPrinter());
+			}
+		});
 		controler.run();
 
 		/*
@@ -147,30 +144,21 @@ private static final Logger log = Logger.getLogger(ExperiencedPlansWriterTest.cl
 	
 	private static class WriterInitializer implements StartupListener {
 
-		private final WithinDayControlerListener withinDayControlerListener;
-		
-		public WriterInitializer(WithinDayControlerListener withinDayControlerListener) {
-			this.withinDayControlerListener = withinDayControlerListener;
-		}
-		
+		@Inject private Scenario scenario;
+		@Inject private ActivityReplanningMap activityReplanningMap;
+		@Inject private WithinDayEngine withinDayEngine;
+
 		@Override
 		public void notifyStartup(StartupEvent event) {
-			ExperiencedPlansWriter experiencedPlansWriter = new ExperiencedPlansWriter(
-					this.withinDayControlerListener.getMobsimDataProvider());
-			event.getControler().addControlerListener(experiencedPlansWriter);
 
 			/*
 			 * Initialize within-day stuff to adapt the second person's route.
 			 */
-			ActivityEndIdentifierFactory identifierFactory = new ActivityEndIdentifierFactory(
-					this.withinDayControlerListener.getActivityReplanningMap());
+			ActivityEndIdentifierFactory identifierFactory = new ActivityEndIdentifierFactory(activityReplanningMap);
 			identifierFactory.addAgentFilterFactory(new FilterFactory());
-			
-			ReplannerFactory replannerFactory = new ReplannerFactory(event.getControler().getScenario(),
-					this.withinDayControlerListener.getWithinDayEngine());
+			ReplannerFactory replannerFactory = new ReplannerFactory(scenario, this.withinDayEngine);
 			replannerFactory.addIdentifier(identifierFactory.createIdentifier());
-			
-			this.withinDayControlerListener.getWithinDayEngine().addDuringActivityReplannerFactory(replannerFactory);
+			this.withinDayEngine.addDuringActivityReplannerFactory(replannerFactory);
 		}
 		
 	}
@@ -266,13 +254,13 @@ private static final Logger log = Logger.getLogger(ExperiencedPlansWriterTest.cl
 		
 		Network network = scenario.getNetwork();
 		NetworkFactory networkFactory = network.getFactory();
-		
-		Node node0 = networkFactory.createNode(Id.create("n0", Node.class), scenario.createCoord(0.0, 0.0));
-		Node node1 = networkFactory.createNode(Id.create("n1", Node.class), scenario.createCoord(1.0, 0.0));
-		Node node2 = networkFactory.createNode(Id.create("n2", Node.class), scenario.createCoord(2.0, 0.0));
-		Node node3 = networkFactory.createNode(Id.create("n3", Node.class), scenario.createCoord(3.0, 0.0));
-		Node node4 = networkFactory.createNode(Id.create("n4", Node.class), scenario.createCoord(1.0, 1.0));
-		Node node5 = networkFactory.createNode(Id.create("n5", Node.class), scenario.createCoord(2.0, 1.0));
+
+		Node node0 = networkFactory.createNode(Id.create("n0", Node.class), new Coord(0.0, 0.0));
+		Node node1 = networkFactory.createNode(Id.create("n1", Node.class), new Coord(1.0, 0.0));
+		Node node2 = networkFactory.createNode(Id.create("n2", Node.class), new Coord(2.0, 0.0));
+		Node node3 = networkFactory.createNode(Id.create("n3", Node.class), new Coord(3.0, 0.0));
+		Node node4 = networkFactory.createNode(Id.create("n4", Node.class), new Coord(1.0, 1.0));
+		Node node5 = networkFactory.createNode(Id.create("n5", Node.class), new Coord(2.0, 1.0));
 		
 		Link link0 = networkFactory.createLink(Id.create("l0", Link.class), node0, node1);
 		Link link1 = networkFactory.createLink(Id.create("l1", Link.class), node1, node2);
@@ -307,7 +295,7 @@ private static final Logger log = Logger.getLogger(ExperiencedPlansWriterTest.cl
 	 */
 	private Person createPerson(Scenario scenario, String id) {
 		
-		PersonImpl person = (PersonImpl) scenario.getPopulation().getFactory().createPerson(Id.create(id, Person.class));
+		Person person = scenario.getPopulation().getFactory().createPerson(Id.create(id, Person.class));
 		
 		Activity from = scenario.getPopulation().getFactory().createActivityFromLinkId("home", Id.create("l0", Link.class));
 		Leg leg = scenario.getPopulation().getFactory().createLeg(TransportMode.car);

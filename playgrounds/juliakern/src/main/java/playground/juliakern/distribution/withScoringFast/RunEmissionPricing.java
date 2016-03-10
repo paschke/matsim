@@ -163,17 +163,17 @@ public class RunEmissionPricing {
 		
 		EmissionControlerListener ecl = new EmissionControlerListener(controler);
 		controler.addControlerListener(ecl);
-        controler.setScoringFunctionFactory(new ResponsibilityScoringFunctionFactory(config, controler.getScenario().getNetwork(), ecl));
+        controler.setScoringFunctionFactory(new ResponsibilityScoringFunctionFactory(ecl, controler.getScenario()));
 		
 		
 		EmissionModule emissionModule = ecl.emissionModule;
 		EmissionCostModule emissionCostModule = new EmissionCostModule(1.0);
 		// add travel disutility
-		final TravelDisutilityFactory travelCostCalculatorFactory = new ResDisFactory(ecl, emissionModule, emissionCostModule);
+		final TravelDisutilityFactory travelCostCalculatorFactory = new ResDisFactory(ecl, emissionModule, emissionCostModule, config.planCalcScore());
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
-				bindTravelDisutilityFactory().toInstance(travelCostCalculatorFactory);
+				bindCarTravelDisutilityFactory().toInstance(travelCostCalculatorFactory);
 			}
 		});
 		controler.run();

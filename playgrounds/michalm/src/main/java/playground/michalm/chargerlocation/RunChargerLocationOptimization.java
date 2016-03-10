@@ -25,13 +25,13 @@ import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.matsim.api.core.v01.*;
 import org.matsim.contrib.dvrp.run.VrpConfigUtils;
+import org.matsim.contrib.util.distance.*;
+import org.matsim.contrib.zone.Zone;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.scenario.ScenarioUtils;
 
 import playground.michalm.berlin.BerlinZoneUtils;
 import playground.michalm.chargerlocation.ChargerLocationProblem.ChargerLocationSolution;
-import playground.michalm.util.distance.*;
-import playground.michalm.zone.Zone;
 
 
 public class RunChargerLocationOptimization
@@ -122,7 +122,7 @@ public class RunChargerLocationOptimization
         //String taxiRanksFile = dir + "scenarios/2015_02_basic_scenario_v6/berlin_ranks.xml";
 
         Scenario scenario = ScenarioUtils.createScenario(VrpConfigUtils.createConfig());
-        new MatsimNetworkReader(scenario).readFile(networkFile);
+        new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
 
         //        DistanceCalculator calculator = DistanceCalculators
         //                .crateFreespeedDistanceCalculator(scenario.getNetwork());
@@ -138,13 +138,13 @@ public class RunChargerLocationOptimization
                 totalEnergyConsumed / totalPotential);
 
         //read/create stations at either zone centroids or ranks 
-        List<ChargingStation> stations = new ArrayList<>();
+        List<ChargerLocation> locations = new ArrayList<>();
         for (Zone z : zones.values()) {
-            Id<ChargingStation> id = Id.create(z.getId(), ChargingStation.class);
-            ChargingStation station = new ChargingStation(id, z.getCoord(), eScenario.chargePower);
-            stations.add(station);
+            Id<ChargerLocation> id = Id.create(z.getId(), ChargerLocation.class);
+            ChargerLocation location = new ChargerLocation(id, z.getCoord(), eScenario.chargePower);
+            locations.add(location);
         }
-        ChargerData chargerData = new ChargerData(stations, HORIZON.hours);
+        ChargerData chargerData = new ChargerData(locations, HORIZON.hours);
 
         int maxChargers = (int)Math.ceil(eScenario.oversupply * totalEnergyConsumed
                 / (eScenario.chargePower * HORIZON.hours));
@@ -217,13 +217,13 @@ public class RunChargerLocationOptimization
 
     private void writeChargers(int[] x, String file)
     {
-        List<ChargingStation> stations = problem.chargerData.stations;
+        List<ChargerLocation> locations = problem.chargerData.locations;
 
         try (PrintWriter writer = new PrintWriter(file)) {
             for (int j = 0; j < problem.J; j++) {
                 if (x[j] > 0) {
-                    Id<ChargingStation> stationId = stations.get(j).getId();
-                    writer.printf("%s,%d\n", stationId, x[j]);
+                    Id<ChargerLocation> locationId = locations.get(j).getId();
+                    writer.printf("%s,%d\n", locationId, x[j]);
                 }
             }
         }
@@ -236,15 +236,15 @@ public class RunChargerLocationOptimization
     private void writeFlows(double[][] f, String file)
     {
         List<ZoneData.Entry> zoneEntries = problem.zoneData.entries;
-        List<ChargingStation> stations = problem.chargerData.stations;
+        List<ChargerLocation> locations = problem.chargerData.locations;
 
         try (PrintWriter writer = new PrintWriter(file)) {
             for (int i = 0; i < problem.I; i++) {
                 for (int j = 0; j < problem.J; j++) {
                     if (f[i][j] > 1e-2) {
                         Id<Zone> zoneId = zoneEntries.get(i).zone.getId();
-                        Id<ChargingStation> stationId = stations.get(j).getId();
-                        writer.printf("%s,%s,%.2f\n", zoneId, stationId, f[i][j]);
+                        Id<ChargerLocation> locationId = locations.get(j).getId();
+                        writer.printf("%s,%s,%.2f\n", zoneId, locationId, f[i][j]);
                     }
                 }
             }

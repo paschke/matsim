@@ -19,25 +19,23 @@
  * *********************************************************************** */
 package playground.johannes.coopsim.analysis;
 
-import gnu.trove.TDoubleArrayList;
-import gnu.trove.TDoubleDoubleHashMap;
-import gnu.trove.TObjectDoubleHashMap;
+import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
+import gnu.trove.map.hash.TObjectDoubleHashMap;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.common.stats.Correlations;
+import org.matsim.contrib.common.stats.StatsWriter;
+import org.matsim.contrib.socnetgen.sna.graph.social.SocialGraph;
+import playground.johannes.coopsim.mental.ActivityDesires;
+import playground.johannes.coopsim.pysical.Trajectory;
+import playground.johannes.coopsim.pysical.VisitorTracker;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Person;
-
-import playground.johannes.coopsim.mental.ActivityDesires;
-import playground.johannes.coopsim.pysical.Trajectory;
-import playground.johannes.coopsim.pysical.VisitorTracker;
-import playground.johannes.sna.util.TXTWriter;
-import playground.johannes.socialnetworks.graph.social.SocialGraph;
-import playground.johannes.socialnetworks.statistics.Correlations;
 
 /**
  * @author illenberger
@@ -89,19 +87,19 @@ public class CoordinationComplexityTask extends TrajectoryAnalyzerTask {
 			}
 			
 			try {
-				double[] x = xvals.toNativeArray();
+				double[] x = xvals.toArray();
 				
 				if(purpose == null)
 					purpose = "all";
 					
-				TDoubleDoubleHashMap correl = Correlations.mean(x, arrVals.toNativeArray());
-				TXTWriter.writeMap(correl, "members", "diff", String.format("%1$s/arrdiff_members.%2$s.txt", getOutputDirectory(), purpose));
+				TDoubleDoubleHashMap correl = Correlations.mean(x, arrVals.toArray());
+				StatsWriter.writeHistogram(correl, "members", "diff", String.format("%1$s/arrdiff_members.%2$s.txt", getOutputDirectory(), purpose));
 				
-				correl = Correlations.mean(x, durVals.toNativeArray());
-				TXTWriter.writeMap(correl, "members", "diff", String.format("%1$s/durdiff_members.%2$s.txt", getOutputDirectory(), purpose));
+				correl = Correlations.mean(x, durVals.toArray());
+				StatsWriter.writeHistogram(correl, "members", "diff", String.format("%1$s/durdiff_members.%2$s.txt", getOutputDirectory(), purpose));
 				
-				correl = Correlations.mean(x, typeVals.toNativeArray());
-				TXTWriter.writeMap(correl, "members", "diff", String.format("%1$s/typediff_members.%2$s.txt", getOutputDirectory(), purpose));
+				correl = Correlations.mean(x, typeVals.toArray());
+				StatsWriter.writeHistogram(correl, "members", "diff", String.format("%1$s/typediff_members.%2$s.txt", getOutputDirectory(), purpose));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

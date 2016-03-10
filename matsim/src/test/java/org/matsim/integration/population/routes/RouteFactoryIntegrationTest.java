@@ -20,21 +20,26 @@
 
 package org.matsim.integration.population.routes;
 
-import org.matsim.api.core.v01.TransportMode;
-import org.matsim.api.core.v01.population.*;
+import java.util.Collection;
+
+import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.StrategyConfigGroup.StrategySettings;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.population.routes.CompressedNetworkRouteFactory;
 import org.matsim.core.population.routes.CompressedNetworkRouteImpl;
+import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.testcases.MatsimTestCase;
-
-import java.util.Collection;
 
 /**
  * @author mrieser
@@ -71,7 +76,9 @@ public class RouteFactoryIntegrationTest extends MatsimTestCase {
 					if (pe instanceof Leg) {
 						Leg leg = (Leg) pe;
 						Route route = leg.getRoute();
-						assertTrue(route instanceof LinkNetworkRouteImpl); // that must be different from the class used below
+						assertTrue(route instanceof LinkNetworkRouteImpl  || route instanceof GenericRouteImpl ); // that must be different from the class used below
+						// yy I added the "|| route instanceof GenericRouteImpl" to compensate for the added walk legs; a more precise 
+						// test would be better. kai, feb'16
 					}
 				}
 			}
@@ -79,10 +86,9 @@ public class RouteFactoryIntegrationTest extends MatsimTestCase {
 
 		// test another setting
 		config.controler().setOutputDirectory(getOutputDirectory() + "/variant1");
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
-		((PopulationFactoryImpl) scenario.getPopulation().getFactory()).setRouteFactory(TransportMode.car, new CompressedNetworkRouteFactory(scenario.getNetwork()));
-		ScenarioLoaderImpl loader = new ScenarioLoaderImpl(scenario);
-		loader.loadScenario();
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
+		((PopulationFactoryImpl) scenario.getPopulation().getFactory()).setRouteFactory(NetworkRoute.class, new CompressedNetworkRouteFactory(scenario.getNetwork()));
+		ScenarioUtils.loadScenario(scenario);
 
 		Controler controler2 = new Controler(scenario);
         controler2.getConfig().controler().setCreateGraphs(false);
@@ -98,7 +104,10 @@ public class RouteFactoryIntegrationTest extends MatsimTestCase {
 					if (pe instanceof Leg) {
 						Leg leg = (Leg) pe;
 						Route route = leg.getRoute();
-						assertTrue("person: " + person.getId() + "; plan: " + planCounter, route instanceof CompressedNetworkRouteImpl);
+						assertTrue("person: " + person.getId() + "; plan: " + planCounter, 
+								route instanceof CompressedNetworkRouteImpl || route instanceof GenericRouteImpl );
+						// yy I added the "|| route instanceof GenericRouteImpl" to compensate for the added walk legs; a more precise 
+						// test would be better. kai, feb'16
 					}
 				}
 			}

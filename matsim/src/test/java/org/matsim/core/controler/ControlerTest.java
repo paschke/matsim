@@ -20,53 +20,86 @@
 
 package org.matsim.core.controler;
 
-import com.google.inject.Provider;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
 
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.*;
-import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.ControlerConfigGroup.EventsFileFormat;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.config.groups.QSimConfigGroup.SnapshotStyle;
 import org.matsim.core.mobsim.framework.Mobsim;
-import org.matsim.core.mobsim.framework.MobsimFactory;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.PopulationFactoryImpl;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.scoring.ScoringFunction;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.SumScoringFunction;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.testcases.MatsimTestUtils;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
+import com.google.inject.Provider;
 
-import static org.junit.Assert.*;
-
+@RunWith(Parameterized.class)
 public class ControlerTest {
 
 	private final static Logger log = Logger.getLogger(ControlerTest.class);
 	@Rule public MatsimTestUtils utils = new MatsimTestUtils();
 
+	private final boolean isUsingFastCapacityUpdate;
+	
+	public ControlerTest(boolean isUsingFastCapacityUpdate) {
+		this.isUsingFastCapacityUpdate = isUsingFastCapacityUpdate;
+	}
+	
+	@Parameters(name = "{index}: isUsingfastCapacityUpdate == {0}")
+	public static Collection<Object> parameterObjects () {
+		Object [] capacityUpdates = new Object [] { false, true };
+		return Arrays.asList(capacityUpdates);
+	}
+	
 	@Test
-	public void testConstructor() {
-		Controler controler = new Controler(new String[]{"test/scenarios/equil/config.xml"});
+	public void testScenarioLoading() {
+		// used to use the String[] constructor, but this makes it use the output/equil/ output directory,
+		// which is problematic as we need a "false" run to check if the scenario is initialized after recent changes
+		// td feb 16
+		// Controler controler = new Controler(new String[]{"test/scenarios/equil/config.xml"});
+		final Config config = utils.loadConfig( "test/scenarios/equil/config.xml" );
+		Controler controler = new Controler( config );
+
+		// need to run the controler to get Scenario initilized
+		controler.getConfig().controler().setLastIteration( 0 );
+		controler.run();
+
         assertNotNull(controler.getScenario().getNetwork()); // is required, e.g. for changing the factories
         assertNotNull(controler.getScenario().getPopulation());
         assertEquals(23, controler.getScenario().getNetwork().getLinks().size());
@@ -76,8 +109,22 @@ public class ControlerTest {
 	}
 
 	@Test
+	public void testTerminationCriterion() {
+		Config config = ConfigUtils.loadConfig("test/scenarios/equil/config.xml");
+		config.controler().setOutputDirectory(utils.getOutputDirectory());
+		Controler controler = new Controler(config);
+		controler.setTerminationCriterion(new TerminationCriterion() {
+			@Override
+			public boolean continueIterations(int iteration) {
+				return false;
+			}
+		});
+		controler.run();
+	}
+
+	@Test
 	public void testConstructor_EventsManagerTypeImmutable() {
-		Controler controler = new Controler(new String[]{"test/scenarios/equil/config.xml"});
+		MatsimServices controler = new Controler(new String[]{"test/scenarios/equil/config.xml"});
 		try {
 			controler.getConfig().setParam("parallelEventHandling", "numberOfThreads", "2");
 			Assert.fail("Expected exception");
@@ -116,7 +163,7 @@ public class ControlerTest {
 		plan1.addActivity(a1);
 		Leg leg1 = factory.createLeg(TransportMode.car);
 		plan1.addLeg(leg1);
-		NetworkRoute route1 = (NetworkRoute) ((PopulationFactoryImpl) f.scenario.getPopulation().getFactory()).createRoute(TransportMode.car, f.link1.getId(), f.link3.getId());
+		NetworkRoute route1 = ((PopulationFactoryImpl) f.scenario.getPopulation().getFactory()).createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
 		leg1.setRoute(route1);
 		ArrayList<Id<Link>> linkIds = new ArrayList<Id<Link>>();
 		linkIds.add(f.link2.getId());
@@ -132,7 +179,7 @@ public class ControlerTest {
 		plan2.addActivity(a2);
 		Leg leg2 = factory.createLeg(TransportMode.car);
 		plan2.addLeg(leg2);
-		NetworkRoute route2 = (NetworkRoute) ((PopulationFactoryImpl) f.scenario.getPopulation().getFactory()).createRoute(TransportMode.car, f.link1.getId(), f.link3.getId());
+		NetworkRoute route2 = ((PopulationFactoryImpl) f.scenario.getPopulation().getFactory()).createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
 		leg2.setRoute(route2);
 		route2.setLinkIds(f.link1.getId(), linkIds, f.link3.getId());
 		plan2.addActivity(factory.createActivityFromLinkId("h", f.link3.getId()));
@@ -149,17 +196,24 @@ public class ControlerTest {
 		// - make sure we don't use threads, as they are not deterministic
 		config.global().setNumberOfThreads(0);
 
+		config.qsim().setUsingFastCapacityUpdate(this.isUsingFastCapacityUpdate);
+		
 		// Now run the simulation
 		Controler controler = new Controler(f.scenario);
         controler.getConfig().controler().setCreateGraphs(false);
         controler.getConfig().controler().setWriteEventsInterval(0);
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
 		// test if we got the right result
-		// the actual result is 151sec, not 150, as each vehicle "loses" 1sec in the buffer
-		assertEquals("TravelTimeCalculator has wrong result",
-				151.0, controler.getLinkTravelTimes().getLinkTravelTime(f.link2, 7*3600, null, null), 0.0);
+		if ( this.isUsingFastCapacityUpdate ) {
+			// the actual result is 151sec, not 150, as each vehicle "loses" 1sec in the buffer
+			assertEquals("TravelTimeCalculator has wrong result",
+					150.5, controler.getLinkTravelTimes().getLinkTravelTime(f.link2, 7*3600, null, null), 0.0);
+		} else {
+			assertEquals("TravelTimeCalculator has wrong result",
+					151.0, controler.getLinkTravelTimes().getLinkTravelTime(f.link2, 7*3600, null, null), 0.0);
+		}
 
 		// now test that the ReRoute-Strategy also knows about these travel times...
 		config.controler().setLastIteration(1);
@@ -175,8 +229,13 @@ public class ControlerTest {
 		controler.run();
 
 		// test that the plans have the correct times
-		assertEquals("ReRoute seems to have wrong travel times.",
-				151.0, ((Leg) (person1.getPlans().get(1).getPlanElements().get(1))).getTravelTime(), 0.0);
+		if ( this.isUsingFastCapacityUpdate ) {
+			assertEquals("ReRoute seems to have wrong travel times.",
+					150.0, ((Leg) (person1.getPlans().get(1).getPlanElements().get(1))).getTravelTime(), 0.0);
+		} else {
+			assertEquals("ReRoute seems to have wrong travel times.",
+					151.0, ((Leg) (person1.getPlans().get(1).getPlanElements().get(1))).getTravelTime(), 0.0);
+		}
 	}
 
 	/**
@@ -190,11 +249,13 @@ public class ControlerTest {
 		final Config config = this.utils.loadConfig(null);
 		config.controler().setLastIteration(0);
 
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		config.qsim().setUsingFastCapacityUpdate( this.isUsingFastCapacityUpdate );
+		
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 		// create a very simple network with one link only and an empty population
 		Network network = scenario.getNetwork();
-		Node node1 = network.getFactory().createNode(Id.create(1, Node.class), new CoordImpl(0, 0));
-		Node node2 = network.getFactory().createNode(Id.create(2, Node.class), new CoordImpl(100, 0));
+		Node node1 = network.getFactory().createNode(Id.create(1, Node.class), new Coord(0, 0));
+		Node node2 = network.getFactory().createNode(Id.create(2, Node.class), new Coord(100, 0));
 		network.addNode(node1);
 		network.addNode(node2);
 		Link link = network.getFactory().createLink(Id.create(1, Link.class), node1, node2);
@@ -219,7 +280,7 @@ public class ControlerTest {
 				});
 			}
 		});
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
 		assertTrue("Custom ScoringFunctionFactory was not set.",
@@ -278,6 +339,8 @@ public class ControlerTest {
 		// - make sure we don't use threads, as they are not deterministic
 		config.global().setNumberOfThreads(1);
 
+		config.qsim().setUsingFastCapacityUpdate( this.isUsingFastCapacityUpdate );
+		
 		// Now run the simulation
 		Controler controler = new Controler(f.scenario);
         controler.getConfig().controler().setCreateGraphs(false);
@@ -293,7 +356,7 @@ public class ControlerTest {
 				});
 			}
 		});
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 		/* if something goes wrong, there will be an exception we don't catch and the test fails,
 		 * otherwise, everything is fine. */
@@ -334,28 +397,32 @@ public class ControlerTest {
 		Leg leg1 = null;
 		Leg leg2 = null;
 
-		person1 = new PersonImpl(Id.create(1, Person.class));
+		person1 = PopulationUtils.createPerson(Id.create(1, Person.class));
 		// --- plan 1 ---
 		Plan plan1 = factory.createPlan();
 		person1.addPlan(plan1);
-		act1a = factory.createActivityFromCoord("h", f.scenario.createCoord(-50.0, 10.0));
+		double x1 = -50.0;
+		act1a = factory.createActivityFromCoord("h", new Coord(x1, 10.0));
 		act1a.setEndTime(7.0*3600);
 		plan1.addActivity(act1a);
 		leg1 = factory.createLeg(TransportMode.car);
 		plan1.addLeg(leg1);
 		// DO NOT CREATE A ROUTE FOR THE LEG!!!
-		act1b = factory.createActivityFromCoord("h", f.scenario.createCoord(1075.0, -10.0));
+		double y1 = -10.0;
+		act1b = factory.createActivityFromCoord("h", new Coord(1075.0, y1));
 		plan1.addActivity(act1b);
 		// --- plan 2 ---
 		Plan plan2 = factory.createPlan();
 		person1.addPlan(plan2);
-		act2a = factory.createActivityFromCoord("h", f.scenario.createCoord(-50.0, -10.0));
+		double x = -50.0;
+		double y = -10.0;
+		act2a = factory.createActivityFromCoord("h", new Coord(x, y));
 		act2a.setEndTime(7.9*3600);
 		plan2.addActivity(act2a);
 		leg2 = factory.createLeg(TransportMode.car);
 		plan2.addLeg(leg2);
 		// DO NOT CREATE A ROUTE FOR THE LEG!!!
-		act2b = factory.createActivityFromCoord("h", f.scenario.createCoord(1111.1, 10.0));
+		act2b = factory.createActivityFromCoord("h", new Coord(1111.1, 10.0));
 		plan2.addActivity(act2b);
 		population.addPerson(person1);
 
@@ -370,6 +437,8 @@ public class ControlerTest {
 		// - make sure we don't use threads, as they are not deterministic
 		config.global().setNumberOfThreads(1);
 
+		config.qsim().setUsingFastCapacityUpdate( this.isUsingFastCapacityUpdate );
+		
 		// Now run the simulation
 		Controler controler = new Controler(f.scenario);
         controler.getConfig().controler().setCreateGraphs(false);
@@ -385,7 +454,7 @@ public class ControlerTest {
 				});
 			}
 		});
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 		/* if something goes wrong, there will be an exception we don't catch and the test fails,
 		 * otherwise, everything is fine. */
@@ -395,6 +464,12 @@ public class ControlerTest {
 		assertEquals(f.link3.getId(), act1b.getLinkId());
 		assertEquals(f.link1.getId(), act2a.getLinkId());
 		assertEquals(f.link3.getId(), act2b.getLinkId());
+		
+		int expectedPlanLength = 3 ;
+		if ( f.scenario.getConfig().plansCalcRoute().isInsertingAccessEgressWalk() ) {
+			// now 7 instead of earlier 3: h-wlk-iact-car-iact-walk-h
+			expectedPlanLength = 7 ;
+		}
 
 		// check that BOTH plans have a route set, even when we only run 1 iteration where only one of them is used.
 		//assertNotNull(leg1.getRoute());
@@ -403,11 +478,16 @@ public class ControlerTest {
 		for (Plan plan : new Plan[]{plan1, plan2}) {
 			assertEquals(
 					"unexpected plan length in "+plan.getPlanElements(),
-					3,
+					expectedPlanLength,
 					plan.getPlanElements().size());
 			assertNotNull(
 					"null route in plan "+plan.getPlanElements(),
 					((Leg) plan.getPlanElements().get( 1 )).getRoute());
+			if ( f.scenario.getConfig().plansCalcRoute().isInsertingAccessEgressWalk() ) {
+				assertNotNull(
+					"null route in plan "+plan.getPlanElements(),
+					((Leg) plan.getPlanElements().get( 3 )).getRoute());
+			}
 		}
 	}
 
@@ -437,7 +517,7 @@ public class ControlerTest {
 				});
 			}
 		});
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
 		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_XML)).exists());
@@ -477,7 +557,7 @@ public class ControlerTest {
 				});
 			}
 		});
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 		assertEquals(4, controler.getConfig().controler().getWriteEventsInterval());
 
@@ -520,11 +600,9 @@ public class ControlerTest {
 				});
 			}
 		});
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
-		assertFalse(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_TXT)).exists());
-		assertFalse(new File(controler.getControlerIO().getIterationFilename(1, Controler.FILENAME_EVENTS_TXT)).exists());
 		assertFalse(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_XML)).exists());
 		assertFalse(new File(controler.getControlerIO().getIterationFilename(1, Controler.FILENAME_EVENTS_XML)).exists());
 	}
@@ -553,43 +631,11 @@ public class ControlerTest {
 				});
 			}
 		});
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
 		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_XML)).exists());
 		assertTrue(new File(controler.getControlerIO().getIterationFilename(1, Controler.FILENAME_EVENTS_XML)).exists());
-	}
-
-	/**
-	 * @author mrieser
-	 */
-	@Test
-	public void testSetWriteEventsTxt() {
-		final Config config = this.utils.loadConfig("test/scenarios/equil/config_plans1.xml");
-		config.controler().setLastIteration(0);
-		config.controler().setWritePlansInterval(0);
-		config.controler().setEventsFileFormats(EnumSet.of(EventsFileFormat.txt));
-
-		final Controler controler = new Controler(config);
-		controler.getConfig().controler().setWriteEventsInterval(1);
-		assertEquals(1, controler.getConfig().controler().getWriteEventsInterval());
-        controler.getConfig().controler().setCreateGraphs(false);
-		controler.addOverridingModule(new AbstractModule() {
-			@Override
-			public void install() {
-				bindMobsim().toProvider(new Provider<Mobsim>() {
-					@Override
-					public Mobsim get() {
-						return new FakeMobsim();
-					}
-				});
-			}
-		});
-		controler.setDumpDataAtEnd(false);
-		controler.run();
-
-		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_TXT)).exists());
-		assertFalse(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_XML)).exists());
 	}
 
 	/**
@@ -617,42 +663,9 @@ public class ControlerTest {
 				});
 			}
 		});
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
-		assertFalse(new File(controler.getControlerIO().getIterationFilename(0,  Controler.FILENAME_EVENTS_TXT)).exists());
-		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_XML)).exists());
-	}
-
-	/**
-	 * @author mrieser
-	 */
-	@Test
-	public void testSetWriteEventsTxtXml() {
-		final Config config = this.utils.loadConfig("test/scenarios/equil/config_plans1.xml");
-		config.controler().setLastIteration(0);
-		config.controler().setWritePlansInterval(0);
-		config.controler().setEventsFileFormats(EnumSet.of(EventsFileFormat.txt, EventsFileFormat.xml));
-
-		final Controler controler = new Controler(config);
-		controler.getConfig().controler().setWriteEventsInterval(1);
-		assertEquals(1, controler.getConfig().controler().getWriteEventsInterval());
-        controler.getConfig().controler().setCreateGraphs(false);
-		controler.addOverridingModule(new AbstractModule() {
-			@Override
-			public void install() {
-				bindMobsim().toProvider(new Provider<Mobsim>() {
-					@Override
-					public Mobsim get() {
-						return new FakeMobsim();
-					}
-				});
-			}
-		});
-		controler.setDumpDataAtEnd(false);
-		controler.run();
-
-		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_TXT)).exists());
 		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, Controler.FILENAME_EVENTS_XML)).exists());
 	}
 
@@ -680,7 +693,7 @@ public class ControlerTest {
 			}
 		});
 
-		controler.setDumpDataAtEnd(true);
+		controler.getConfig().controler().setDumpDataAtEnd(true);
 		controler.run();
 
 		assertTrue(new File(controler.getControlerIO().getOutputFilename(Controler.FILENAME_POPULATION)).exists());
@@ -710,54 +723,28 @@ public class ControlerTest {
 			}
 		});
 
-		controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
 
 		assertFalse(new File(controler.getControlerIO().getOutputFilename(Controler.FILENAME_POPULATION)).exists());
 	}
 
-	/**
-	 * @author mrieser
-	 * @throws InterruptedException
-	 */
-	@Test
+	@Test(expected = RuntimeException.class)
 	public void testShutdown_UncaughtException() throws InterruptedException {
-		ControlerRunnable r = new ControlerRunnable();
+		final Config config = ControlerTest.this.utils.loadConfig("test/scenarios/equil/config_plans1.xml");
+		config.controler().setLastIteration(1);
 
-		// we have to start the Controler in it's own thread, as JUnit interferes with the UncaughtExceptionHandler
-		Thread t = new Thread(r);
-		t.start();
-		t.join();
-
-		assertNotNull(r.controler);
-		assertNotNull(r.controler.uncaughtException);
-	}
-
-	private class ControlerRunnable implements Runnable {
-		/*package*/ Controler controler = null;
-		@Override
-		public void run() {
-			final Config config = ControlerTest.this.utils.loadConfig("test/scenarios/equil/config_plans1.xml");
-			config.controler().setLastIteration(1);
-
-			controler = new Controler(config);
-			final CrashingMobsimFactory testFactory = new CrashingMobsimFactory();
-			controler.addOverridingModule(new AbstractModule() {
-				@Override
-				public void install() {
-					bindMobsim().toProvider(new Provider<Mobsim>() {
-						@Override
-						public Mobsim get() {
-							return testFactory.createMobsim(controler.getScenario(), controler.getEvents());
-						}
-					});
-				}
-			});
-			controler.getConfig().controler().setCreateGraphs(false);
-            controler.setDumpDataAtEnd(false);
-			controler.run();
-		}
+		Controler controler = new Controler(config);
+		controler.addOverridingModule(new AbstractModule() {
+			@Override
+			public void install() {
+				bindMobsim().to(CrashingMobsim.class);
+			}
+		});
+		controler.getConfig().controler().setCreateGraphs(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
+		controler.run();
 	}
 
 	@Test
@@ -782,7 +769,7 @@ public class ControlerTest {
 				}
 			});
 			controler.getConfig().controler().setCreateGraphs(false);
-			controler.setDumpDataAtEnd(false);
+			controler.getConfig().controler().setDumpDataAtEnd(false);
 			controler.run();
 			Assert.fail("expected exception, got none.");
 			
@@ -817,7 +804,7 @@ public class ControlerTest {
 				}
 			});
 			controler.getConfig().controler().setCreateGraphs(false);
-        controler.setDumpDataAtEnd(false);
+			controler.getConfig().controler().setDumpDataAtEnd(false);
 			controler.run();
 			Assert.fail("expected exception, got none.");
 			
@@ -852,7 +839,7 @@ public class ControlerTest {
 				}
 			});
 			controler.getConfig().controler().setCreateGraphs(false);
-        controler.setDumpDataAtEnd(false);
+			controler.getConfig().controler().setDumpDataAtEnd(false);
 			controler.run();
 			Assert.fail("expected exception, got none.");
 			
@@ -878,7 +865,7 @@ public class ControlerTest {
 
 		final Controler controler = new Controler(config);
         controler.getConfig().controler().setCreateGraphs(false);
-        controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
 		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, "googleearth.kmz")).exists());
@@ -893,11 +880,11 @@ public class ControlerTest {
 		config.controler().setWriteEventsInterval(0);
 		config.controler().setWritePlansInterval(0);
 		config.qsim().setSnapshotPeriod(10);
-		config.qsim().setSnapshotStyle( SnapshotStyle.equiDist ) ;;
+		config.qsim().setSnapshotStyle(SnapshotStyle.equiDist) ;;
 
 		final Controler controler = new Controler(config);
         controler.getConfig().controler().setCreateGraphs(false);
-        controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
 		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, "T.veh.gz")).exists());
@@ -916,7 +903,7 @@ public class ControlerTest {
 
 		final Controler controler = new Controler(config);
         controler.getConfig().controler().setCreateGraphs(false);
-        controler.setDumpDataAtEnd(false);
+		controler.getConfig().controler().setDumpDataAtEnd(false);
 		controler.run();
 
 		assertTrue(new File(controler.getControlerIO().getIterationFilename(0, "T.veh.gz")).exists());
@@ -924,24 +911,61 @@ public class ControlerTest {
 		assertTrue(new File(controler.getControlerIO().getIterationFilename(2, "T.veh.gz")).exists());
 	}
 
-	/*package*/ static class FakeMobsim implements Mobsim {
+	/**
+	 * This might sound (or be) silly, but we had this problem in zurich when using a mix of old code and Guice-based code:
+	 * old code wrapped into Guice modules eventually called Controler.setScoringFunctionFactory(),
+	 * which itself adds a Guice module... but too late.
+	 *
+	 * @thibautd
+	 */
+	@Test( expected = RuntimeException.class )
+	public void testGuiceModulesCannotAddModules() {
+		final Config config = this.utils.loadConfig("test/scenarios/equil/config_plans1.xml");
+		config.controler().setLastIteration( 0 );
+		final Controler controler = new Controler( config );
+
+		controler.addOverridingModule(
+				new AbstractModule() {
+					@Override
+					public void install() {
+						controler.setScoringFunctionFactory( null );
+					}
+				}
+		);
+
+		controler.run();
+	}
+
+	static class FakeMobsim implements Mobsim {
 		@Override
 		public void run() {
 			// nothing to do
 		}
 	}
 
-	/*package*/ static class CrashingMobsimFactory implements MobsimFactory {
-		/*package*/ int counter = 0;
+	static class CrashingMobsim implements Mobsim {
 		@Override
-		public Mobsim createMobsim(final Scenario sc, final EventsManager eventsManager) {
-			this.counter++;
-			throw new NullPointerException("Just for testing...");
+		public void run() {
+			// Evil: Create and join an unmanaged thread on which there is an Exception.
+			// Normally, this silently exits, but we want it to test our infrastructure where
+			// Exceptions on wild threads are collected and dispatched to the Controler.
+			Thread thread = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					throw new NullPointerException("Just for testing...");
+				}
+			});
+			thread.start();
+			try {
+				thread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
 	/** A helper class for testSetScoringFunctionFactory() */
-	/*package*/ static class DummyScoringFunctionFactory implements ScoringFunctionFactory {
+	static class DummyScoringFunctionFactory implements ScoringFunctionFactory {
 		@Override
 		public ScoringFunction createNewScoringFunction(final Person person) {
 			return new SumScoringFunction();
@@ -952,7 +976,7 @@ public class ControlerTest {
 	 * @author mrieser
 	 */
 	private static class Fixture {
-		final ScenarioImpl scenario;
+		final MutableScenario scenario;
 		final Network network;
 		Node node1 = null;
 		Node node2 = null;
@@ -963,7 +987,7 @@ public class ControlerTest {
 		Link link3 = null;
 
 		protected Fixture(final Config config) {
-			this.scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+			this.scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 			this.network = this.scenario.getNetwork();
 
 			/* Create a simple network with 4 nodes and 3 links:
@@ -978,10 +1002,11 @@ public class ControlerTest {
 			 * (one having 100secs, the other having 200secs to cross the link).
 			 */
 //			this.network.setCapacityPeriod(Time.parseTime("01:00:00"));
-			this.node1 = this.network.getFactory().createNode(Id.create(1, Node.class), new CoordImpl(-100.0, 0.0));
-			this.node2 = this.network.getFactory().createNode(Id.create(2, Node.class), new CoordImpl(0.0, 0.0));
-			this.node3 = this.network.getFactory().createNode(Id.create(3, Node.class), new CoordImpl(1000.0, 0.0));
-			this.node4 = this.network.getFactory().createNode(Id.create(4, Node.class), new CoordImpl(1100.0, 0.0));
+			final double x = -100.0;
+			this.node1 = this.network.getFactory().createNode(Id.create(1, Node.class), new Coord(x, 0.0));
+			this.node2 = this.network.getFactory().createNode(Id.create(2, Node.class), new Coord(0.0, 0.0));
+			this.node3 = this.network.getFactory().createNode(Id.create(3, Node.class), new Coord(1000.0, 0.0));
+			this.node4 = this.network.getFactory().createNode(Id.create(4, Node.class), new Coord(1100.0, 0.0));
 			this.network.addNode(this.node1);
 			this.network.addNode(this.node2);
 			this.network.addNode(this.node3);

@@ -46,7 +46,7 @@ public class MyLinkStatsReaderTest extends MatsimTestCase{
 	 * file; and the given network.xml file.
 	 */
 	public void testMyLinkstatsReaderConstructor(){
-		String f1 = (new File(getInputDirectory())).getParent() + "/dummy.txt";
+		String f1 = getPackageInputDirectory() + "/dummy.txt";
 		try{
 			MyLinkStatsReader mlsr1 = new MyLinkStatsReader(f1);
 			fail("Uncaught exception: dummy file " + f1 + " does not exist.");
@@ -101,7 +101,7 @@ public class MyLinkStatsReaderTest extends MatsimTestCase{
 	private void setupTest() {
 		scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		String f = (new File(getInputDirectory())).getParent() + "/network.xml";
-		MatsimNetworkReader mnr = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader mnr = new MatsimNetworkReader(scenario.getNetwork());
 		mnr.readFile(f);
 	}
 

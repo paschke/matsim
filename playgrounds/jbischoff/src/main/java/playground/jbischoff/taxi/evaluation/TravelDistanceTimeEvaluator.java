@@ -49,7 +49,7 @@ public class TravelDistanceTimeEvaluator
     private Map<Id, Double> endTimes;
 
 
-    public TravelDistanceTimeEvaluator(Network network)
+    public TravelDistanceTimeEvaluator(Network network, double timeLimit)
     {
         this.taxiTravelDistance = new TreeMap<Id, Double>();
         this.taxiTravelDistancesWithPassenger = new HashMap<Id, Double>();
@@ -101,7 +101,16 @@ public class TravelDistanceTimeEvaluator
 
     private boolean isMonitoredVehicle(Id agentId)
     {
-        return (this.taxiTravelDistance.containsKey(agentId));
+//        return (this.taxiTravelDistance.containsKey(agentId));
+    	if (agentId.toString().startsWith("rt")){
+    		if (!this.taxiTravelDistance.containsKey(agentId)  				){
+    			this.taxiTravelDistance.put(agentId, 0.0);
+    			
+    		}
+    		return true;
+    	}
+    		return false;
+
     }
 
 

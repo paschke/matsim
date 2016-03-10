@@ -1,6 +1,7 @@
 package playground.wrashid.parkingChoice;
 
 import junit.framework.TestCase;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
@@ -10,7 +11,6 @@ import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.listener.AfterMobsimListener;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.utils.geometry.CoordImpl;
 import playground.wrashid.parkingChoice.infrastructure.ParkingImpl;
 import playground.wrashid.parkingChoice.infrastructure.api.PParking;
 
@@ -29,7 +29,7 @@ public class IntegrationTest  extends TestCase {
 		
 		for (int i = 0; i < 10; i++) {
 			for (int j = 0; j < 10; j++) {
-				ParkingImpl parking = new ParkingImpl(new CoordImpl(i * 1000 + 500, j * 1000 + 500));
+				ParkingImpl parking = new ParkingImpl(new Coord((double) (i * 1000 + 500), (double) (j * 1000 + 500)));
 				parking.setMaxCapacity(30000.0);
 				parkingCollection.add(parking);
 			}
@@ -41,7 +41,7 @@ public class IntegrationTest  extends TestCase {
 			
 			@Override
 			public void notifyAfterMobsim(AfterMobsimEvent event) {
-                for (Person p: event.getControler().getScenario().getPopulation().getPersons().values()){
+                for (Person p: event.getServices().getScenario().getPopulation().getPersons().values()){
 					Plan plan=p.getSelectedPlan();
 					if (isPlanCarTripFree(plan)){
 						if (parkingModule.getParkingManager().getNumberOfParkedVehicles()>0){
@@ -54,10 +54,7 @@ public class IntegrationTest  extends TestCase {
 		
 		controler.addControlerListener(afterMobSimListener);
 
-		controler.getConfig().controler().setOverwriteFileSetting(
-				true ?
-						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
+		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 
 		controler.run();
 		assertFalse(someErrorHappened);

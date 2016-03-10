@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -39,9 +40,8 @@ import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationImpl;
 import org.matsim.core.population.PopulationReader;
 import org.matsim.core.population.PopulationWriter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.MatsimFacilitiesReader;
 
@@ -61,7 +61,7 @@ public class DilutedZurichFilter {
 
 		log.info("MATSim-DB: filterDemand...");
 
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 //		World world = new World();
 
 		//////////////////////////////////////////////////////////////////////
@@ -80,7 +80,7 @@ public class DilutedZurichFilter {
 
 		System.out.println("  reading the network xml file...");
 		Network network = scenario.getNetwork();
-		new MatsimNetworkReader(scenario).readFile(config.network().getInputFile());
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(config.network().getInputFile());
 		System.out.println("  done.");
 
 		//////////////////////////////////////////////////////////////////////
@@ -93,7 +93,7 @@ public class DilutedZurichFilter {
 
 		log.info("  calculate area of interest... ");
 		double radius = 30000.0;
-		final CoordImpl center = new CoordImpl(683518.0,246836.0);
+		final Coord center = new Coord(683518.0, 246836.0);
 		final Map<Id<Link>, Link> areaOfInterest = new HashMap<>();
 		log.info("    => area of interest (aoi): center=" + center + "; radius=" + radius);
 
@@ -101,7 +101,7 @@ public class DilutedZurichFilter {
 		for (Link link : network.getLinks().values()) {
 			final Node from = link.getFromNode();
 			final Node to = link.getToNode();
-			if ((CoordUtils.calcDistance(from.getCoord(), center) <= radius) || (CoordUtils.calcDistance(to.getCoord(), center) <= radius)) {
+			if ((CoordUtils.calcEuclideanDistance(from.getCoord(), center) <= radius) || (CoordUtils.calcEuclideanDistance(to.getCoord(), center) <= radius)) {
 				areaOfInterest.put(link.getId(),link);
 			}
 		}

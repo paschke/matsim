@@ -19,24 +19,21 @@
  * *********************************************************************** */
 package playground.ivt.matsim2030.scoring;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.locationchoice.bestresponse.DestinationChoiceBestResponseContext;
+import org.matsim.contrib.socnetsim.jointtrips.scoring.BlackListedActivityScoringFunction;
+import org.matsim.contrib.socnetsim.jointtrips.scoring.ElementalCharyparNagelLegScoringFunction;
+import org.matsim.contrib.socnetsim.jointtrips.scoring.ElementalCharyparNagelLegScoringFunction.LegScoringParameters;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.config.groups.ScenarioConfigGroup;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.router.StageActivityTypes;
 import org.matsim.core.router.TripStructureUtils;
-import org.matsim.core.scenario.ScenarioImpl;
 import org.matsim.core.scoring.ScoringFunction;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.SumScoringFunction;
@@ -44,19 +41,19 @@ import org.matsim.core.scoring.functions.ActivityUtilityParameters;
 import org.matsim.core.scoring.functions.CharyparNagelAgentStuckScoring;
 import org.matsim.core.scoring.functions.CharyparNagelMoneyScoring;
 import org.matsim.core.scoring.functions.CharyparNagelScoringParameters;
-import org.matsim.core.scoring.functions.CharyparNagelScoringParameters.CharyparNagelScoringParametersBuilder;
+import org.matsim.core.scoring.functions.CharyparNagelScoringParameters.Builder;
 import org.matsim.utils.objectattributes.ObjectAttributes;
-
 import playground.ivt.kticompatibility.KtiActivityScoring;
 import playground.ivt.kticompatibility.KtiLikeScoringConfigGroup;
-import org.matsim.contrib.socnetsim.jointtrips.scoring.BlackListedActivityScoringFunction;
-import org.matsim.contrib.socnetsim.jointtrips.scoring.ElementalCharyparNagelLegScoringFunction;
-import org.matsim.contrib.socnetsim.jointtrips.scoring.ElementalCharyparNagelLegScoringFunction.LegScoringParameters;
 import playground.ivt.scoring.LineChangeScoringFunction;
+
+import java.util.*;
 
 /**
  * @author thibautd
+ * @deprecated use {@link MATSim2010ScoringModule} instead
  */
+@Deprecated
 public class MATSim2010ScoringFunctionFactory implements ScoringFunctionFactory {
 
 	private final Scenario scenario;
@@ -90,7 +87,7 @@ public class MATSim2010ScoringFunctionFactory implements ScoringFunctionFactory 
 
 		final SumScoringFunction scoringFunctionAccumulator = new SumScoringFunction();
 		//final ScoringFunctionAccumulator scoringFunctionAccumulator = new ScoringFunctionAccumulator();
-		final CharyparNagelScoringParameters params = createParams( person , config , personAttributes );
+		final CharyparNagelScoringParameters params = createParams( person , config , scenario.getConfig().scenario(), personAttributes );
 
 		scoringFunctionAccumulator.addScoringFunction(
 				new BlackListedActivityScoringFunction(
@@ -98,7 +95,7 @@ public class MATSim2010ScoringFunctionFactory implements ScoringFunctionFactory 
 					new KtiActivityScoring(
 						person.getSelectedPlan(),
 						params,
-						((ScenarioImpl) scenario).getActivityFacilities() )) );
+						scenario.getActivityFacilities() )) );
 
 		// standard modes
 		scoringFunctionAccumulator.addScoringFunction(
@@ -109,7 +106,7 @@ public class MATSim2010ScoringFunctionFactory implements ScoringFunctionFactory 
 					scenario.getNetwork()));
 		// KTI like consideration of influence of travel card
 		// (except that is was not expressed as a ratio)
-		final Collection<String> travelCards = ((PersonImpl) person).getTravelcards();
+		final Collection<String> travelCards = PersonUtils.getTravelcards(person);
 		final double utilityOfDistancePt =
 			travelCards == null || travelCards.isEmpty() ?
 				params.modeParams.get(TransportMode.pt).marginalUtilityOfDistance_m :
@@ -163,13 +160,14 @@ public class MATSim2010ScoringFunctionFactory implements ScoringFunctionFactory 
 	private CharyparNagelScoringParameters createParams(
 			final Person person,
 			final PlanCalcScoreConfigGroup config,
+			final ScenarioConfigGroup scenarioConfig,
 			final ObjectAttributes personAttributes) {
 		if ( individualParameters.containsKey( person.getId() ) ) {
 			return individualParameters.get( person.getId() );
 		}
 
-		final CharyparNagelScoringParametersBuilder builder =
-				CharyparNagelScoringParameters.getBuilder( config );
+		final Builder builder =
+				new Builder(config, config.getScoringParameters(null), scenarioConfig);
 		final Set<String> handledTypes = new HashSet<String>();
 		for ( Activity act : TripStructureUtils.getActivities( person.getSelectedPlan() , blackList ) ) {
 			// XXX works only if no variation of type of activities between plans
@@ -223,13 +221,13 @@ public class MATSim2010ScoringFunctionFactory implements ScoringFunctionFactory 
 				typeBuilder.setTypicalDuration_s(typicalDuration);
 			}
 
-			builder.withActivityParameters(
+			builder.setActivityParameters(
 					act.getType(),
-					typeBuilder.create());
+					typeBuilder );
 		}
 
 		final CharyparNagelScoringParameters params =
-				builder.create();
+				builder.build();
 		individualParameters.put( person.getId() , params );
 		return params;
 	}

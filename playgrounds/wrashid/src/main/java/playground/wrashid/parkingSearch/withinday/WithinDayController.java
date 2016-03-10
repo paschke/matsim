@@ -25,6 +25,7 @@ package playground.wrashid.parkingSearch.withinday;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
+import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.events.StartupEvent;
 import org.matsim.core.controler.listener.StartupListener;
@@ -33,7 +34,6 @@ import org.matsim.core.mobsim.framework.listeners.FixedOrderSimulationListener;
 import org.matsim.core.mobsim.framework.listeners.MobsimInitializedListener;
 import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.router.*;
-import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.withinday.mobsim.MobsimDataProvider;
 import org.matsim.withinday.mobsim.WithinDayEngine;
@@ -42,6 +42,7 @@ import org.matsim.withinday.replanning.identifiers.tools.LinkReplanningMap;
 import org.matsim.withinday.trafficmonitoring.EarliestLinkExitTimeProvider;
 import org.matsim.withinday.trafficmonitoring.TravelTimeCollector;
 
+import javax.inject.Provider;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -55,9 +56,10 @@ import java.util.Set;
  * @author Christoph Dobler
  */
 @Deprecated
-public abstract class WithinDayController extends Controler implements StartupListener, MobsimInitializedListener {
+public abstract class WithinDayController implements StartupListener, MobsimInitializedListener {
 
 	private static final Logger log = Logger.getLogger(WithinDayController.class);
+	protected final Controler controler;
 
 	/*
 	 * How many parallel Threads shall do the Replanning.
@@ -73,23 +75,23 @@ public abstract class WithinDayController extends Controler implements StartupLi
 
 	private boolean withinDayEngineInitialized = false;
 	private WithinDayEngine withinDayEngine;
-	private TripRouterFactory withinDayTripRouterFactory;
+	private Provider<TripRouter> withinDayTripRouterFactory;
 	private FixedOrderSimulationListener fosl = new FixedOrderSimulationListener();
 
 	public WithinDayController(String[] args) {
-		super(args);
+		controler = new Controler(args);
 
 		init();
 	}
 
 	public WithinDayController(Config config) {
-		super(config);
+		controler = new Controler(config);
 
 		init();
 	}
 
 	public WithinDayController(Scenario scenario) {
-		super(scenario);
+		controler = new Controler(scenario);
 
 		init();
 	}
@@ -122,14 +124,14 @@ public abstract class WithinDayController extends Controler implements StartupLi
 	}
 
 	public void createAndInitTravelTimeCollector(Set<String> analyzedModes) {
-		if (this.getEvents() == null) {
+		if (controler.getEvents() == null) {
 			log.warn("Cannot create and init the TravelTimeCollector. EventsManager has not be initialized yet!");
 			return;
 		}
 		if (travelTimeCollector == null) {
-			travelTimeCollector = new TravelTimeCollector(this.getScenario(), analyzedModes);
+			travelTimeCollector = new TravelTimeCollector(controler.getScenario(), analyzedModes);
 			fosl.addSimulationListener(travelTimeCollector);
-			this.getEvents().addHandler(travelTimeCollector);
+			controler.getEvents().addHandler(travelTimeCollector);
 		}
 	}
 
@@ -138,13 +140,12 @@ public abstract class WithinDayController extends Controler implements StartupLi
 	}
 
 	public void createAndInitActivityReplanningMap() {
-		if (this.getEvents() == null) {
+		if (controler.getEvents() == null) {
 			log.warn("Cannot create and init the ActivityReplanningMap. EventsManager has not be initialized yet!");
 			return;
 		}
 		if (activityReplanningMap == null) {
-			activityReplanningMap = new ActivityReplanningMap(this.mobsimDataProvider);
-			this.getEvents().addHandler(activityReplanningMap);
+			activityReplanningMap = new ActivityReplanningMap(this.mobsimDataProvider, controler.getEvents());
 			fosl.addSimulationListener(activityReplanningMap);
 		}
 	}
@@ -158,20 +159,14 @@ public abstract class WithinDayController extends Controler implements StartupLi
 	}
 	
 	public void createAndInitLinkReplanningMap(Map<String, TravelTime> travelTime) {
-		if (this.getEvents() == null) {
-			log.warn("Cannot create and init the LinkReplanningMap. EventsManager has not be initialized yet!");
-			return;
-		}
 		if (linkReplanningMap == null) {
-			linkReplanningMap = new LinkReplanningMap(this.earliestLinkExitTimeProvider);
-			this.getEvents().addHandler(linkReplanningMap);
+			linkReplanningMap = new LinkReplanningMap(this.earliestLinkExitTimeProvider, controler.getEvents());
 			fosl.addSimulationListener(linkReplanningMap);
 		}
 	}
 	
 	private void createAndInitEarliestLinkExitTimeProvider() {
-		this.earliestLinkExitTimeProvider = new EarliestLinkExitTimeProvider(this.getScenario());
-		this.getEvents().addHandler(this.earliestLinkExitTimeProvider);
+		this.earliestLinkExitTimeProvider = new EarliestLinkExitTimeProvider(controler.getScenario(), controler.getEvents());
 		this.earliestLinkExitTimeProvider.getTransportModeProvider();
 	}
 
@@ -191,38 +186,27 @@ public abstract class WithinDayController extends Controler implements StartupLi
 	public void initWithinDayEngine(int numOfThreads) {
 		if (!withinDayEngineInitialized) {
 			log.info("Initialize ReplanningManager");
-			withinDayEngine.initializeReplanningModules(numOfThreads);
 			withinDayEngineInitialized = true;
 		}
 	}
 
 	public void initWithinDayTripRouterFactory() {
 		TripRouterFactoryBuilderWithDefaults tripRouterFactoryBuilder = new TripRouterFactoryBuilderWithDefaults();
-		this.withinDayTripRouterFactory = tripRouterFactoryBuilder.build(this.getScenario());
+		this.withinDayTripRouterFactory = tripRouterFactoryBuilder.build(controler.getScenario());
 	}
 	
 	public WithinDayEngine getWithinDayEngine() {
 		return this.withinDayEngine;
 	}
 	
-	public void setWithinDayTripRouterFactory(TripRouterFactory tripRouterFactory) {
+	public void setWithinDayTripRouterFactory(Provider<TripRouter> tripRouterFactory) {
 		this.withinDayTripRouterFactory = tripRouterFactory;
 	}
 
-	public TripRouterFactory getWithinDayTripRouterFactory() {
+	public Provider<TripRouter> getWithinDayTripRouterFactory() {
 		return this.withinDayTripRouterFactory;
 	}
-	
-	/**
-	 * Uses travel times from the travel time collector for car trips.
-	 */
-	public TripRouter getWithinDayTripRouterInstance() {
-		TravelDisutility travelDisutility = this.getTravelDisutilityFactory().createTravelDisutility(this.getTravelTimeCollector(), 
-				this.getScenario().getConfig().planCalcScore());
-		RoutingContext routingContext = new RoutingContextImpl(travelDisutility, this.getTravelTimeCollector());
-		return this.withinDayTripRouterFactory.instantiateAndConfigureTripRouter(routingContext);
-	}
-	
+
 	public FixedOrderSimulationListener getFixedOrderSimulationListener() {
 		return this.fosl;
 	}
@@ -231,9 +215,14 @@ public abstract class WithinDayController extends Controler implements StartupLi
 	 */
 
 	private void init() {
-		
-		super.getMobsimListeners().add(fosl);
-		
+
+		controler.addOverridingModule(new AbstractModule() {
+			@Override
+			public void install() {
+				addMobsimListenerBinding().toInstance(fosl);
+			}
+		});
+
 		// initialize a withinDayEngine and set WithinDayQSimFactory as MobsimFactory
 //		this.withinDayEngine = new WithinDayEngine(this.getEvents());
 //		WithinDayQSimFactory mobsimFactory = new WithinDayQSimFactory(withinDayEngine);
@@ -241,7 +230,7 @@ public abstract class WithinDayController extends Controler implements StartupLi
 		
 		// register this as a Controller and Simulation Listener
 		this.getFixedOrderSimulationListener().addSimulationListener(this);
-		this.addControlerListener(this);
+		controler.addControlerListener(this);
 	}
 
 	/*

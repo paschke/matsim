@@ -91,7 +91,7 @@ public class HITSToMATSim {
 		this.scenario = ScenarioUtils
 				.createScenario(ConfigUtils.createConfig());
 		this.population = scenario.getPopulation();
-		new MatsimNetworkReader(scenario)
+		new MatsimNetworkReader(scenario.getNetwork())
 				.readFile("data/singapore1_no_rail_CLEAN.xml");
 		NetworkImpl subNet = NetworkImpl.createNetwork();
 		TransportModeNetworkFilter t = new TransportModeNetworkFilter(scenario.getNetwork());
@@ -712,7 +712,7 @@ public class HITSToMATSim {
 	 * pre-processes the network for astar, and associating acts with links
 	 */
 	private void preProcessNetwork() {
-        XY2Links xY2Links = new XY2Links(network);
+        XY2Links xY2Links = new XY2Links(network, null);
 		this.links = network.getLinks();
 	}
 
@@ -780,8 +780,7 @@ public class HITSToMATSim {
 		while (rs.next()) {
 			this.zip2Coord.put(
 					rs.getInt("zip"),
-					scenario.createCoord(rs.getDouble("x_utm48n"),
-							rs.getDouble("y_utm48n")));
+					new Coord(rs.getDouble("x_utm48n"), rs.getDouble("y_utm48n")));
 		}
 	}
 

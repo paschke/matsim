@@ -25,7 +25,7 @@ import java.util.Set;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.log4j.Priority;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.ControlerConfigGroup.EventsFileFormat;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
@@ -33,7 +33,8 @@ import org.matsim.core.config.groups.PlansConfigGroup;
 import org.matsim.core.config.groups.QSimConfigGroup.TrafficDynamics;
 import org.matsim.core.config.groups.StrategyConfigGroup.StrategySettings;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup.VspDefaultsCheckingLevel;
-import org.matsim.core.config.groups.VspExperimentalConfigGroup;
+import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule.DefaultStrategy;
+import org.matsim.pt.PtConstants;
 
 /**
  * @author nagel
@@ -70,6 +71,16 @@ public final class VspConfigConsistencyCheckerImpl implements ConfigConsistencyC
 		
 		boolean problem = false ; // ini
 		
+		// added feb'16
+		if ( !config.qsim().isUsingTravelTimeCheckInTeleportation() ) {
+			log.log( lvl, "found `qsim.usingTravelTimeCheckInTeleporation==false'; vsp should try out `true' and report." ) ;
+		}
+		
+		// added feb'16
+		if ( !config.plansCalcRoute().isInsertingAccessEgressWalk() ) {
+			log.log( lvl, "found `plansCalcRoute.insertingAccessEgressWalk==false'; vsp should try out `true' and report. " ) ;
+		}
+		
 		// added apr'15
 		if ( !config.qsim().isUsingFastCapacityUpdate() ) {
 			log.log( lvl,  " found 'qsim.usingFastCapacityUpdate==false'; vsp should try out `true' and report. ") ;
@@ -78,32 +89,36 @@ public final class VspConfigConsistencyCheckerImpl implements ConfigConsistencyC
 		case withHoles:
 			break;
 		default:
-			log.log( lvl,  " found 'qsim.trafficDynamics==" + config.qsim().getTrafficDynamics() + "'; vsp should try out `" 
-					+ TrafficDynamics.withHoles + "' and report." ) ;
+			log.log( lvl,  " found 'qsim.trafficDynamics==" + config.qsim().getTrafficDynamics() + "'; vsp standard is`" 
+					+ TrafficDynamics.withHoles + "'." ) ;
 			break;
 		}
 		
 		// added apr'15:
 		for ( ActivityParams params : config.planCalcScore().getActivityParams() ) {
+			if ( PtConstants.TRANSIT_ACTIVITY_TYPE.equals( params.getActivityType() ) ) {
+				// they have typicalDurationScoreComputation==relative, but are not scored anyways. benjamin/kai, nov'15
+				continue ;
+			}
 			switch( params.getTypicalDurationScoreComputation() ) {
 			case relative:
 				break;
 			case uniform:
 //				problem = true ;
-				log.log( lvl,  "found `typicalDurationScoreComputation == uniform'; vsp should try out `relative' and report. ") ;
+				log.log( lvl,  "found `typicalDurationScoreComputation == uniform' for activity type " + params.getActivityType() + "; vsp should try out `relative' and report. ") ;
 				break;
 			default:
 				throw new RuntimeException("unexpected setting; aborting ... ") ;
 			}
 		}
 
-		if ( config.planCalcScore().getMonetaryDistanceCostRateCar() > 0 ) {
+		if ( config.planCalcScore().getModes().get(TransportMode.car).getMonetaryDistanceRate() > 0 ) {
 			problem = true ;
 			System.out.flush() ;
 			log.error("found monetary distance cost rate car > 0.  You probably want a value < 0 here.  " +
 					"This is a bug and may be changed eventually.  kai, jun'11") ;
 		}
-		if ( config.planCalcScore().getMonetaryDistanceCostRatePt() > 0 ) {
+		if ( config.planCalcScore().getModes().get(TransportMode.pt).getMonetaryDistanceRate() > 0 ) {
 			problem = true ;
 			System.out.flush() ;
 			log.error("found monetary distance cost rate pt > 0.  You probably want a value < 0 here.  " +
@@ -147,24 +162,34 @@ public final class VspConfigConsistencyCheckerImpl implements ConfigConsistencyC
 			log.log( lvl, "did not find xml as one of the events file formats. vsp default is using xml events.");
 		}
 		
-		// added before nov'12
-		if ( config.timeAllocationMutator().getMutationRange() < 7200 ) {
-			problem = true ;
-			System.out.flush() ;
-			log.log( lvl, "timeAllocationMutator mutationRange < 7200; vsp default is 7200.  This means you have to add the following lines to your config file: ") ;
-			log.log( lvl, "<module name=\"TimeAllocationMutator\">");
-			log.log( lvl, "	<param name=\"mutationRange\" value=\"7200.0\" />");
-			log.log( lvl, "</module>");
+		// added nov'15
+		boolean usingTimeMutator = false ;
+		for ( StrategySettings it : config.strategy().getStrategySettings() ) {
+			if ( DefaultStrategy.TimeAllocationMutator.name().equals( it.getName() ) ) {
+				usingTimeMutator = true ;
+				break ;
+			}
 		}
-		// added jan'14
-		if ( config.timeAllocationMutator().isAffectingDuration() ) {
-//			problem = true ;
-			System.out.flush() ;
-			log.log( lvl, "timeAllocationMutator is affecting duration; vsp default is to not do that.  This will be more strictly" +
-					" enforced in the future. This means you have to add the following lines to your config file: ") ;
-			log.log( lvl, "<module name=\"TimeAllocationMutator\">");
-			log.log( lvl, "	<param name=\"affectingDuration\" value=\"false\" />");
-			log.log( lvl, "</module>");
+		if ( usingTimeMutator ) {
+			// added before nov'12
+			if ( config.timeAllocationMutator().getMutationRange() < 7200 ) {
+				problem = true ;
+				System.out.flush() ;
+				log.log( lvl, "timeAllocationMutator mutationRange < 7200; vsp default is 7200.  This means you have to add the following lines to your config file: ") ;
+				log.log( lvl, "<module name=\"TimeAllocationMutator\">");
+				log.log( lvl, "	<param name=\"mutationRange\" value=\"7200.0\" />");
+				log.log( lvl, "</module>");
+			}
+			// added jan'14
+			if ( config.timeAllocationMutator().isAffectingDuration() ) {
+				//			problem = true ;
+				System.out.flush() ;
+				log.log( lvl, "timeAllocationMutator is affecting duration; vsp default is to not do that.  This will be more strictly" +
+						" enforced in the future. This means you have to add the following lines to your config file: ") ;
+				log.log( lvl, "<module name=\"TimeAllocationMutator\">");
+				log.log( lvl, "	<param name=\"affectingDuration\" value=\"false\" />");
+				log.log( lvl, "</module>");
+			}
 		}
 		
 		// added before nov'12

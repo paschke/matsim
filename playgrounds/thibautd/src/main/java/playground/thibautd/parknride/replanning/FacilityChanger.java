@@ -19,12 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.parknride.replanning;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Activity;
@@ -37,12 +31,17 @@ import org.matsim.core.router.ActivityWrapperFacility;
 import org.matsim.core.router.TripRouter;
 import org.matsim.core.utils.collections.QuadTree;
 import org.matsim.core.utils.geometry.CoordUtils;
-
 import playground.thibautd.parknride.ParkAndRideConstants;
 import playground.thibautd.parknride.ParkAndRideFacilities;
 import playground.thibautd.parknride.ParkAndRideFacility;
 import playground.thibautd.parknride.scoring.ParkingPenalty;
 import playground.thibautd.parknride.scoring.ParkingPenaltyFactory;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
 
 /**
  * @author thibautd
@@ -138,7 +137,7 @@ public class FacilityChanger {
 			final ParkAndRideFacility fac,
 			final double currentRadius) {
 		Collection<ParkAndRideFacility> neighbors =
-				facilitiesQT.get(
+				facilitiesQT.getDisk(
 						fac.getCoord().getX(),
 						fac.getCoord().getY(),
 						currentRadius);
@@ -202,9 +201,9 @@ public class FacilityChanger {
 			final Coord pnr,
 			final Coord accessDest,
 			final Coord egressOr) {
-		return CoordUtils.calcDistance( origin , pnr ) * 2
-			+ CoordUtils.calcDistance( pnr , accessDest )
-			+ CoordUtils.calcDistance( pnr , egressOr );
+		return CoordUtils.calcEuclideanDistance( origin , pnr ) * 2
+			+ CoordUtils.calcEuclideanDistance( pnr , accessDest )
+			+ CoordUtils.calcEuclideanDistance( pnr , egressOr );
 	}
 
 	private void rerouteSubtour(

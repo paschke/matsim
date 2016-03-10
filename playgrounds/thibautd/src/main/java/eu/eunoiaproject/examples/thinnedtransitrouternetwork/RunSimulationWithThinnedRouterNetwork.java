@@ -27,9 +27,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.controler.Controler;
-import org.matsim.core.router.TripRouterFactory;
+import org.matsim.core.router.TripRouter;
 import org.matsim.core.router.TripRouterFactoryBuilderWithDefaults;
-import org.matsim.core.scenario.ScenarioImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.PtConstants;
 import org.matsim.pt.router.TransitRouter;
@@ -100,9 +99,9 @@ public class RunSimulationWithThinnedRouterNetwork {
 		return transitRouterFactory;
 	}
 
-	private static TripRouterFactory createTripRouterFactory(
+	private static Provider<TripRouter> createTripRouterFactory(
 			final String routingNetworkFile,
-			final Scenario scenario ) {
+			final Scenario scenario) {
 		final TripRouterFactoryBuilderWithDefaults builder = new TripRouterFactoryBuilderWithDefaults();
 		
 		builder.setTransitRouterFactory(
@@ -113,7 +112,7 @@ public class RunSimulationWithThinnedRouterNetwork {
 		return builder.build( scenario );
 	}
 
-	private static TripRouterFactory createTeleportingTripRouterFactory(
+	private static Provider<TripRouter> createTeleportingTripRouterFactory(
 			final String routingNetworkFile,
 			final Scenario scenario ) {
 		return new ScheduleBasedTripRouterFactory(
@@ -128,7 +127,6 @@ public class RunSimulationWithThinnedRouterNetwork {
 		// if actual simulation of transit is disabled, the transit schedule
 		// is not loaded automatically: we need to do it by hand
 		if ( !config.transit().isUseTransit() ) {
-			((ScenarioImpl) scenario).createTransitScheduleContainer();
 			log.info( "read schedule from "+config.transit().getTransitScheduleFile() );
 			new TransitScheduleReader( scenario ).readFile( config.transit().getTransitScheduleFile() );
 

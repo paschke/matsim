@@ -20,20 +20,15 @@
 
 package playground.meisterk.org.matsim.facilities.algorithms;
 
-import java.util.Iterator;
-import java.util.TreeMap;
-
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.Config;
-import org.matsim.core.utils.geometry.CoordImpl;
-import org.matsim.facilities.ActivityFacilitiesImpl;
-import org.matsim.facilities.ActivityFacility;
-import org.matsim.facilities.ActivityFacilityImpl;
-import org.matsim.facilities.ActivityOptionImpl;
-import org.matsim.facilities.OpeningTimeImpl;
-
+import org.matsim.facilities.*;
 import playground.meisterk.org.matsim.enterprisecensus.EnterpriseCensus;
 import playground.meisterk.org.matsim.enterprisecensus.EnterpriseCensusParser;
+
+import java.util.Iterator;
+import java.util.TreeMap;
 
 public class FacilitiesWork9To18 {
 
@@ -80,8 +75,8 @@ public class FacilitiesWork9To18 {
 			Y = Integer.toString((int) this.myCensus.getHectareAggregationInformation(reli, "Y"));
 
 			for (int i=0; i<B01S2; i++) {
-				f = facilities.createAndAddFacility(Id.create(facilityCnt++, ActivityFacility.class), new CoordImpl(X, Y));
-				a = f.createActivityOption("work");
+				f = facilities.createAndAddFacility(Id.create(facilityCnt++, ActivityFacility.class), new Coord(Double.parseDouble(X), Double.parseDouble(Y)));
+				a = f.createAndAddActivityOption("work");
 
 				// equally distribute jobs among facilities
 				// as a test here, not exactly the number of avail workplaces :-)
@@ -94,8 +89,8 @@ public class FacilitiesWork9To18 {
 			}
 
 			for (int i=0; i<B01S3; i++) {
-				f = facilities.createAndAddFacility(Id.create(facilityCnt++, ActivityFacility.class), new CoordImpl(X, Y));
-				a = f.createActivityOption("work");
+				f = facilities.createAndAddFacility(Id.create(facilityCnt++, ActivityFacility.class), new Coord(Double.parseDouble(X), Double.parseDouble(Y)));
+				a = f.createAndAddActivityOption("work");
 
 				// equally distribute jobs among facilities
 				// as a test here, not exactly the number of avail workplaces :-)

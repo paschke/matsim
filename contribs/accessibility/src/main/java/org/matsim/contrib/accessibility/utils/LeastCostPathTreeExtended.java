@@ -26,7 +26,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
@@ -38,7 +40,7 @@ import org.matsim.core.controler.Controler;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.roadpricing.RoadPricingScheme;
 import org.matsim.roadpricing.RoadPricingSchemeImpl;
@@ -168,10 +170,8 @@ public final class LeastCostPathTreeExtended extends LeastCostPathTree{
 	 * @param args
 	 */
 	public static void main(String args[]){
-		TempDirectoryUtil tempDirectoryUtil = new TempDirectoryUtil() ;
-
 		// create temp output dir
-		String tmpOutputLocation = tempDirectoryUtil.createCustomTempDirectory("test");
+		String tmpOutputLocation = TempDirectoryUtil.createCustomTempDirectory("test");
 		
 		// create network
 		NetworkImpl network = LeastCostPathTreeExtended.createTriangularNetwork();
@@ -182,8 +182,9 @@ public final class LeastCostPathTreeExtended extends LeastCostPathTree{
 		controlerCG.setLastIteration( 1 );
 		controlerCG.setOutputDirectory( tmpOutputLocation );
 		// set scenario
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario( config );
-		scenario.setNetwork( LeastCostPathTreeExtended.createTriangularNetwork() );
+		ScenarioUtils.ScenarioBuilder builder = new ScenarioUtils.ScenarioBuilder(config) ;
+		builder.setNetwork( createTriangularNetwork() ) ;
+		Scenario scenario = builder.build() ;
 		Controler controler = new Controler(scenario);
 		controler.run();
 		// init lcpte
@@ -205,7 +206,7 @@ public final class LeastCostPathTreeExtended extends LeastCostPathTree{
 		log.info("Distance = " + distance );
 		log.info("Toll = " + toll);
 		
-		tempDirectoryUtil.cleanUpCustomTempDirectories();
+		TempDirectoryUtil.cleanUpCustomTempDirectories();
 	}
 	
 	/**
@@ -226,15 +227,15 @@ public final class LeastCostPathTreeExtended extends LeastCostPathTree{
 		 *(1)-------(3)-------(4)
 		 *(50m,0.1m/s)(50m,0.1m/s) 			
 		 */
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		
 		// add nodes
-		Node node1 = network.createAndAddNode(Id.create(1, Node.class), scenario.createCoord(0, 0));
-		Node node2 = network.createAndAddNode(Id.create(2, Node.class), scenario.createCoord(50, 100));
-		Node node3 = network.createAndAddNode(Id.create(3, Node.class), scenario.createCoord(50, 0));
-		Node node4 = network.createAndAddNode(Id.create(4, Node.class), scenario.createCoord(100, 0));
+		Node node1 = network.createAndAddNode(Id.create(1, Node.class), new Coord(0, 0));
+		Node node2 = network.createAndAddNode(Id.create(2, Node.class), new Coord(50, 100));
+		Node node3 = network.createAndAddNode(Id.create(3, Node.class), new Coord(50, 0));
+		Node node4 = network.createAndAddNode(Id.create(4, Node.class), new Coord(100, 0));
 
 		// add links
 		network.createAndAddLink(Id.create(1, Link.class), node1, node2, 500.0, 10.0, 3600.0, 1);

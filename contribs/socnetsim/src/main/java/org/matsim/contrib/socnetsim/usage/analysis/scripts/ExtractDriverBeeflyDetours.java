@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.Stack;
 
 import org.matsim.api.core.v01.Coord;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlParser;
@@ -73,9 +72,7 @@ public class ExtractDriverBeeflyDetours {
 				isSelectedPlan = atts.getValue( "selected" ).equals( "yes" );
 			}
 			else if (isSelectedPlan && name.equals( "act" )) {
-				Coord coord = new CoordImpl(
-						 Double.parseDouble( atts.getValue( "x" ) ),
-						 Double.parseDouble( atts.getValue( "y" ) ));
+				Coord coord = new Coord(Double.parseDouble(atts.getValue("x")), Double.parseDouble(atts.getValue("y")));
 
 				String type = atts.getValue( "type" );
 				if (type.equals( "pick_up" )) {
@@ -85,10 +82,10 @@ public class ExtractDriverBeeflyDetours {
 					dropOffCoord = coord;
 				}
 				else if (pickUpCoord != null) {
-					double directDist = CoordUtils.calcDistance( lastActCoord , coord );
-					double accessDist = CoordUtils.calcDistance( lastActCoord , pickUpCoord );
-					double jointDist = CoordUtils.calcDistance( pickUpCoord , dropOffCoord );
-					double egressDist = CoordUtils.calcDistance( dropOffCoord , coord );
+					double directDist = CoordUtils.calcEuclideanDistance( lastActCoord , coord );
+					double accessDist = CoordUtils.calcEuclideanDistance( lastActCoord , pickUpCoord );
+					double jointDist = CoordUtils.calcEuclideanDistance( pickUpCoord , dropOffCoord );
+					double egressDist = CoordUtils.calcEuclideanDistance( dropOffCoord , coord );
 
 					try{
 						writer.newLine();

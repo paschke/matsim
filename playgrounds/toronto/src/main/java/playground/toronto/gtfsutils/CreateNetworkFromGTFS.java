@@ -16,9 +16,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkWriter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 
 import playground.toronto.demand.util.TableReader;
@@ -36,9 +35,9 @@ public class CreateNetworkFromGTFS{
         HashMap<Id<Node>,Coord> StopAndCoordinates = new HashMap<>();
         HashMap<Id<Link>,Link> RemoveLinks = new HashMap<>();
         
-        ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+        MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
         NetworkImpl network = (NetworkImpl) scenario.getNetwork();
-		new MatsimNetworkReader(scenario).readFile(NetworkFile);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(NetworkFile);
 		
 		/*read the stops file
 		 * create nodes for each stop
@@ -49,7 +48,7 @@ public class CreateNetworkFromGTFS{
 		
 		while (rdStops.next()){
 			Id<Node> StopID = Id.create(rdStops.current().get("stop_id").toString(), Node.class);
-			CoordImpl StopCoord = new CoordImpl(Double.parseDouble(rdStops.current().get("stop_lon").toString()), Double.parseDouble(rdStops.current().get("stop_lat").toString()));
+			Coord StopCoord = new Coord(Double.parseDouble(rdStops.current().get("stop_lon").toString()), Double.parseDouble(rdStops.current().get("stop_lat").toString()));
 			network.createAndAddNode(StopID, StopCoord);
 			StopAndCoordinates.put(StopID, StopCoord);	
 		}//end of while loop
@@ -96,7 +95,7 @@ public class CreateNetworkFromGTFS{
 				Id<Link> linkID = Id.create(fromNodeID.toString()+"_"+toNodeID.toString(), Link.class);
 				if (ListofLinks.contains(linkID)!=true){
 					//System.out.println(linkID);
-					linklength = CoordUtils.calcDistance(fromNode.getCoord(),toNode.getCoord());
+					linklength = CoordUtils.calcEuclideanDistance(fromNode.getCoord(),toNode.getCoord());
 					//System.out.println(linklength);
 					if (linklength <= 2){
 						network.createAndAddLink(linkID, fromNode, toNode, linklength,linkspeed, linkcapacity, numlanes);

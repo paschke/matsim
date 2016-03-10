@@ -34,9 +34,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkWriter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-
 
 
 public class TestXmls {
@@ -58,16 +57,16 @@ public class TestXmls {
 		mxw.closeFile();
 		System.out.println("done");
 		
-		ScenarioImpl sc = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario sc = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		
 		NetworkImpl network = (NetworkImpl) sc.getNetwork();
 		for(int i=0; i<10; i++){
 			for(int j=0; j<10; j++ ){
-				Coord coordA = sc.createCoord(i*10+5, j*10+5);
+				Coord coordA = new Coord((double) (i * 10 + 5), (double) (j * 10 + 5));
 				String nodeAs = "Node "+i+"_"+j+"A";
 				//Node node1 = network.createAndAddNode(sc.createId("node 1"), sc.createCoord(-20000.0,     0.0));
 				Node nodeA = network.createAndAddNode(Id.create(nodeAs, Node.class), coordA);
-				Coord coordB = sc.createCoord(i*10+6, j*10+6);
+				Coord coordB = new Coord((double) (i * 10 + 6), (double) (j * 10 + 6));
 				String nodeBs = "Node "+i+"_"+j+"B";
 				Node nodeB = network.createAndAddNode(Id.create(nodeBs, Node.class), coordB);
 				Id<Link> linkId = Id.create("link_"+i+"_"+j, Link.class);
@@ -83,7 +82,7 @@ public class TestXmls {
 		for(int i=1; i<11; i++){
 			for(int j = 1; j<11; j++){
 				Person person = pop.getFactory().createPerson(Id.create("person" +i+"_"+j, Person.class));
-				Coord coord = sc.createCoord(i*10-5, j*10-5);
+				Coord coord = new Coord((double) (i * 10 - 5), (double) (j * 10 - 5));
 				Activity homeAct = pop.getFactory().createActivityFromCoord("home", coord );
 				Plan plan = pop.getFactory().createPlan();
 				plan.addActivity(homeAct);

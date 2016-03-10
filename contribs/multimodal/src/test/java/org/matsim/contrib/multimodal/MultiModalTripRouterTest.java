@@ -20,8 +20,10 @@
 
 package org.matsim.contrib.multimodal;
 
+import com.google.inject.name.Names;
 import org.junit.Assert;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -33,21 +35,22 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.contrib.multimodal.config.MultiModalConfigGroup;
-import org.matsim.contrib.multimodal.router.DefaultDelegateFactory;
-import org.matsim.contrib.multimodal.router.MultimodalTripRouterFactory;
 import org.matsim.contrib.multimodal.router.util.LinkSlopesReader;
-import org.matsim.contrib.multimodal.router.util.MultiModalTravelTimeFactory;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
+import org.matsim.core.controler.AbstractModule;
+import org.matsim.core.controler.Injector;
+import org.matsim.core.events.EventsUtils;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.router.*;
-import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.costcalculators.TravelTimeAndDistanceBasedTravelDisutilityFactory;
-import org.matsim.core.router.util.FastDijkstraFactory;
-import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
-import org.matsim.core.router.util.TravelTime;
+import org.matsim.core.router.PlanRouter;
+import org.matsim.core.router.TripRouter;
+import org.matsim.core.router.TripRouterModule;
+import org.matsim.core.router.costcalculators.TravelDisutilityModule;
+import org.matsim.core.scenario.ScenarioByInstanceModule;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
+import org.matsim.core.trafficmonitoring.TravelTimeCalculatorModule;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -62,30 +65,24 @@ public class MultiModalTripRouterTest {
 	@Test
 	public void testRouteLeg() {
 		
-		Config config = ConfigUtils.createConfig();
+		final Config config = ConfigUtils.createConfig();
 		config.plansCalcRoute().addParam("teleportedModeSpeed_bike", "6.01");
 		config.plansCalcRoute().addParam("teleportedModeFreespeedFactor_pt", "2.0");
 		config.plansCalcRoute().addParam("teleportedModeSpeed_ride", "15.0");
 		config.plansCalcRoute().addParam("teleportedModeSpeed_undefined", "13.88888888888889");
 		config.plansCalcRoute().addParam("teleportedModeSpeed_walk", "1.34");
-		
-		Scenario scenario = ScenarioUtils.createScenario(config);
+
+		config.planCalcScore().addModeParams( new PlanCalcScoreConfigGroup.ModeParams( TransportMode.ride ) );
+		final Scenario scenario = ScenarioUtils.createScenario(config);
 		
 		createNetwork(scenario);
 		
-//		MultiModalConfigGroup multiModalConfigGroup = (MultiModalConfigGroup) config.getModule(MultiModalConfigGroup.GROUP_NAME);
 		MultiModalConfigGroup multiModalConfigGroup = new MultiModalConfigGroup();
 		config.addModule(multiModalConfigGroup);
 		multiModalConfigGroup.setSimulatedModes(TransportMode.bike + ", " + TransportMode.walk + ", " + TransportMode.ride + ", " + TransportMode.pt);
 		
 		Map<Id<Link>, Double> linkSlopes = new LinkSlopesReader().getLinkSlopes(multiModalConfigGroup, scenario.getNetwork());
-		MultiModalTravelTimeFactory multiModalTravelTimeFactory = new MultiModalTravelTimeFactory(config, linkSlopes);
-		Map<String, TravelTime> multiModalTravelTimes = multiModalTravelTimeFactory.createTravelTimes();	
 
-		TripRouterFactoryBuilderWithDefaults builder = new TripRouterFactoryBuilderWithDefaults();
-		LeastCostPathCalculatorFactory leastCostPathCalculatorFactory = builder.createDefaultLeastCostPathCalculatorFactory(scenario);
-		TravelDisutilityFactory travelDisutilityFactory = new TravelTimeAndDistanceBasedTravelDisutilityFactory();
-		
 		/*
 		 * Use a ...
 		 * - defaultDelegateFactory for the QNetsim modes
@@ -97,14 +94,24 @@ public class MultiModalTripRouterTest {
 		 * - only "fast" router implementations handle sub-networks correct
 		 * - AStarLandmarks uses link speed information instead of agent speeds
 		 */
-		TripRouterFactory defaultDelegateFactory = new DefaultDelegateFactory(scenario, leastCostPathCalculatorFactory);
-		TripRouterFactory multiModalTripRouterFactory = new MultimodalTripRouterFactory(scenario, multiModalTravelTimes, 
-				travelDisutilityFactory, defaultDelegateFactory, new FastDijkstraFactory());
-		
-		TravelTime travelTime = new FreeSpeedTravelTime();
-		RoutingContext routingContext = new RoutingContextImpl(travelDisutilityFactory.createTravelDisutility(
-				travelTime, config.planCalcScore()), travelTime);
-		TripRouter tripRouter = multiModalTripRouterFactory.instantiateAndConfigureTripRouter(routingContext);
+
+		MultiModalModule multiModalModule = new MultiModalModule();
+		multiModalModule.setLinkSlopes(linkSlopes);
+		com.google.inject.Injector injector = Injector.createInjector(
+				config,
+				AbstractModule.override(Collections.singleton(new AbstractModule() {
+					@Override
+					public void install() {
+						bind(EventsManager.class).toInstance(EventsUtils.createEventsManager(config));
+						install(new ScenarioByInstanceModule(scenario));
+						install(new TripRouterModule());
+						install(new TravelTimeCalculatorModule());
+						install(new TravelDisutilityModule());
+						bind(Integer.class).annotatedWith(Names.named("iteration")).toInstance(0);
+					}
+				}), multiModalModule));
+
+		TripRouter tripRouter = injector.getInstance(TripRouter.class);
 		PlanRouter planRouter = new PlanRouter(tripRouter);
 		
 		/*
@@ -153,6 +160,7 @@ public class MultiModalTripRouterTest {
 	}
 	
 	private void checkMode(Scenario scenario, String transportMode, PlanRouter planRouter) {
+		// XXX transportMode parameter is NOT USED, hence this test is NOT DOING WHAT IT SHOULD! td oct 15
 		Person person = createPerson(scenario);
 		planRouter.run(person);
 		checkRoute((Leg) person.getSelectedPlan().getPlanElements().get(1), scenario.getNetwork());
@@ -199,17 +207,19 @@ public class MultiModalTripRouterTest {
 		/*
 		 * create nodes
 		 */
-		Node startNode = scenario.getNetwork().getFactory().createNode(Id.create("startNode", Node.class), scenario.createCoord(0.0, 0.0));
-		Node splitNode = scenario.getNetwork().getFactory().createNode(Id.create("splitNode", Node.class), scenario.createCoord(1.0, 0.0));
-		
-		Node carNode = scenario.getNetwork().getFactory().createNode(Id.create("carNode", Node.class), scenario.createCoord(2.0, 2.0));
-		Node ptNode = scenario.getNetwork().getFactory().createNode(Id.create("ptNode", Node.class), scenario.createCoord(2.0, 1.0));
-		Node walkNode = scenario.getNetwork().getFactory().createNode(Id.create("walkNode", Node.class), scenario.createCoord(2.0, 0.0));
-		Node bikeNode = scenario.getNetwork().getFactory().createNode(Id.create("bikeNode", Node.class), scenario.createCoord(2.0, -1.0));
-		Node rideNode = scenario.getNetwork().getFactory().createNode(Id.create("rideNode", Node.class), scenario.createCoord(2.0, -2.0));
-		
-		Node joinNode = scenario.getNetwork().getFactory().createNode(Id.create("joinNode", Node.class), scenario.createCoord(1.0, 0.0));
-		Node endNode = scenario.getNetwork().getFactory().createNode(Id.create("endNode", Node.class), scenario.createCoord(0.0, 0.0));
+		Node startNode = scenario.getNetwork().getFactory().createNode(Id.create("startNode", Node.class), new Coord(0.0, 0.0));
+		Node splitNode = scenario.getNetwork().getFactory().createNode(Id.create("splitNode", Node.class), new Coord(1.0, 0.0));
+
+		Node carNode = scenario.getNetwork().getFactory().createNode(Id.create("carNode", Node.class), new Coord(2.0, 2.0));
+		Node ptNode = scenario.getNetwork().getFactory().createNode(Id.create("ptNode", Node.class), new Coord(2.0, 1.0));
+		Node walkNode = scenario.getNetwork().getFactory().createNode(Id.create("walkNode", Node.class), new Coord(2.0, 0.0));
+		double y1 = -1.0;
+		Node bikeNode = scenario.getNetwork().getFactory().createNode(Id.create("bikeNode", Node.class), new Coord(2.0, y1));
+		double y = -2.0;
+		Node rideNode = scenario.getNetwork().getFactory().createNode(Id.create("rideNode", Node.class), new Coord(2.0, y));
+
+		Node joinNode = scenario.getNetwork().getFactory().createNode(Id.create("joinNode", Node.class), new Coord(1.0, 0.0));
+		Node endNode = scenario.getNetwork().getFactory().createNode(Id.create("endNode", Node.class), new Coord(0.0, 0.0));
 		
 		/*
 		 * create links

@@ -23,6 +23,7 @@ package org.matsim.core.population;
 import java.io.BufferedWriter;
 import java.io.IOException;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Activity;
@@ -31,18 +32,27 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.Route;
-import org.matsim.core.population.routes.GenericRoute;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.transformations.IdentityTransformation;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.misc.Time;
-import org.matsim.facilities.ActivityOptionImpl;
 
 public class PopulationWriterHandlerImplV4 extends AbstractPopulationWriterHandler {
 
+	private final CoordinateTransformation coordinateTransformation;
 	private final Network network;
 
-	public PopulationWriterHandlerImplV4(final Network network) {
+	public PopulationWriterHandlerImplV4(
+			final Network network) {
+		this( new IdentityTransformation() , network );
+	}
+
+	public PopulationWriterHandlerImplV4(
+			final CoordinateTransformation coordinateTransformation,
+			final Network network) {
+		this.coordinateTransformation = coordinateTransformation;
 		this.network = network;
 	}
 
@@ -80,30 +90,30 @@ public class PopulationWriterHandlerImplV4 extends AbstractPopulationWriterHandl
 		out.write(p.getId().toString());
 		out.write("\"");
 		if (p instanceof PersonImpl){
-			PersonImpl person = (PersonImpl)p;
-			if (person.getSex() != null) {
+			Person person = p;
+			if (PersonUtils.getSex(person) != null) {
 				out.write(" sex=\"");
-				out.write(person.getSex());
+				out.write(PersonUtils.getSex(person));
 				out.write("\"");
 			}
-			if (person.getAge() != Integer.MIN_VALUE) {
+			if (PersonUtils.getAge(person) != null) {
 				out.write(" age=\"");
-				out.write(Integer.toString(person.getAge()));
+				out.write(Integer.toString(PersonUtils.getAge(person)));
 				out.write("\"");
 			}
-			if (person.getLicense() != null) {
+			if (PersonUtils.getLicense(person) != null) {
 				out.write(" license=\"");
-				out.write(person.getLicense());
+				out.write(PersonUtils.getLicense(person));
 				out.write("\"");
 			}
-			if (person.getCarAvail() != null) {
+			if (PersonUtils.getCarAvail(person) != null) {
 				out.write(" car_avail=\"");
-				out.write(person.getCarAvail());
+				out.write(PersonUtils.getCarAvail(person));
 				out.write("\"");
 			}
-			if (person.isEmployed() != null) {
+			if (PersonUtils.isEmployed(person) != null) {
 				out.write(" employed=\"");
-				out.write((person.isEmployed() ? "yes" : "no"));
+				out.write((PersonUtils.isEmployed(person) ? "yes" : "no"));
 				out.write("\"");
 			}
 		}
@@ -131,62 +141,6 @@ public class PopulationWriterHandlerImplV4 extends AbstractPopulationWriterHandl
 	}
 
 	//////////////////////////////////////////////////////////////////////
-	// <activity ... > ... </activity>
-	//////////////////////////////////////////////////////////////////////
-
-	@Override
-	public void startActivity(final String act_type, final BufferedWriter out) throws IOException {
-		out.write("\t\t\t<activity");
-		out.write(" type=\"" + act_type + "\"");
-		out.write(">\n");
-	}
-
-	@Override
-	public void endActivity(final BufferedWriter out) throws IOException {
-		out.write("\t\t\t</activity>\n\n");
-	}
-
-	//////////////////////////////////////////////////////////////////////
-	// <location ... > ... </location>
-	//////////////////////////////////////////////////////////////////////
-
-//	public void startLocation(final Facility facility, final BufferedWriter out) throws IOException {
-//		out.write("\t\t\t\t<location");
-//		out.write(" type=\"" + facility.getLayer().getType() + "\"");
-//		out.write(" id=\"" + facility.getId() + "\"");
-//		out.write(">\n");
-//	}
-//
-//	public void endLocation(final BufferedWriter out) throws IOException {
-//		out.write("\t\t\t\t</location>\n");
-//	}
-
-	@Override
-	public void startPrimaryLocation(final ActivityOptionImpl activity, final BufferedWriter out) throws IOException {
-		out.write("\t\t\t\t<location");
-		out.write(" id=\"" + activity.getFacility().getId() + "\"");
-		out.write(" isPrimary=\"" + "yes" + "\"");
-		out.write(">\n");
-	}
-
-	@Override
-	public void endPrimaryLocation(final BufferedWriter out) throws IOException {
-		out.write("\t\t\t\t</location>\n");
-	}
-
-	@Override
-	public void startSecondaryLocation(final ActivityOptionImpl activity, final BufferedWriter out) throws IOException {
-		out.write("\t\t\t\t<location");
-		out.write(" id=\"" + activity.getFacility().getId() + "\"");
-		out.write(">\n");
-	}
-
-	@Override
-	public void endSecondaryLocation(final BufferedWriter out) throws IOException {
-		out.write("\t\t\t\t</location>\n");
-	}
-
-	//////////////////////////////////////////////////////////////////////
 	// <plan ... > ... </plan>
 	//////////////////////////////////////////////////////////////////////
 
@@ -198,7 +152,7 @@ public class PopulationWriterHandlerImplV4 extends AbstractPopulationWriterHandl
 			out.write(plan.getScore().toString());
 			out.write("\"");
 		}
-		if (plan.isSelected())
+		if (PersonUtils.isSelected(plan))
 			out.write(" selected=\"yes\"");
 		else
 			out.write(" selected=\"no\"");
@@ -238,10 +192,11 @@ public class PopulationWriterHandlerImplV4 extends AbstractPopulationWriterHandl
 			out.write("\"");
 		}
 		if (act.getCoord() != null) {
+			final Coord coord = coordinateTransformation.transform( act.getCoord() );
 			out.write(" x=\"");
-			out.write(Double.toString(act.getCoord().getX()));
+			out.write(Double.toString( coord.getX() ));
 			out.write("\" y=\"");
-			out.write(Double.toString(act.getCoord().getY()));
+			out.write(Double.toString( coord.getY() ));
 			out.write("\"");
 		}
 		if (act.getStartTime() != Time.UNDEFINED_TIME) {
@@ -324,17 +279,16 @@ public class PopulationWriterHandlerImplV4 extends AbstractPopulationWriterHandl
 		out.write(">\n");
 
 		out.write("\t\t\t\t\t");
-		if (route instanceof GenericRoute) {
-			String rd = ((GenericRoute) route).getRouteDescription();
-			if (rd != null) {
-				out.write(rd);
-				out.write(" "); // this is at the moment only to maintain binary compatibility
-			}
-		}
-		else if (route instanceof NetworkRoute) {
+		if (route instanceof NetworkRoute) {
 			for (Node n : RouteUtils.getNodes((NetworkRoute) route, this.network)) {
 				out.write(n.getId().toString());
 				out.write(" ");
+			}
+		} else {
+			String rd = route.getRouteDescription();
+			if (rd != null) {
+				out.write(rd);
+				out.write(" "); // this is at the moment only to maintain binary compatibility
 			}
 		}
 

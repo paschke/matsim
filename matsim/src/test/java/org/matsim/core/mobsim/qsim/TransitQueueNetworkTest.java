@@ -28,8 +28,8 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Node;
@@ -62,7 +62,7 @@ import org.matsim.core.mobsim.qsim.qnetsimengine.QVehicle;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.fakes.FakeAgent;
 import org.matsim.pt.transitSchedule.api.Departure;
@@ -604,8 +604,8 @@ public class TransitQueueNetworkTest extends TestCase {
         f.simEngine.doSimStep(239);
         assertEquals(2, f.qlink2.getAllVehicles().size());
         vehicles = f.qlink2.getAllVehicles().toArray(vehicles);
-        assertEquals(f.normalVehicle2, vehicles[0]);
-        assertEquals(f.transitVehicle, vehicles[1]);
+        assertEquals(f.transitVehicle, vehicles[0]);
+        assertEquals(f.normalVehicle2, vehicles[1]);
         assertEquals(1, f.qlink3.getAllVehicles().size());
         vehicles = f.qlink3.getAllVehicles().toArray(vehicles);
         assertEquals(f.normalVehicle, vehicles[0]);
@@ -722,8 +722,8 @@ public class TransitQueueNetworkTest extends TestCase {
         f.simEngine.doSimStep(239);
         assertEquals(2, f.qlink2.getAllVehicles().size());
         vehicles = f.qlink2.getAllVehicles().toArray(vehicles);
-        assertEquals(f.normalVehicle2, vehicles[0]);
-        assertEquals(f.transitVehicle, vehicles[1]);
+        assertEquals(f.transitVehicle, vehicles[0]);
+        assertEquals(f.normalVehicle2, vehicles[1]);
         assertEquals(1, f.qlink3.getAllVehicles().size());
 
         // time 240: transitVeh moved to qlink3, normalVeh2 moved to qlink2.buffer
@@ -986,7 +986,7 @@ public class TransitQueueNetworkTest extends TestCase {
         public Fixture(final int firstStopLocation, final boolean firstStopisBlocking, final int secondStopLocation, final boolean secondStopIsBlocking)
                 throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, SecurityException, NoSuchMethodException {
             // setup: config
-            ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+            MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
             scenario.getConfig().transit().setUseTransit(true);
             Id<Node> nodeId1 = Id.create("1", Node.class);
             Id<Node> nodeId2 = Id.create("2", Node.class);
@@ -998,10 +998,10 @@ public class TransitQueueNetworkTest extends TestCase {
 
             // setup: network
             NetworkImpl network = (NetworkImpl) scenario.getNetwork();
-            Node node1 = network.createAndAddNode(nodeId1, scenario.createCoord(   0, 0));
-            Node node2 = network.createAndAddNode(nodeId2, scenario.createCoord(1000, 0));
-            Node node3 = network.createAndAddNode(nodeId3, scenario.createCoord(2000, 0));
-            Node node4 = network.createAndAddNode(nodeId4, scenario.createCoord(3000, 0));
+            Node node1 = network.createAndAddNode(nodeId1, new Coord((double) 0, (double) 0));
+            Node node2 = network.createAndAddNode(nodeId2, new Coord((double) 1000, (double) 0));
+            Node node3 = network.createAndAddNode(nodeId3, new Coord((double) 2000, (double) 0));
+            Node node4 = network.createAndAddNode(nodeId4, new Coord((double) 3000, (double) 0));
             Link[] links = new Link[4];
             links[1] = network.createAndAddLink(linkId1, node1, node2, 1000.0, 10.0, 3600.0, 1);
             links[2] = network.createAndAddLink(linkId2, node2, node3, 1000.0, 10.0, 3600.0, 1);
@@ -1028,12 +1028,12 @@ public class TransitQueueNetworkTest extends TestCase {
             // setup: transit schedule
             TransitSchedule schedule = scenario.getTransitSchedule();
             TransitScheduleFactory builder = schedule.getFactory();
-            TransitStopFacility stop1 = builder.createTransitStopFacility(Id.create("1", TransitStopFacility.class), scenario.createCoord(0, 0), firstStopisBlocking);
+            TransitStopFacility stop1 = builder.createTransitStopFacility(Id.create("1", TransitStopFacility.class), new Coord((double) 0, (double) 0), firstStopisBlocking);
             schedule.addStopFacility(stop1);
             stop1.setLinkId(links[firstStopLocation].getId());
             TransitStopFacility stop2 = null;
             if (secondStopLocation > 0) {
-                stop2 = builder.createTransitStopFacility(Id.create("2", TransitStopFacility.class), scenario.createCoord(100, 0), secondStopIsBlocking);
+                stop2 = builder.createTransitStopFacility(Id.create("2", TransitStopFacility.class), new Coord((double) 100, (double) 0), secondStopIsBlocking);
                 schedule.addStopFacility(stop2);
                 stop2.setLinkId(links[secondStopLocation].getId());
             }

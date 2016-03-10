@@ -2,34 +2,30 @@ package playground.michalm.taxi.run;
 
 import java.io.PrintWriter;
 
-import org.matsim.analysis.LegHistogram;
-import org.matsim.contrib.dvrp.run.VrpLauncherUtils;
-import org.matsim.contrib.dvrp.util.Schedules2GIS;
+import org.apache.commons.configuration.Configuration;
 import org.matsim.contrib.dynagent.run.DynAgentLauncherUtils;
-import org.matsim.contrib.util.chart.ChartWindowUtils;
+import org.matsim.contrib.taxi.optimizer.AbstractTaxiOptimizerParams;
+import org.matsim.contrib.taxi.util.stats.*;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.algorithms.*;
 import org.matsim.core.mobsim.qsim.QSim;
-import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.vis.otfvis.OTFVisConfigGroup.ColoringScheme;
 
-import playground.michalm.taxi.util.chart.TaxiScheduleChartUtils;
-import playground.michalm.taxi.util.stats.TaxiStatsCalculator;
-import playground.michalm.taxi.util.stats.TaxiStatsCalculator.TaxiStats;
 import playground.michalm.util.MovingAgentsRegister;
 
 
-public class SingleRunTaxiLauncher
+class SingleRunTaxiLauncher
     extends TaxiLauncher
 {
-    private LegHistogram legHistogram;
     private EventWriter eventWriter;
     private MovingAgentsRegister movingAgents;
 
 
-    SingleRunTaxiLauncher(TaxiLauncherParams params)
+    SingleRunTaxiLauncher(Configuration config)
     {
-        super(params);
+        super(config);
+        optimParams = AbstractTaxiOptimizerParams
+                .createParams(TaxiConfigUtils.getOptimizerConfig(config));
     }
 
 
@@ -38,20 +34,18 @@ public class SingleRunTaxiLauncher
     {
         EventsManager events = qSim.getEventsManager();
 
-        if (params.eventsOutFile != null) {
-            eventWriter = new EventWriterXML(params.eventsOutFile);
+        if (launcherParams.eventsOutFile != null) {
+            eventWriter = new EventWriterXML(launcherParams.eventsOutFile);
             events.addHandler(eventWriter);
         }
 
-        movingAgents = new MovingAgentsRegister();
-        events.addHandler(movingAgents);
-
-        if (params.otfVis) { // OFTVis visualization
-            DynAgentLauncherUtils.runOTFVis(qSim, false, ColoringScheme.taxicab);
+        if (launcherParams.debugMode) {
+            movingAgents = new MovingAgentsRegister();
+            events.addHandler(movingAgents);
         }
 
-        if (params.histogramOutDir != null) {
-            events.addHandler(legHistogram = new LegHistogram(300));
+        if (launcherParams.otfVis) { // OFTVis visualization
+            DynAgentLauncherUtils.runOTFVis(qSim, false, ColoringScheme.taxicab);
         }
     }
 
@@ -59,7 +53,7 @@ public class SingleRunTaxiLauncher
     @Override
     public void afterQSim(QSim qSim)
     {
-        if (params.eventsOutFile != null) {
+        if (launcherParams.eventsOutFile != null) {
             eventWriter.closeFile();
         }
     }
@@ -67,8 +61,8 @@ public class SingleRunTaxiLauncher
 
     void run()
     {
-        initVrpPathCalculator();
-        simulateIteration();
+        initTravelTimeAndDisutility();
+        simulateIteration("");
         generateOutput();
     }
 
@@ -76,33 +70,26 @@ public class SingleRunTaxiLauncher
     void generateOutput()
     {
         PrintWriter pw = new PrintWriter(System.out);
-        pw.println(params.algorithmConfig.name());
+        //        pw.println(params.algorithmConfig.name());
         pw.println("m\t" + context.getVrpData().getVehicles().size());
         pw.println("n\t" + context.getVrpData().getRequests().size());
         pw.println(TaxiStats.HEADER);
-        TaxiStats stats = new TaxiStatsCalculator(context.getVrpData().getVehicles().values()).getStats();
+        TaxiStats stats = new TaxiStatsCalculator(context.getVrpData().getVehicles().values())
+                .getStats();
         pw.println(stats);
         pw.flush();
+    }
 
-        if (params.vrpOutDir != null) {
-            new Schedules2GIS(context.getVrpData().getVehicles().values(),
-                    TransformationFactory.WGS84_UTM33N).write(params.vrpOutDir);
-        }
 
-        // ChartUtils.showFrame(RouteChartUtils.chartRoutesByStatus(data.getVrpData()));
-        ChartWindowUtils.showFrame(
-                TaxiScheduleChartUtils.chartSchedule(context.getVrpData().getVehicles().values()));
-
-        if (params.histogramOutDir != null) {
-            VrpLauncherUtils.writeHistograms(legHistogram, params.histogramOutDir);
-        }
+    static void run(Configuration config)
+    {
+        SingleRunTaxiLauncher launcher = new SingleRunTaxiLauncher(config);
+        launcher.run();
     }
 
 
     public static void main(String... args)
     {
-        TaxiLauncherParams params = TaxiLauncherParams.readParams(args[0]);
-        SingleRunTaxiLauncher launcher = new SingleRunTaxiLauncher(params);
-        launcher.run();
+        SingleRunTaxiLauncher.run(TaxiConfigUtils.loadConfig(args[0]));
     }
 }

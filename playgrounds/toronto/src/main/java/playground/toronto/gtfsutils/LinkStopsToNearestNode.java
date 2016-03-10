@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.config.ConfigUtils;
@@ -18,10 +19,9 @@ import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.network.NodeImpl;
 import org.matsim.core.network.algorithms.TransportModeNetworkFilter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.CollectionUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 
 public class LinkStopsToNearestNode {
 
@@ -32,13 +32,13 @@ public class LinkStopsToNearestNode {
 		String outputFolder = args[2];
 
 		//Create base network
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
-		new MatsimNetworkReader(scenario).readFile(networkInFile);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkInFile);
 		
-		ScenarioImpl scenario2 = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario2 = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		NetworkImpl noHighways = (NetworkImpl) scenario.getNetwork();
-		new MatsimNetworkReader(scenario2).readFile(networkInFile);
+		new MatsimNetworkReader(scenario2.getNetwork()).readFile(networkInFile);
 		
 		//Remove highways and on/off ramps. Should not affect routes which travel on highways since transit lines don't stop ON highways.	
 		ArrayList<Id<Link>> linksToRemove = new ArrayList<>();
@@ -88,11 +88,11 @@ public class LinkStopsToNearestNode {
 			
 			// Get nearest node for the mode-filtered network (or base, if no mode is specified). This will be slow, but hopefully okay.
 			if (modes.isEmpty()){
-				N = (NodeImpl) noHighways.getNearestNode(new CoordImpl(stopLon, stopLat));
+				N = (NodeImpl) noHighways.getNearestNode(new Coord(stopLon, stopLat));
 			}
 			else{
-				
-				CoordImpl c = new CoordImpl(stopLon, stopLat);
+
+				Coord c = new Coord(stopLon, stopLat);
 				
 				if (modes.equals("[Bus]")){
 					N = (NodeImpl) BusNetwork.getNearestNode(c);

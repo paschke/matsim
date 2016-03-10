@@ -87,11 +87,10 @@ public class TreesBuilder {
 		double radius = 0.0;
 		Node centerNode = null;
 
-		if (!config.getCenterNode().equals("null") &&
-				!config.getRadius().equals("null")) {
+		if (this.config.getCenterNode() != null && this.config.getRadius() != null) {
 			regionalScenario = true;
 			centerNode = this.network.getNodes().get(Id.createNodeId(config.getCenterNode()));
-			radius = Double.parseDouble(config.getRadius());
+			radius = config.getRadius();
 			log.info("Building trees regional scenario");
 		}
 		else {
@@ -104,7 +103,7 @@ public class TreesBuilder {
 			Map<String, ? extends ActivityOption> facilityActOpts = f.getActivityOptions();
 
 			// do not add facility if it is not in region of interest ------------------------
-			if (regionalScenario && (CoordUtils.calcDistance(f.getCoord(), centerNode.getCoord()) > radius)) {
+			if (regionalScenario && (CoordUtils.calcEuclideanDistance(f.getCoord(), centerNode.getCoord()) > radius)) {
 				continue;
 			}
 			// -------------------------------------------------------------------------------

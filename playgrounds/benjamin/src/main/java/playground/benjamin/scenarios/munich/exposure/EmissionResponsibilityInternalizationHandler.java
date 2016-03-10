@@ -22,13 +22,13 @@ package playground.benjamin.scenarios.munich.exposure;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.events.PersonMoneyEvent;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.emissions.events.ColdEmissionEvent;
 import org.matsim.contrib.emissions.events.ColdEmissionEventHandler;
 import org.matsim.contrib.emissions.events.WarmEmissionEvent;
 import org.matsim.contrib.emissions.events.WarmEmissionEventHandler;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.controler.Controler;
-
+import org.matsim.core.controler.MatsimServices;
 
 
 /**
@@ -40,7 +40,7 @@ public class EmissionResponsibilityInternalizationHandler implements WarmEmissio
 	EventsManager eventsManager;
 	EmissionResponsibilityCostModule emissionResponsibilityCostModule;
 
-	public EmissionResponsibilityInternalizationHandler(Controler controler, EmissionResponsibilityCostModule emissionCostModule) {
+	public EmissionResponsibilityInternalizationHandler(MatsimServices controler, EmissionResponsibilityCostModule emissionCostModule) {
 		this.eventsManager = controler.getEvents();
 		this.emissionResponsibilityCostModule = emissionCostModule;
 	}
@@ -61,7 +61,7 @@ public class EmissionResponsibilityInternalizationHandler implements WarmEmissio
 	}
 
 	private void calculateColdEmissionCostsAndThrowEvent(ColdEmissionEvent event) {
-		Id personId = event.getVehicleId();
+		Id<Person> personId = Id.createPersonId(event.getVehicleId());
 		double time = event.getTime();
 		double coldEmissionCosts = emissionResponsibilityCostModule.calculateColdEmissionCosts(event.getColdEmissions(), event.getLinkId(), time);
 		double amount2Pay = - coldEmissionCosts;
@@ -72,9 +72,8 @@ public class EmissionResponsibilityInternalizationHandler implements WarmEmissio
 	}
 
 	private void calculateWarmEmissionCostsAndThrowEvent(WarmEmissionEvent event) {
-		Id personId = event.getVehicleId();
+		Id<Person> personId = Id.createPersonId(event.getVehicleId());
 		double time = event.getTime();
-		System.out.println("person id" + personId.toString());
 		double warmEmissionCosts = emissionResponsibilityCostModule.calculateWarmEmissionCosts(event.getWarmEmissions(), event.getLinkId(), time);
 		double amount2Pay = - warmEmissionCosts;
 		

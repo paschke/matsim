@@ -30,7 +30,6 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.LegImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
@@ -96,13 +95,13 @@ public class PersonSubTourAnalysis extends AbstractPersonAlgorithm implements Pl
 		Coord prev = ((ActivityImpl)plan.getPlanElements().get(start)).getCoord();
 		for (int k=start+2; k<=i; k=k+2) {
 			Coord curr = ((ActivityImpl)plan.getPlanElements().get(k)).getCoord();
-			d = d + CoordUtils.calcDistance(curr, prev);
+			d = d + CoordUtils.calcEuclideanDistance(curr, prev);
 			prev = curr;
 		}
 		prev = ((ActivityImpl)plan.getPlanElements().get(j)).getCoord();
 		for (int k=j+2; k<=end; k=k+2) {
 			Coord curr = ((ActivityImpl)plan.getPlanElements().get(k)).getCoord();
-			d = d + CoordUtils.calcDistance(curr, prev);
+			d = d + CoordUtils.calcEuclideanDistance(curr, prev);
 			prev = curr;
 		}
 		d = d/1000.0;

@@ -20,27 +20,17 @@
 
 package playground.meisterk;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.ConfigReader;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.MatsimNetworkReader;
@@ -49,17 +39,14 @@ import org.matsim.core.network.NodeImpl;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationImpl;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
-import org.matsim.core.scenario.ScenarioLoaderImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.MatsimFacilitiesReader;
 import org.matsim.population.algorithms.PersonAlgorithm;
 import org.matsim.population.algorithms.PersonRemoveLinkAndRoute;
 import org.matsim.run.XY2Links;
-
 import playground.meisterk.PersonAnalyseTimesByActivityType.Activities;
 import playground.meisterk.kti.config.KtiConfigGroup;
 import playground.meisterk.kti.router.KtiPtRoute;
@@ -68,6 +55,12 @@ import playground.meisterk.org.matsim.config.PlanomatConfigGroup;
 import playground.meisterk.org.matsim.config.groups.MeisterkConfigGroup;
 import playground.meisterk.org.matsim.population.algorithms.PersonSetFirstActEndTime;
 import playground.meisterk.org.matsim.population.algorithms.PlanAnalyzeTourModeChoiceSet;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
 
 public class MyRuns {
 
@@ -142,7 +135,7 @@ public class MyRuns {
 
 	void ktiPtRoutesPerformanceTest(final String[] args) {
 
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		Config config = scenario.getConfig();
 		KtiConfigGroup ktiConfigGroup = new KtiConfigGroup();
 		config.addModule(ktiConfigGroup);
@@ -154,11 +147,13 @@ public class MyRuns {
 		NodeImpl node = null;
 
 		node = new NodeImpl(Id.create(1, Node.class));
-		node.setCoord(new CoordImpl(-824635.0, -799519.0));
+		final double x = -824635.0;
+		final double y = -799519.0;
+		node.setCoord(new Coord(x, y));
 		network.addNode(node);
 
 		node = new NodeImpl(Id.create(2, Node.class));
-		node.setCoord(new CoordImpl(2732681.5, 2625289.25));
+		node.setCoord(new Coord(2732681.5, 2625289.25));
 		network.addNode(node);
 
 		PlansCalcRouteKtiInfo plansCalcRouteKtiInfo = new PlansCalcRouteKtiInfo(ktiConfigGroup);
@@ -169,7 +164,7 @@ public class MyRuns {
 		for (int i = 0; i < max; i++) {
 			String expectedRouteDescription = "kti=300614=6616=456.78=4258=8500301";
 			KtiPtRoute testee = new KtiPtRoute(null, null, plansCalcRouteKtiInfo);
-			testee.setRouteDescription(null, expectedRouteDescription, null);
+			testee.setRouteDescription(expectedRouteDescription);
 			if (i == skip) {
 				logger.info("Constructed " + i + " KtiPtRoute objects with processing route descriptions.");
 				skip += max / 10;
@@ -197,7 +192,7 @@ public class MyRuns {
 	void moveInitDemandToDifferentNetwork(final String[] args) {
 
 		// read ivtch demand
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		Config config = scenario.getConfig();
 		MeisterkConfigGroup meisterkConfigGroup = new MeisterkConfigGroup();
 		config.addModule(meisterkConfigGroup);
@@ -205,8 +200,7 @@ public class MyRuns {
 		reader.readFile(args[0]);
 		MatsimRandom.reset(config.global().getRandomSeed());
 
-		ScenarioLoaderImpl loader = new ScenarioLoaderImpl(scenario);
-		loader.loadScenario();
+		ScenarioUtils.loadScenario(scenario);
 
 		Population population = scenario.getPopulation();
 		Network network = scenario.getNetwork();
@@ -216,9 +210,16 @@ public class MyRuns {
 		personRemoveLinkAndRoute.run(population);
 
 		// switch to new network in scenario
-		ScenarioImpl scenario2 = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new MatsimNetworkReader(scenario2).parse(config.getParam(MeisterkConfigGroup.GROUP_NAME, "inputSecondNetworkFile"));
-		scenario.setNetwork(scenario2.getNetwork());
+
+		// this is what I found ...
+//		ScenarioImpl scenario2 = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+//		new MatsimNetworkReader(scenario2).parse(config.getParam(MeisterkConfigGroup.GROUP_NAME, "inputSecondNetworkFile"));
+//		scenario.setNetwork(scenario2.getNetwork());
+
+		// ... but I think we can just give the existing scenario to the reader, so I am changing this.  There is so much commented out in this
+		// code that it is probably no longer used anyways. kai, sep'15
+		new MatsimNetworkReader(scenario.getNetwork()).parse(config.getParam(MeisterkConfigGroup.GROUP_NAME, "inputSecondNetworkFile"));
+
 		// run XY2Links
 		XY2Links xY2Links = new XY2Links();
 
@@ -348,13 +349,13 @@ public class MyRuns {
 
 	public void analyzeModeChainFeasibility(Config config) {
 
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 
 		// initialize scenario with events from a given events file
 		// - network
 		logger.info("Reading network xml file...");
 		Network network = scenario.getNetwork();
-		new MatsimNetworkReader(scenario).readFile(config.network().getInputFile());
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(config.network().getInputFile());
 		logger.info("Reading network xml file...done.");
 
 		// - facilities
@@ -444,10 +445,7 @@ public class MyRuns {
 	}
 
 	public static void setPlansToSameDepTime(Config config) {
-		ScenarioLoaderImpl loader = new ScenarioLoaderImpl(config);
-		loader.loadScenario();
-
-		Scenario scenario = loader.getScenario();
+		Scenario scenario = ScenarioUtils.loadScenario(config);
 		Population population = scenario.getPopulation();
 
 		PersonSetFirstActEndTime psfaet = new PersonSetFirstActEndTime(24.0 * 3600);
@@ -458,7 +456,7 @@ public class MyRuns {
 		logger.info("Writing plans file...DONE.");
 	}
 
-	public static Population initMatsimAgentPopulation(final String inputFilename, final boolean isStreaming, final ArrayList<PersonAlgorithm> algos, ScenarioImpl scenario) {
+	public static Population initMatsimAgentPopulation(final String inputFilename, final boolean isStreaming, final ArrayList<PersonAlgorithm> algos, MutableScenario scenario) {
 
 		PopulationImpl population = (PopulationImpl) scenario.getPopulation();
 
@@ -503,11 +501,11 @@ public class MyRuns {
 	 */
 	public static void analyseInitialTimes(Config config) {
 
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(config);
 		// initialize scenario with events from a given events file
 		// - network
 		logger.info("Reading network xml file...");
-		new MatsimNetworkReader(scenario).readFile(scenario.getConfig().network().getInputFile());
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(scenario.getConfig().network().getInputFile());
 		logger.info("Reading network xml file...done.");
 		// - population
 		PersonAlgorithm pa = new PersonAnalyseTimesByActivityType(TIME_BIN_SIZE);

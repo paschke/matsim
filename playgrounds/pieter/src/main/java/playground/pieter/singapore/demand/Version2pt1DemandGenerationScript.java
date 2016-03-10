@@ -20,14 +20,11 @@ import org.matsim.api.core.v01.BasicLocation;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.population.PersonImpl;
-import org.matsim.core.population.PlanImpl;
-import org.matsim.core.population.PopulationImpl;
-import org.matsim.core.population.PopulationWriter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.population.*;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.misc.Time;
@@ -46,7 +43,7 @@ public class Version2pt1DemandGenerationScript {
 	private static final double DEFAULT_LEISURE_HOME_DEPARTTIME = Time
 			.parseTime("09:00:00");
 	private InputDataCollection inputData;
-	private ScenarioImpl scenario;
+	private MutableScenario scenario;
 	private DataBaseAdmin dba;
 	private Properties diverseScriptProperties;
 	private Logger scriptLog;
@@ -60,7 +57,7 @@ public class Version2pt1DemandGenerationScript {
 		this.diverseScriptProperties = new Properties();
 		this.diverseScriptProperties.load(new FileInputStream(new File(
 				otherProperties)));
-		this.scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils
+		this.scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils
 				.createConfig());
 		scriptLog = Logger.getLogger("DemandGenScript");
 		scriptLog.info("Starting.");
@@ -126,19 +123,19 @@ public class Version2pt1DemandGenerationScript {
 			// skip over non-travelers:
 			if (pax.modeSuggestion.equals("notravel"))
 				continue;
-			PersonImpl person = (PersonImpl) popFactory
+			Person person = popFactory
 					.createPerson(Id.createPersonId((long) pax.paxId));
-			person.setAge(pax.age);
-			person.setEmployed(!pax.occup.equals("XXX"));
+			PersonUtils.setAge(person, pax.age);
+			PersonUtils.setEmployed(person, !pax.occup.equals("XXX"));
 			// the ptmix plans allowed through should have car assigned too if
 			// they have a license and have a car available
-			person.setCarAvail(pax.modeSuggestion.equals("car")
+			PersonUtils.setCarAvail(person, pax.modeSuggestion.equals("car")
 					|| pax.modeSuggestion.equals("ptmix")
 					&& pax.carLicenseHolder && pax.household.carAvailability ? "always"
 					: "never");
-			person.setLicence(person.getCarAvail().equals("always") ? "yes"
+			PersonUtils.setLicence(person, PersonUtils.getCarAvail(person).equals("always") ? "yes"
 					: null);
-			person.setSex(pax.sex);
+			PersonUtils.setSex(person, pax.sex);
 			person.getCustomAttributes().put("income_pax", pax.income);
 			person.getCustomAttributes().put("foreigner", pax.foreigner);
 			person.getCustomAttributes().put("synth_hh_id",
@@ -228,7 +225,7 @@ public class Version2pt1DemandGenerationScript {
 				plan.addActivity(act);
 				if (st.hasMoreTokens()) {
 					Leg currLeg;
-					if (person.hasLicense()){
+					if (PersonUtils.hasLicense(person)){
 						currLeg = popFactory.createLeg("car");
 						carTripCounter++;
 					}

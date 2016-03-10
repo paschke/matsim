@@ -10,16 +10,16 @@ import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationReader;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 public class UtilsAvignon {
 
 	/**
 	 * @param args
 	 */
-	ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+	MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 	PopulationReader populationReader = new MatsimPopulationReader(scenario);
-	MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+	MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 	double centerX = 683217.0;  //Belvue coordinates
 	double centerY = 247300.0;
 	public UtilsAvignon(String plansFilePath, String networkFilePath) {
@@ -45,7 +45,7 @@ public class UtilsAvignon {
 				if (pe instanceof Leg) {
 					if (((Leg) pe).getMode().equals( "car" )) {
 						car = true;
-					previousDistance = RouteUtils.calcDistance((NetworkRoute) ((Leg) pe).getRoute(), scenario.getNetwork());
+					previousDistance = RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) ((Leg) pe).getRoute(), scenario.getNetwork());
 					if (shop == true) {
 						distanceFrom +=previousDistance;
 					}
@@ -92,7 +92,7 @@ public class UtilsAvignon {
 				if (pe instanceof Leg) {
 					if (((Leg) pe).getMode().equals("car")) {
 						car = true;
-					previousTravelTime = RouteUtils.calcDistance((NetworkRoute) ((Leg) pe).getRoute(), scenario.getNetwork());
+					previousTravelTime = RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) ((Leg) pe).getRoute(), scenario.getNetwork());
 					if (shop == true) {
 						travelTimeFrom +=previousTravelTime;
 					}
@@ -145,7 +145,7 @@ public class UtilsAvignon {
 				if (pe instanceof Leg) {
 					if (((Leg) pe).getMode().equals("car")) {
 						car = true;
-						previousDistance = RouteUtils.calcDistance((NetworkRoute) ((Leg) pe).getRoute(), scenario.getNetwork());
+						previousDistance = RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) ((Leg) pe).getRoute(), scenario.getNetwork());
 						if (shopInside == true) {
 							distanceFromInside +=previousDistance;
 							numberFromInside++;
@@ -222,7 +222,7 @@ public class UtilsAvignon {
 				if (pe instanceof Leg) {
 					if (((Leg) pe).getMode().equals("car")) {
 						car = true;
-						previousDistance = RouteUtils.calcDistance((NetworkRoute) ((Leg) pe).getRoute(), scenario.getNetwork());
+						previousDistance = RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute) ((Leg) pe).getRoute(), scenario.getNetwork());
 						if (shopInside == true) {
 							travelTimeFromInside += previousDistance;
 							numberFromInside++;

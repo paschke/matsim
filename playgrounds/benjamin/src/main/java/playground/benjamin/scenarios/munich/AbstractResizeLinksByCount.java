@@ -66,8 +66,8 @@ public abstract class AbstractResizeLinksByCount {
 	private Map<Id, SortedMap<String, String>> unmodAttributes = null;
 	private Double scaleFactor = null;
 	private boolean countsMatched = false;
-	private Counts origCounts;
-	private Counts rescaledCounts = null;
+	private Counts<Link> origCounts;
+	private Counts<Link> rescaledCounts = null;
 		
 	
 	/**
@@ -120,11 +120,11 @@ public abstract class AbstractResizeLinksByCount {
 		writeUnmodifiedLinks2Shape();
 	}
 	
-	private Counts preProcessCounts(Counts oldCounts) {
-		Counts tempCounts = new Counts();
+	private Counts<Link> preProcessCounts(Counts<Link> oldCounts) {
+		Counts<Link> tempCounts = new Counts();
 		Node node;
-		Count oldCount;
-		Count newCount;
+		Count<Link> oldCount;
+		Count<Link> newCount;
 		Id outLink = null;
 		tempCounts.setDescription("none");
 		tempCounts.setName("counts merged");
@@ -194,7 +194,7 @@ public abstract class AbstractResizeLinksByCount {
 		this.rescaledCounts.setYear(2009);
 		
 		Count temp ;
-		for(Count c : this.origCounts.getCounts().values()){
+		for(Count<Link> c : this.origCounts.getCounts().values()){
 			temp = rescaledCounts.createAndAddCount(c.getLocId(), c.getCsId());
 			temp.setCoord(c.getCoord());
 			for(Entry<Integer, Volume> ee : c.getVolumes().entrySet()){
@@ -208,8 +208,8 @@ public abstract class AbstractResizeLinksByCount {
 		Scenario oldScenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		Scenario newScenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		log.info("Reading " + this.netFile);
-		new MatsimNetworkReader(oldScenario).readFile(this.netFile);
-		new MatsimNetworkReader(newScenario).readFile(this.netFile);
+		new MatsimNetworkReader(oldScenario.getNetwork()).readFile(this.netFile);
+		new MatsimNetworkReader(newScenario.getNetwork()).readFile(this.netFile);
 		this.newNet = newScenario.getNetwork();
 		this.oldNet = oldScenario.getNetwork();
 	}

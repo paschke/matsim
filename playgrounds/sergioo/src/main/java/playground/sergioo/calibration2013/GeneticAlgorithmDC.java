@@ -1,6 +1,7 @@
 package playground.sergioo.calibration2013;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
@@ -20,18 +21,15 @@ import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.algorithms.TransportModeNetworkFilter;
 import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.PlanImpl;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.replanning.ReplanningContext;
-import org.matsim.core.router.TripRouter;
-import org.matsim.core.router.TripRouterProviderImpl;
+import org.matsim.core.router.TripRouterFactoryBuilderWithDefaults;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility.Builder;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.costcalculators.TravelTimeAndDistanceBasedTravelDisutilityFactory;
 import org.matsim.core.router.util.DijkstraFactory;
-import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
@@ -65,7 +63,7 @@ public class GeneticAlgorithmDC {
 	private static String actTypes = "biz,errand,medi,eat,rec,shop,social,sport,fun";
 	private static int NUM_PARAMETERS = actTypes.split(",").length+9;
 	private static Map<String, Map<String, List<Double>>> distancesHits = createMap();
-	
+
 	private static class ParametersArray {
 		
 		private double[] parameters = new double[NUM_PARAMETERS];
@@ -96,26 +94,26 @@ public class GeneticAlgorithmDC {
 		}
 		private void modifyConfig(Scenario scenario) {
 			int k=0;
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setAnalysisBinSize(Double.toString(this.parameters[k++]));
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setAnalysisBoundary(Double.toString(this.parameters[k++]));
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setAnalysisBinSize((int) this.parameters[k++]);
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setAnalysisBoundary((int) this.parameters[k++]);
 			String factors = "";
 			for(int j=0; j<scenario.getConfig().findParam("locationchoice", "flexible_types").split(",").length; j++)
 				factors += this.parameters[k++]+",";
 			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setEpsilonScaleFactors(factors.substring(0, factors.length()-1));
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setProbChoiceSetSize(Integer.toString((int)this.parameters[k++]));
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRadius(Double.toString(this.parameters[k++]));
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRestraintFcnExp(Double.toString(this.parameters[k++]));
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRestraintFcnFactor(Double.toString(this.parameters[k++]));
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setScaleFactor(Double.toString(this.parameters[k++]));
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setTravelSpeed_car(Double.toString(this.parameters[k++]));
-			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setTravelSpeed_pt(Double.toString(this.parameters[k++]));
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setProbChoiceSetSize((int)this.parameters[k++]);
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRadius(this.parameters[k++]);
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRestraintFcnExp(this.parameters[k++]);
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRestraintFcnFactor(this.parameters[k++]);
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setScaleFactor(this.parameters[k++]);
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setTravelSpeed_car(this.parameters[k++]);
+			((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setTravelSpeed_pt(this.parameters[k++]);
 		}
 		private void calculateScore(final Scenario scenario) {
-			module.prepareReplanning(context);
+			module.prepareReplanning(null);
 			TransitActsRemover transitActsRemover = new TransitActsRemover();
 			Collection<PlanImpl> copiedPlans = new ArrayList<PlanImpl>();
 			for(Person person:scenario.getPopulation().getPersons().values()) {
-				Person copyPerson = new PersonImpl(person.getId());
+				Person copyPerson = PopulationUtils.createPerson(person.getId());
 				PlanImpl copyPlan = new PlanImpl(copyPerson);
 				copyPlan.copyFrom(person.getSelectedPlan());
 				copyPerson.addPlan(copyPlan);
@@ -145,7 +143,7 @@ public class GeneticAlgorithmDC {
 									list = new ArrayList<Double>();
 									map.put(prevMode, list);
 								}
-								double distance = CoordUtils.calcDistance(prevActivity.getCoord(), ((Activity)planElement).getCoord());
+								double distance = CoordUtils.calcEuclideanDistance(prevActivity.getCoord(), ((Activity)planElement).getCoord());
 								sumDistances+=distance;
 								numSec++;
 								list.add(distance);
@@ -269,7 +267,7 @@ public class GeneticAlgorithmDC {
 		final Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.loadConfig(args[0]));
 		new MatsimPopulationReader(scenario).readFile(args[1]);
 		new MatsimFacilitiesReader(scenario).readFile(args[2]);
-		new MatsimNetworkReader(scenario).readFile(args[3]);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(args[3]);
 		for(Link link:scenario.getNetwork().getLinks().values()) {
 			Set<String> modes = new HashSet<String>(link.getAllowedModes());
 			modes.add("pt");
@@ -289,9 +287,9 @@ public class GeneticAlgorithmDC {
 		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setEpsilonDistribution("gumbel");
 		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setFlexibleTypes(actTypes);
 		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setEpsilonScaleFactors("1, 1, 1, 1, 1, 1, 1, 1, 1");
-		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setDestinationSamplePercent(args[9]);
-		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRestraintFcnExp("1");
-		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRestraintFcnFactor("1");
+		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setDestinationSamplePercent(Double.parseDouble(args[9]));
+		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRestraintFcnExp(1);
+		((DestinationChoiceConfigGroup)scenario.getConfig().getModule("locationchoice")).setRestraintFcnFactor(1);
 		EventsManager events = new EventsManagerImpl();
 		final TravelTimeCalculator travelTimeCalculator = TravelTimeCalculator.create(scenario.getNetwork(), scenario.getConfig().travelTimeCalculator());
 		events.addHandler(travelTimeCalculator);
@@ -300,37 +298,18 @@ public class GeneticAlgorithmDC {
 		final StopStopTimeCalculator stopStopTimeCalculator = new StopStopTimeCalculator(scenario.getTransitSchedule(), scenario.getConfig().travelTimeCalculator().getTraveltimeBinSize(), (int) (scenario.getConfig().qsim().getEndTime()-scenario.getConfig().qsim().getStartTime()));
 		events.addHandler(stopStopTimeCalculator);
 		new MatsimEventsReader(events).readFile(args[10]);
-		final TravelDisutilityFactory factory = new TravelTimeAndDistanceBasedTravelDisutilityFactory();
-		final TravelDisutility disutility = factory.createTravelDisutility(travelTimeCalculator.getLinkTravelTimes(), scenario.getConfig().planCalcScore());
+		final TravelDisutilityFactory factory = new Builder( TransportMode.car, scenario.getConfig().planCalcScore() );
 		final Provider<TransitRouter> transitRouterFactory = new TransitRouterWSImplFactory(scenario, waitTimeCalculator.getWaitTimes(), stopStopTimeCalculator.getStopStopTimes());
-		context = new ReplanningContext() {
-			@Override
-			public TravelDisutility getTravelDisutility() {
-				return disutility;
-			}
-			@Override
-			public TravelTime getTravelTime() {
-				return travelTimeCalculator.getLinkTravelTimes();
-			}
-			@Override
-			public ScoringFunctionFactory getScoringFunctionFactory() {
-				return new CharyparNagelOpenTimesScoringFunctionFactory(scenario.getConfig().planCalcScore(), scenario);
-			}
-			@Override
-			public int getIteration() {
-				return 1;
-			}
-			@Override
-			public TripRouter getTripRouter() {
-				return new TripRouterProviderImpl(scenario, factory, travelTimeCalculator.getLinkTravelTimes(), new DijkstraFactory(), transitRouterFactory).get();
-			}
-		};
 		DestinationChoiceBestResponseContext dcContext = new DestinationChoiceBestResponseContext(scenario);
 		dcContext.init();
 		ReadOrComputeMaxDCScore rcms = new ReadOrComputeMaxDCScore(dcContext);
         rcms.readOrCreateMaxDCScore(new Controler(scenario).getConfig(), dcContext.kValsAreRead());
         rcms.getPersonsMaxEpsUnscaled();
-		module = new BestReplyDestinationChoice(dcContext, rcms.getPersonsMaxEpsUnscaled());
+		Map<String, TravelTime> travelTimes = new HashMap<>();
+		travelTimes.put(TransportMode.car, travelTimeCalculator.getLinkTravelTimes());
+		Map<String, TravelDisutilityFactory> factories = new HashMap<>();
+		factories.put(TransportMode.car, factory);
+		module = new BestReplyDestinationChoice(TripRouterFactoryBuilderWithDefaults.createTripRouterProvider(scenario, new DijkstraFactory(), transitRouterFactory), dcContext, rcms.getPersonsMaxEpsUnscaled(), new CharyparNagelOpenTimesScoringFunctionFactory(scenario.getConfig().planCalcScore(), scenario), travelTimes, factories);
 		int numIterations = new Integer(args[4]);
 		avgDistance = new Double(args[5]);
 		int maxElements = new Integer(args[6]);

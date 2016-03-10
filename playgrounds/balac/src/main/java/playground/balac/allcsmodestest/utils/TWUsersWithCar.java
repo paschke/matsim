@@ -10,18 +10,18 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 
 
 public class TWUsersWithCar {
 
 	public void run(String[] args) {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		PopulationReader populationReader = new MatsimPopulationReader(scenario);
-		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 		networkReader.readFile(args[1]);
 		populationReader.readFile(args[0]);		
 		
@@ -31,18 +31,18 @@ public class TWUsersWithCar {
 		int countYoung = 0;
 		
 		for (Person person: scenario.getPopulation().getPersons().values()) {
-			if (((PersonImpl)person).getAge() >= 18) {
-			if (!((PersonImpl)person).getCarAvail().equals("never")  && ((PersonImpl)person).hasLicense())
+			if (PersonUtils.getAge(person) >= 18) {
+			if (!PersonUtils.getCarAvail(person).equals("never")  && PersonUtils.hasLicense(person))
 				countCar++;
 			
-			if (((PersonImpl)person).hasLicense())
+			if (PersonUtils.hasLicense(person))
 				countLicence++;
 			for (PlanElement pe:person.getSelectedPlan().getPlanElements()) {
 				 if (pe instanceof Leg) {
 					
 					if (((Leg) pe).getMode().equals("twowaycarsharing")) {
 						
-						if (!((PersonImpl)person).getCarAvail().equals("never")) {
+						if (!PersonUtils.getCarAvail(person).equals("never")) {
 							
 							hasCar.add(person.getId());
 						}				

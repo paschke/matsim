@@ -1,25 +1,35 @@
 package org.matsim.contrib.accessibility;
 
-import com.vividsolutions.jts.geom.Geometry;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.accessibility.gis.GridUtils;
 import org.matsim.contrib.accessibility.gis.SpatialGrid;
+import org.matsim.contrib.accessibility.interfaces.FacilityDataExchangeInterface;
 import org.matsim.contrib.accessibility.interfaces.SpatialGridDataExchangeInterface;
+import org.matsim.contrib.accessibility.utils.AccessibilityRunUtils;
 import org.matsim.contrib.matrixbasedptrouter.PtMatrix;
 import org.matsim.contrib.matrixbasedptrouter.utils.BoundingBox;
 import org.matsim.contrib.matrixbasedptrouter.utils.TempDirectoryUtil;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.events.ShutdownEvent;
 import org.matsim.core.controler.listener.ShutdownListener;
+import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
+import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.facilities.ActivityFacilities;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import com.vividsolutions.jts.geom.Geometry;
+
+import javax.inject.Inject;
 
 /**
  * improvements sep'11:
@@ -111,58 +121,53 @@ import java.util.TreeMap;
  */
 public final class GridBasedAccessibilityControlerListenerV3 implements ShutdownListener {
 	private static final Logger log = Logger.getLogger(GridBasedAccessibilityControlerListenerV3.class);
-	private final AccessibilityCalculator accessibilityControlerListener = new AccessibilityCalculator();
+	private final AccessibilityCalculator delegate;
 	private final List<SpatialGridDataExchangeInterface> spatialGridDataExchangeListener = new ArrayList<>();
 
-	private Network network;
+	private Scenario scenario;
 	private Config config;
+	private double time;
+	
 	// for consideration of different activity types or different modes (or both) subdirectories are
 	// required in order not to confuse the output
 	private String outputSubdirectory;
 	private boolean urbanSimMode;
+	
+	
+	//
+	private boolean	calculateAggregateValues;
+	private Map<Modes4Accessibility, Double> accessibilitySums = new HashMap<Modes4Accessibility, Double>();
+	private Map<Modes4Accessibility, Double> accessibilityGiniCoefficients = new HashMap<Modes4Accessibility, Double>();
+	//
+	
 	private SpatialGridAggregator spatialGridAggregator;
 
-
-	// ////////////////////////////////////////////////////////////////////
-	// constructors
-	// ////////////////////////////////////////////////////////////////////
-
-	public GridBasedAccessibilityControlerListenerV3(ActivityFacilities opportunities, Config config, Network network){
-		this(opportunities, null, config, network); // PtMatrix is optional and in a different contrib
-	}
-	
-	
 	/**
 	 * constructor
-	 * 
-	 * @param opportunities represented by ActivityFacilitiesImpl 
+	 * @param opportunities represented by ActivityFacilitiesImpl
 	 * @param ptMatrix matrix with travel times and distances for any pair of pt stops
 	 * @param config MATSim Config object
-	 * @param network MATSim road network
+	 * @param scenario MATSim scenario
 	 */
-	public GridBasedAccessibilityControlerListenerV3(ActivityFacilities opportunities, PtMatrix ptMatrix, Config config, Network network){
+	public GridBasedAccessibilityControlerListenerV3(ActivityFacilities opportunities, PtMatrix ptMatrix, Config config, Scenario scenario, Map<String, TravelTime> travelTimes, Map<String, TravelDisutilityFactory> travelDisutilityFactories) {
 		// I thought about changing the type of opportunities to Map<Id,Facility> or even Collection<Facility>, but in the end
 		// one can also use FacilitiesUtils.createActivitiesFacilities(), put everything in there, and give that to this constructor. kai, feb'14
 
 		log.info("Initializing  ...");
 		spatialGridAggregator = new SpatialGridAggregator();
-		accessibilityControlerListener.addZoneDataExchangeListener(spatialGridAggregator);
+		delegate = new AccessibilityCalculator(travelTimes, travelDisutilityFactories, scenario, ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.GROUP_NAME, AccessibilityConfigGroup.class));
+		delegate.addFacilityDataExchangeListener(spatialGridAggregator);
 
-		accessibilityControlerListener.setPtMatrix(ptMatrix);	// this could be zero if no input files for pseudo pt are given ...
+		delegate.setPtMatrix(ptMatrix);	// this could be zero if no input files for pseudo pt are given ...
 		assert (config != null);
 		this.config = config ;
-		assert (network != null);
-
-		accessibilityControlerListener.initAccessibilityParameters(config);
+		this.scenario = scenario;
+		delegate.initAccessibilityParameters(config);
 
 		// aggregating facilities to their nearest node on the road network
-		accessibilityControlerListener.aggregateOpportunities(opportunities, network);
+		delegate.aggregateOpportunities(opportunities, scenario.getNetwork());
 		// yyyy ignores the "capacities" of the facilities.  kai, mar'14
 		
-		
-		// use network as global variable, otherwise another network might be used during 
-		// notifyShutDown(...) (network may be preprocessed, e.g. only car-links.)
-		this.network = network;
 		log.info(".. done initializing CellBasedAccessibilityControlerListenerV3");
 	}
 
@@ -177,30 +182,29 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 		if (event.isUnexpected()) {
 			return;
 		}
+		
 		if (outputSubdirectory != null) {
 			File file = new File(config.controler().getOutputDirectory() + "/" + outputSubdirectory);
 			file.mkdirs();
 		}
+		
 		UrbansimCellBasedAccessibilityCSVWriterV2 urbansimAccessibilityWriter = null;
 		log.warn("here-1") ;
 		if (urbanSimMode) {
-			if (outputSubdirectory == null) {
-				log.warn("here0");
-				urbansimAccessibilityWriter = new UrbansimCellBasedAccessibilityCSVWriterV2(config.controler().getOutputDirectory());
-				accessibilityControlerListener.addZoneDataExchangeListener(urbansimAccessibilityWriter);
-			} else {
-				log.warn("here0b");
-				System.exit(-1) ;
-				urbansimAccessibilityWriter = new UrbansimCellBasedAccessibilityCSVWriterV2(config.controler().getOutputDirectory() + "/" + outputSubdirectory);
-				accessibilityControlerListener.addZoneDataExchangeListener(urbansimAccessibilityWriter);
+			if ( outputSubdirectory != null ) {
+				throw new RuntimeException("output subdirectory not null stems from separate accessibility computation per activity type.  "
+						+ "This is, however, not supported on the urbansim side, so using it in the urbansim mode does not make sense.  "
+						+ "Thus aborting ..." ) ;
 			}
-			// yyyy having the above depend on the existence of outputSubdirectory is too indirect ... could you pls use a boolean switch 
-			// with a "telling" name?  thanks.  kai, aug'15
+			log.warn("here0");
+			urbansimAccessibilityWriter = new UrbansimCellBasedAccessibilityCSVWriterV2(config.controler().getOutputDirectory());
+			delegate.addFacilityDataExchangeListener(urbansimAccessibilityWriter);
 		}
-		accessibilityControlerListener.initDefaultContributionCalculators(event.getControler());
+		
+		delegate.initDefaultContributionCalculators();
 
 		// make sure that measuring points are set.
-		if(accessibilityControlerListener.getMeasuringPoints() == null){
+		if(delegate.getMeasuringPoints() == null){
 			// yy this test is really a bit late AFTER all the iterations. kai, mar'14
 			
 			log.error("No measuring points found! For this reason no accessibilities can be calculated!");
@@ -219,14 +223,22 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 
 		log.info("Computing and writing cell based accessibility measures ...");
 		// printParameterSettings(); // use only for debugging (settings are printed as part of config dump)
-		log.info(accessibilityControlerListener.getMeasuringPoints().getFacilities().values().size() + " measurement points are now processing ...");
+		log.info(delegate.getMeasuringPoints().getFacilities().values().size() + " measurement points are now processing ...");
 
-		accessibilityControlerListener.computeAccessibilities(event.getControler().getScenario());
-
-		if (urbansimAccessibilityWriter != null) {
-			urbansimAccessibilityWriter.close();
+		AccessibilityConfigGroup moduleAPCM =
+		ConfigUtils.addOrGetModule(
+				scenario.getConfig(),
+				AccessibilityConfigGroup.GROUP_NAME,
+				AccessibilityConfigGroup.class);
+		delegate.computeAccessibilities(scenario, moduleAPCM.getTimeOfDay());
+		
+		//
+		// do calculation of aggregate index values, e.g. gini coefficient
+		if (calculateAggregateValues) {
+			performAggregateValueCalculations();
 		}
-			
+		//
+		
 		
 		// as for the other writer above: In case multiple AccessibilityControlerListeners are added to the controller, e.g. if 
 		// various calculations are done for different activity types or different modes (or both) subdirectories are required
@@ -239,7 +251,12 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 
 		log.info("Triggering " + spatialGridDataExchangeListener.size() + " SpatialGridDataExchangeListener(s) ...");
 		for (SpatialGridDataExchangeInterface spatialGridDataExchangeInterface : spatialGridDataExchangeListener) {
-			spatialGridDataExchangeInterface.setAndProcessSpatialGrids(spatialGridAggregator.getAccessibilityGrids());
+			try {
+				spatialGridDataExchangeInterface.setAndProcessSpatialGrids(spatialGridAggregator.getAccessibilityGrids());
+			} catch ( Exception ee ) {
+				log.warn("Had a problem here; printing stack trace but then continuing anyways") ;
+				ee.printStackTrace(); 
+			}
 		}
 
 	}
@@ -259,6 +276,8 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 		// write header
 		writer.writeField(Labels.X_COORDINATE);
 		writer.writeField(Labels.Y_COORDINATE);
+		writer.writeField(Labels.TIME);
+		
 		writer.writeField(Labels.ACCESSIBILITY_BY_FREESPEED);
 		writer.writeField(Labels.ACCESSIBILITY_BY_CAR);
 		writer.writeField(Labels.ACCESSIBILITY_BY_BIKE);
@@ -272,16 +291,18 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 
 		final SpatialGrid spatialGrid = spatialGridAggregator.getAccessibilityGrids().get(Modes4Accessibility.freeSpeed) ;
 		// yy for time being, have to assume that this is always there
-		for(double y = spatialGrid.getYmin(); y <= spatialGrid.getYmax() ; y += spatialGrid.getResolution()) {
+		for(double y = spatialGrid.getYmin(); y <= spatialGrid.getYmax(); y += spatialGrid.getResolution()) {
 			for(double x = spatialGrid.getXmin(); x <= spatialGrid.getXmax(); x += spatialGrid.getResolution()) {
 				
+				writer.writeField( x + 0.5*spatialGrid.getResolution());
+				writer.writeField( y + 0.5*spatialGrid.getResolution());
 				
-				writer.writeField( x + 0.5*spatialGrid.getResolution() ) ;
-				writer.writeField( y + 0.5*spatialGrid.getResolution() ) ;
-				for ( Modes4Accessibility mode : Modes4Accessibility.values()  ) {
-					if ( accessibilityControlerListener.getIsComputingMode().get(mode) ) {
-						final SpatialGrid theSpatialGrid = spatialGridAggregator.getAccessibilityGrids().get(mode);
-						final double value = theSpatialGrid.getValue(x, y);
+				writer.writeField(time);
+				
+				for (Modes4Accessibility mode : Modes4Accessibility.values()) {
+					if ( delegate.getIsComputingMode().contains(mode) ) {
+						final SpatialGrid spatialGridOfMode = spatialGridAggregator.getAccessibilityGrids().get(mode);
+						final double value = spatialGridOfMode.getValue(x, y);
 						if ( !Double.isNaN(value ) ) { 
 							writer.writeField( value ) ;
 						} else {
@@ -297,14 +318,49 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 				}
 				writer.writeNewLine(); 
 			}
-			writer.writeNewLine(); // gnuplot pm3d scanline 
+			// writer.writeNewLine(); // gnuplot pm3d scanline
 		}
 		writer.close() ;
 
 		log.info("Writing plotting data for other analysis done!");
-		
 	}
 	
+	
+	//
+	/**
+	 * perform aggregate value calculations
+	 */
+	private void performAggregateValueCalculations() {
+		log.info("Starting to caluclating aggregate values!");
+		final SpatialGrid spatialGrid = spatialGridAggregator.getAccessibilityGrids().get(Modes4Accessibility.freeSpeed) ;
+		// yy for time being, have to assume that this is always there
+
+		for (Modes4Accessibility mode : delegate.getIsComputingMode()) {
+			List<Double> valueList = new ArrayList<Double>();
+
+			for(double y = spatialGrid.getYmin(); y <= spatialGrid.getYmax() ; y += spatialGrid.getResolution()) {
+				for(double x = spatialGrid.getXmin(); x <= spatialGrid.getXmax(); x += spatialGrid.getResolution()) {
+					final SpatialGrid spatialGridOfMode = spatialGridAggregator.getAccessibilityGrids().get(mode);
+					final double value = spatialGridOfMode.getValue(x, y);
+					if ( !Double.isNaN(value ) ) {
+						valueList.add(value);
+					} else {
+						new RuntimeException("Don't know how to calculate aggregate values properly if some are missing!");
+					}
+				}
+			}
+
+			double accessibilityValueSum = AccessibilityRunUtils.calculateSum(valueList);
+			double giniCoefficient = AccessibilityRunUtils.calculateGiniCoefficient(valueList);
+
+			log.warn("mode = " + mode  + " -- accessibilityValueSum = " + accessibilityValueSum);
+			accessibilitySums.put(mode, accessibilityValueSum);
+			log.warn("accessibilitySum = " + accessibilitySums);
+			accessibilityGiniCoefficients.put(mode, giniCoefficient);
+		}
+		log.info("Done with caluclating aggregate values!");
+	}
+	//
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// GridBasedAccessibilityControlerListenerV3 specific methods that do not apply to zone-based accessibility measures
@@ -326,9 +382,9 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 			throw new RuntimeException("ShapeFile for accessibility computation not found: " + shapeFileName);
 
 		Geometry boundary = GridUtils.getBoundary(shapeFileName);
-		accessibilityControlerListener.setMeasuringPoints(GridUtils.createGridLayerByGridSizeByShapeFileV2(boundary, cellSize));
+		delegate.setMeasuringPoints(GridUtils.createGridLayerByGridSizeByShapeFileV2(boundary, cellSize));
 		for ( Modes4Accessibility mode : Modes4Accessibility.values() ) {
-			if ( accessibilityControlerListener.getIsComputingMode().get(mode) ) {
+			if ( delegate.getIsComputingMode().contains(mode) ) {
 				spatialGridAggregator.getAccessibilityGrids().put(mode, GridUtils.createSpatialGridByShapeBoundary(boundary, cellSize)) ;
 			}
 		}
@@ -361,7 +417,7 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 		if (cellSize <= 0) {
 			throw new RuntimeException("Cell Size needs to be assigned a value greater than zero.");
 		}
-		BoundingBox bb = BoundingBox.createBoundingBox(network);
+		BoundingBox bb = BoundingBox.createBoundingBox(scenario.getNetwork());
 		generateGridsAndMeasuringPoints(bb.getXMin(), bb.getYMin(), bb.getXMax(), bb.getYMax(), cellSize);
 	}
 	
@@ -378,11 +434,9 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 	 * @param cellSize double value giving the the side length of the cell in meter
 	 */
 	private void generateGridsAndMeasuringPoints(double minX, double minY, double maxX, double maxY, double cellSize) {
-		accessibilityControlerListener.setMeasuringPoints(GridUtils.createGridLayerByGridSizeByBoundingBoxV2(minX, minY, maxX, maxY, cellSize));
-		for ( Modes4Accessibility mode : Modes4Accessibility.values() ) {
-			if ( accessibilityControlerListener.getIsComputingMode().get(mode) ) {
-				spatialGridAggregator.getAccessibilityGrids().put(mode, new SpatialGrid(minX, minY, maxX, maxY, cellSize, Double.NaN)) ;
-			}
+		delegate.setMeasuringPoints(GridUtils.createGridLayerByGridSizeByBoundingBoxV2(minX, minY, maxX, maxY, cellSize));
+		for ( Modes4Accessibility mode : delegate.getIsComputingMode()) {
+			spatialGridAggregator.getAccessibilityGrids().put(mode, new SpatialGrid(minX, minY, maxX, maxY, cellSize, Double.NaN)) ;
 		}
 		lockedForAdditionalFacilityData  = true ;
 		for ( ActivityFacilities facilities : this.additionalFacilityData ) {
@@ -435,16 +489,43 @@ public final class GridBasedAccessibilityControlerListenerV3 implements Shutdown
 		this.outputSubdirectory = subdirectory;
 	}
 
+	
 	public void setComputingAccessibilityForMode(Modes4Accessibility mode, boolean val) {
-		accessibilityControlerListener.setComputingAccessibilityForMode(mode, val);
+		delegate.setComputingAccessibilityForMode(mode, val);
 	}
 
+	
 	public void addSpatialGridDataExchangeListener(SpatialGridDataExchangeInterface l) {
 		this.spatialGridDataExchangeListener.add(l);
 	}
+	
+	
+	public final void addFacilityDataExchangeListener(FacilityDataExchangeInterface listener) {
+		this.delegate.addFacilityDataExchangeListener(listener);
+	}
 
+	
 	public void setUrbansimMode(boolean urbansimMode) {
 		this.urbanSimMode = urbansimMode;
 	}
-
+	
+	
+	public void setTime(double time) {
+		this.time = time;
+	}
+	
+	
+	public void setCalculateAggregateValues(boolean calculateAggregateValues) {
+		this.calculateAggregateValues = calculateAggregateValues;
+	}
+	
+	
+	public Map<Modes4Accessibility, Double> getAccessibilitySums() {
+		return this.accessibilitySums;
+	}
+	
+	
+	public Map<Modes4Accessibility, Double> getAccessibilityGiniCoefficients() {
+		return this.accessibilityGiniCoefficients;
+	}
 }

@@ -25,12 +25,11 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.socnetsim.framework.population.SocialNetwork;
+import org.matsim.contrib.socnetsim.framework.population.SocialNetworkReader;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
-import org.matsim.contrib.socnetsim.framework.population.SocialNetwork;
-import org.matsim.contrib.socnetsim.framework.population.SocialNetworkReader;
 
 import java.util.Map;
 
@@ -54,8 +53,8 @@ public class SocialNetworkAsMatsimNetworkUtils {
 
 	public static Network convertToNetwork(final SocialNetwork sn, final Map<Id<Person>, Coord> agentCoords) {
 		final Network net = NetworkImpl.createNetwork();
-	
-		final Coord dummyCoord = new CoordImpl( 0 , 0 );
+
+		final Coord dummyCoord = new Coord((double) 0, (double) 0);
 		for ( Id ego : sn.getEgos() ) {
 			final Coord coord = agentCoords == null ? dummyCoord : agentCoords.get( ego );
 			net.addNode(

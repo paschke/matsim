@@ -26,10 +26,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.network.NetworkUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.misc.ByteBufferUtils;
 import org.matsim.vis.otfvis.OTFClientControl;
 import org.matsim.vis.otfvis.OTFVisConfigGroup;
@@ -46,6 +46,9 @@ import org.matsim.vis.snapshotwriters.SnapshotLinkWidthCalculator;
 import org.matsim.vis.snapshotwriters.VisLink;
 
 
+/**
+ * I think this is responsible when agents are visualized "live", i.e. directly from the simulation. kai, nov'15
+ */
 public class OTFLinkAgentsHandler extends OTFDataReader {
 
 	public static boolean showParked = false;
@@ -124,7 +127,7 @@ public class OTFLinkAgentsHandler extends OTFDataReader {
 		private static void writeAgent(AgentSnapshotInfo pos, ByteBuffer out) {
 			String id = pos.getId().toString();
 			ByteBufferUtils.putString(out, id);
-			Point2D.Double point = OTFServerQuadTree.transform(new CoordImpl(pos.getEasting(), pos.getNorthing()));
+			Point2D.Double point = OTFServerQuadTree.transform(new Coord(pos.getEasting(), pos.getNorthing()));
 			out.putFloat((float) point.getX());
 			out.putFloat((float) point.getY());
 			out.putInt(pos.getUserDefined());

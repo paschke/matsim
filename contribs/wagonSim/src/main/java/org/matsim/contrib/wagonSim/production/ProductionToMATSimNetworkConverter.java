@@ -40,7 +40,6 @@ import org.matsim.contrib.wagonSim.production.ProductionDataContainer.Production
 import org.matsim.contrib.wagonSim.production.ProductionDataContainer.RbNode;
 import org.matsim.contrib.wagonSim.production.ProductionDataContainer.RcpNode;
 import org.matsim.contrib.wagonSim.production.ProductionDataContainer.SatNode;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 
@@ -106,7 +105,7 @@ public class ProductionToMATSimNetworkConverter {
 			
 			if (pNode instanceof RbNode) {
 				RbNode n = (RbNode)pNode;
-				Coord c = new CoordImpl(infraNode.getCoord().getX()+RB_COORD_SHIFT,infraNode.getCoord().getY()+RB_COORD_SHIFT);
+				Coord c = new Coord(infraNode.getCoord().getX() + RB_COORD_SHIFT, infraNode.getCoord().getY() + RB_COORD_SHIFT);
 				Node node = factory.createNode(n.id,c);
 				network.addNode(node);
 				
@@ -122,7 +121,7 @@ public class ProductionToMATSimNetworkConverter {
 			}
 			else if (pNode instanceof RcpNode) {
 				RcpNode n = (RcpNode)pNode;
-				Coord c = new CoordImpl(infraNode.getCoord().getX()+RCP_COORD_SHIFT,infraNode.getCoord().getY()+RCP_COORD_SHIFT);
+				Coord c = new Coord(infraNode.getCoord().getX() + RCP_COORD_SHIFT, infraNode.getCoord().getY() + RCP_COORD_SHIFT);
 				Node node = factory.createNode(n.id,c);
 				network.addNode(node);
 				
@@ -140,7 +139,7 @@ public class ProductionToMATSimNetworkConverter {
 			}
 			else if (pNode instanceof SatNode) {
 				SatNode n = (SatNode)pNode;
-				Coord c = new CoordImpl(infraNode.getCoord().getX()+SAT_COORD_SHIFT,infraNode.getCoord().getY()+SAT_COORD_SHIFT);
+				Coord c = new Coord(infraNode.getCoord().getX() + SAT_COORD_SHIFT, infraNode.getCoord().getY() + SAT_COORD_SHIFT);
 				Node node = factory.createNode(n.id,c);
 				network.addNode(node);
 				
@@ -171,7 +170,7 @@ public class ProductionToMATSimNetworkConverter {
 				Node toNode = network.getNodes().get(pNode.parentNode.id);
 				Link link = factory.createLink(Id.create(fromNode.getId().toString()+"-"+toNode.getId().toString(), Link.class),fromNode,toNode);
 				network.addLink(link);
-				link.setLength(CoordUtils.calcDistance(fromNode.getCoord(),toNode.getCoord()));
+				link.setLength(CoordUtils.calcEuclideanDistance(fromNode.getCoord(),toNode.getCoord()));
 				link.setAllowedModes(defaultModes);
 				link.setNumberOfLanes(1);
 				link.setCapacity(DEFAULT_CAPACITY);
@@ -180,7 +179,7 @@ public class ProductionToMATSimNetworkConverter {
 				Node toNode = network.getNodes().get(sNode.id);
 				Link link = factory.createLink(Id.create(fromNode.getId().toString()+"-"+toNode.getId().toString(), Link.class),fromNode,toNode);
 				network.addLink(link);
-				link.setLength(CoordUtils.calcDistance(fromNode.getCoord(),toNode.getCoord()));
+				link.setLength(CoordUtils.calcEuclideanDistance(fromNode.getCoord(),toNode.getCoord()));
 				link.setAllowedModes(defaultModes);
 				link.setNumberOfLanes(1);
 				link.setCapacity(DEFAULT_CAPACITY);
@@ -202,7 +201,7 @@ public class ProductionToMATSimNetworkConverter {
 			if (!network.getLinks().containsKey(linkId)) {
 				Link link = factory.createLink(linkId, fromNode, toNode);
 				network.addLink(link);
-				link.setLength(CoordUtils.calcDistance(fromNode.getCoord(),toNode.getCoord()));
+				link.setLength(CoordUtils.calcEuclideanDistance(fromNode.getCoord(),toNode.getCoord()));
 				link.setAllowedModes(defaultModes);
 				link.setNumberOfLanes(1);
 				link.setCapacity(DEFAULT_CAPACITY);
@@ -214,7 +213,7 @@ public class ProductionToMATSimNetworkConverter {
 				if (!network.getLinks().containsKey(linkId)) {
 					Link link = factory.createLink(linkId,fromNode,toNode);
 					network.addLink(link);
-					link.setLength(CoordUtils.calcDistance(fromNode.getCoord(),toNode.getCoord()));
+					link.setLength(CoordUtils.calcEuclideanDistance(fromNode.getCoord(),toNode.getCoord()));
 					link.setAllowedModes(defaultModes);
 					link.setNumberOfLanes(1);
 					link.setCapacity(DEFAULT_CAPACITY);

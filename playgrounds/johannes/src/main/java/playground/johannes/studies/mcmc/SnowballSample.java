@@ -19,52 +19,36 @@
  * *********************************************************************** */
 package playground.johannes.studies.mcmc;
 
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.Point;
+import org.matsim.contrib.common.gis.CRSUtils;
+import org.matsim.contrib.common.gis.CartesianDistanceCalculator;
+import org.matsim.contrib.common.gis.EsriShapeIO;
+import org.matsim.contrib.socnetgen.sna.gis.GravityCostFunction;
+import org.matsim.contrib.socnetgen.sna.graph.analysis.*;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.SpatialSparseEdge;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.SpatialSparseGraph;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.SpatialSparseVertex;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.SpatialVertex;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.analysis.*;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.io.Population2SpatialGraph;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.io.SpatialGraphKMLWriter;
+import org.matsim.contrib.socnetgen.sna.graph.spatial.io.SpatialGraphMLReader;
+import org.matsim.contrib.socnetgen.sna.snowball.SampledVertexDecorator;
+import org.matsim.contrib.socnetgen.sna.snowball.analysis.EstimatedDegree;
+import org.matsim.contrib.socnetgen.sna.snowball.analysis.SimplePiEstimator;
+import org.matsim.contrib.socnetgen.sna.snowball.analysis.WSMStatsFactory;
+import org.matsim.contrib.socnetgen.sna.snowball.analysis.WaveSizeTask;
+import org.matsim.contrib.socnetgen.sna.snowball.sim.Sampler;
+import org.matsim.contrib.socnetgen.sna.snowball.sim.SamplerListener;
+import org.matsim.contrib.socnetgen.sna.snowball.sim.SnowballSampler;
+import org.matsim.contrib.socnetgen.sna.snowball.spatial.SpatialSampledGraphProjectionBuilder;
+import org.matsim.contrib.socnetgen.sna.snowball.spatial.analysis.ObservedAccessibility;
+import org.opengis.feature.simple.SimpleFeature;
+
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-
-import org.opengis.feature.simple.SimpleFeature;
-
-import playground.johannes.sna.gis.CRSUtils;
-import playground.johannes.sna.graph.analysis.DegreeTask;
-import playground.johannes.sna.graph.analysis.FixedSizeRandomPartition;
-import playground.johannes.sna.graph.analysis.GraphAnalyzer;
-import playground.johannes.sna.graph.analysis.RandomPartition;
-import playground.johannes.sna.graph.analysis.VertexFilter;
-import playground.johannes.sna.graph.spatial.SpatialSparseEdge;
-import playground.johannes.sna.graph.spatial.SpatialSparseGraph;
-import playground.johannes.sna.graph.spatial.SpatialSparseVertex;
-import playground.johannes.sna.graph.spatial.SpatialVertex;
-import playground.johannes.sna.graph.spatial.io.SpatialGraphKMLWriter;
-import playground.johannes.sna.graph.spatial.io.SpatialGraphMLReader;
-import playground.johannes.sna.snowball.SampledVertexDecorator;
-import playground.johannes.sna.snowball.analysis.EstimatedDegree;
-import playground.johannes.sna.snowball.analysis.SimplePiEstimator;
-import playground.johannes.sna.snowball.sim.SnowballSampler;
-import playground.johannes.sna.snowball.sim.Sampler;
-import playground.johannes.sna.snowball.sim.SamplerListener;
-import playground.johannes.socialnetworks.gis.CartesianDistanceCalculator;
-import playground.johannes.socialnetworks.gis.GravityCostFunction;
-import playground.johannes.socialnetworks.gis.io.FeatureSHP;
-import playground.johannes.socialnetworks.graph.analysis.AnalyzerTaskArray;
-import playground.johannes.socialnetworks.graph.analysis.AnalyzerTaskComposite;
-import playground.johannes.socialnetworks.graph.analysis.TopologyAnalyzerTask;
-import playground.johannes.socialnetworks.graph.spatial.analysis.AcceptancePropaCategoryTask;
-import playground.johannes.socialnetworks.graph.spatial.analysis.Accessibility;
-import playground.johannes.socialnetworks.graph.spatial.analysis.CachedAccessibility;
-import playground.johannes.socialnetworks.graph.spatial.analysis.DegreeAccessibilityTask;
-import playground.johannes.socialnetworks.graph.spatial.analysis.EdgeLength;
-import playground.johannes.socialnetworks.graph.spatial.analysis.EdgeLengthAccessibilityTask;
-import playground.johannes.socialnetworks.graph.spatial.analysis.EdgeLengthTask;
-import playground.johannes.socialnetworks.graph.spatial.analysis.TransitivityAccessibilityTask;
-import playground.johannes.socialnetworks.graph.spatial.io.Population2SpatialGraph;
-import playground.johannes.socialnetworks.snowball2.analysis.WSMStatsFactory;
-import playground.johannes.socialnetworks.snowball2.analysis.WaveSizeTask;
-import playground.johannes.socialnetworks.snowball2.spatial.SpatialSampledGraphProjectionBuilder;
-import playground.johannes.socialnetworks.snowball2.spatial.analysis.ObservedAccessibility;
-
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.Point;
 
 /**
  * @author illenberger
@@ -81,7 +65,7 @@ public class SnowballSample {
 		SpatialSparseGraph graph = reader.readGraph("/Users/jillenberger/Work/socialnets/mcmc/ergm/raw/graph.graphml");
 //		SpatialSparseGraph graph = reader.readGraph("/Users/jillenberger/Work/socialnets/mcmc/ergm/small/graph.graphml");
 		
-		Set<SimpleFeature> features = FeatureSHP.readFeatures("/Users/jillenberger/Work/socialnets/data/schweiz/complete/zones/Kanton.shp");
+		Set<SimpleFeature> features = EsriShapeIO.readFeatures("/Users/jillenberger/Work/socialnets/data/schweiz/complete/zones/Kanton.shp");
 		Geometry geometry = (Geometry) features.iterator().next().getDefaultGeometry();
 		
 		SnowballSampler<SpatialSparseGraph, SpatialSparseVertex, SpatialSparseEdge> sampler = new SnowballSampler<SpatialSparseGraph, SpatialSparseVertex, SpatialSparseEdge>();

@@ -36,9 +36,8 @@ import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkWriter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
@@ -54,7 +53,7 @@ public class CottbusTramLinkCreator {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		
 		String cbdir;
 		if (args.length == 0){
@@ -64,7 +63,7 @@ public class CottbusTramLinkCreator {
 		cbdir = args[0];
 		String netfile = cbdir+"network_wgs84_utm33n.xml.gz";
 		Network network = scenario.getNetwork();
-		new MatsimNetworkReader(scenario).readFile(netfile);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(netfile);
 		CoordinateTransformation ct = TransformationFactory.getCoordinateTransformation(TransformationFactory.WGS84,
 				TransformationFactory.WGS84_UTM33N);
 		
@@ -83,8 +82,8 @@ public class CottbusTramLinkCreator {
 				String[] result = line.split(";");
 				
 			    if (result[0].equals("b")){
-			    	
-			    	Coord xy =ct.transform(new CoordImpl(Double.parseDouble(result[4]), Double.parseDouble(result[5])));
+
+					Coord xy =ct.transform(new Coord(Double.parseDouble(result[4]), Double.parseDouble(result[5])));
 			    	Id<Node> nodeId = Id.create("pt"+result[1], Node.class);
 			    	Node n = network.getFactory().createNode(nodeId, xy);
 			    	nodeList.add(n);
@@ -151,7 +150,7 @@ public class CottbusTramLinkCreator {
 					Link ll = network.getFactory().createLink(Id.create("ptb"+i, Link.class), network.getNodes().get(lastId), network.getNodes().get(currentId));
 					
 					
-					Double d = CoordUtils.calcDistance(l.getFromNode().getCoord(), l.getToNode().getCoord());
+					Double d = CoordUtils.calcEuclideanDistance(l.getFromNode().getCoord(), l.getToNode().getCoord());
 					l.setCapacity(30);
 					l.setAllowedModes(modes);
 					l.setFreespeed(14);
@@ -176,7 +175,7 @@ public class CottbusTramLinkCreator {
 			Link l = network.getFactory().createLink(Id.create("ptl999", Link.class), network.getNodes().get(Id.create("26999281", Node.class)), network.getNodes().get(Id.create("243180738", Node.class)));
 			
 			Link ll = network.getFactory().createLink(Id.create("ptb999", Link.class), network.getNodes().get(Id.create("243180738", Node.class)), network.getNodes().get(Id.create("26999281", Node.class)));
-			Double d = CoordUtils.calcDistance(l.getFromNode().getCoord(), l.getToNode().getCoord());
+			Double d = CoordUtils.calcEuclideanDistance(l.getFromNode().getCoord(), l.getToNode().getCoord());
 
 			l.setCapacity(30);
 			l.setAllowedModes(modes);

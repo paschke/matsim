@@ -22,55 +22,57 @@
 
 package org.matsim.core.router;
 
-import org.matsim.core.config.Config;
+import com.google.inject.Key;
+import com.google.inject.Provides;
+import com.google.inject.name.Names;
+import org.matsim.api.core.v01.TransportMode;
+import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.util.TravelDisutility;
-import org.matsim.core.router.util.TravelTime;
+import org.matsim.pt.router.TransitRouterModule;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
+import java.util.Map;
 
 public class TripRouterModule extends AbstractModule {
 
     @Override
     public void install() {
-        install(new TripRouterFactoryModule());
-        bind(TripRouter.class).toProvider(RealTripRouterProvider.class);
+        bind(MainModeIdentifier.class).to(MainModeIdentifierImpl.class);
+        install(new LeastCostPathCalculatorModule());
+        install(new TransitRouterModule());
+        bind(SingleModeNetworksCache.class).asEagerSingleton();
+        PlansCalcRouteConfigGroup routeConfigGroup = getConfig().plansCalcRoute();
+        for (String mode : routeConfigGroup.getTeleportedModeFreespeedFactors().keySet()) {
+            if (getConfig().transit().isUseTransit() && getConfig().transit().getTransitModes().contains(mode)) {
+                // default config contains "pt" as teleported mode, but if we have simulated transit, this is supposed to override it
+                // better solve this on the config level eventually.
+                continue;
+            }
+            addRoutingModuleBinding(mode).toProvider(new PseudoTransit(getConfig().plansCalcRoute().getModeRoutingParams().get(mode)));
+        }
+        for (String mode : routeConfigGroup.getTeleportedModeSpeeds().keySet()) {
+            addRoutingModuleBinding(mode).toProvider(new Teleportation(getConfig().plansCalcRoute().getModeRoutingParams().get(mode)));
+        }
+        for (String mode : routeConfigGroup.getNetworkModes()) {
+            addRoutingModuleBinding(mode).toProvider(new NetworkRouting(mode));
+        }
+        if (getConfig().transit().isUseTransit()) {
+            for (String mode : getConfig().transit().getTransitModes()) {
+                addRoutingModuleBinding(mode).toProvider(Transit.class);
+            }
+            addRoutingModuleBinding(TransportMode.transit_walk).to(Key.get(RoutingModule.class, Names.named(TransportMode.walk)));
+        }
+
     }
 
-    private static class RealTripRouterProvider implements Provider<TripRouter> {
-
-        final Config config;
-        final TripRouterFactory tripRouterFactory;
-        final TravelDisutilityFactory travelDisutilityFactory;
-        final Provider<TravelTime> travelTime;
-
-        @Inject
-        RealTripRouterProvider(Config config, TripRouterFactory tripRouterFactory, TravelDisutilityFactory travelDisutilityFactory, Provider<TravelTime> travelTime) {
-            this.config = config;
-            this.travelDisutilityFactory = travelDisutilityFactory;
-            this.tripRouterFactory = tripRouterFactory;
-            this.travelTime = travelTime;
+    @Provides TripRouter create(Map<String, Provider<RoutingModule>> routingModules, MainModeIdentifier mainModeIdentifier) {
+        TripRouter tripRouter = new TripRouter();
+        for (Map.Entry<String, Provider<RoutingModule>> entry : routingModules.entrySet()) {
+            tripRouter.setRoutingModule(entry.getKey(), entry.getValue().get());
         }
-
-        @Override
-        public TripRouter get() {
-            return tripRouterFactory.instantiateAndConfigureTripRouter(new RoutingContext() {
-
-                @Override
-                public TravelDisutility getTravelDisutility() {
-                    return travelDisutilityFactory.createTravelDisutility(travelTime.get(), config.planCalcScore());
-                }
-
-                @Override
-                public TravelTime getTravelTime() {
-                    return travelTime.get();
-                }
-
-            });
-        }
-
+        tripRouter.setMainModeIdentifier(mainModeIdentifier);
+        return tripRouter;
     }
 
 }

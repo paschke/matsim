@@ -20,6 +20,7 @@
 package org.matsim.core.config.consistency;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.ControlerConfigGroup.EventsFileFormat;
 import org.matsim.core.config.groups.ControlerConfigGroup.MobsimType;
@@ -49,52 +50,23 @@ public final class ConfigConsistencyCheckerImpl implements ConfigConsistencyChec
 		this.checkTravelTimeCalculationRoutingConfiguration(config);
 		this.checkLaneDefinitionRoutingConfiguration(config);
 		this.checkPlanCalcScore(config);
-		this.checkMobsimSelection(config);
+		this.checkTransit(config);
 	}
-
-	/**
-	 * Design comments:<ul>
-	 * <li> This is so complicated since currently it is possible to define some mobsim in the controler config module
-	 * but still run the jdeqsim.  The logical behavior would be to run the defined mobsim and to ignore the jdeqsim.
-	 * But this would silently change the behavior for people who have used it in that way.  If anybody finds this 
-	 * after, say, a year from now, it could/should be simplified (and made more restrictive).  kai, mar'12
-	 * </ul>
-	 */
-	private void checkMobsimSelection(final Config config) {
-		if ( config.getModule("JDEQSim")!=null) {
-			if ( !config.controler().getMobsim().equalsIgnoreCase(MobsimType.JDEQSim.toString()) ) {
-				throw new RuntimeException( "config module for JDEQSim defined but other mobsim selected in controler config" +
-						" module; aborting since there is no way to fix this AND remain backwards compatible.\n" +
-						" Either select jdeqsim in the controler config OR remove the jdeqsim config module.") ;
-			}
-		}
-
-		// older checks, valid for the implicit mobsim selection by putting in the corresponding config group.
-		if ( config.getModule("JDEQSim")!=null ) {
-			if (!config.controler().getMobsim().equals(MobsimType.JDEQSim.toString())) {
-				throw new RuntimeException("You have a 'JDEQSim' config group, but have not set " +
-						"the mobsim type to 'JDEQSim'. Aborting...");
-			}
-		}
-			
-		
-	}
-
 
 	/*package*/ void checkPlanCalcScore(final Config c) {
-		if (c.planCalcScore().getTravelingPt_utils_hr() > 0) {
+		if (c.planCalcScore().getModes().get(TransportMode.pt).getMarginalUtilityOfTraveling() > 0) {
 			log.warn(PlanCalcScoreConfigGroup.GROUP_NAME + ".travelingPt is > 0. This values specifies a utility. " +
 					"Typically, this should be a disutility, i.e. have a negative value.");
 		}
-		if (c.planCalcScore().getTraveling_utils_hr() > 0) {
+		if (c.planCalcScore().getModes().get(TransportMode.car).getMarginalUtilityOfTraveling() > 0) {
 			log.warn(PlanCalcScoreConfigGroup.GROUP_NAME + ".traveling is > 0. This values specifies a utility. " +
 			"Typically, this should be a disutility, i.e. have a negative value.");
 		}
-		if (c.planCalcScore().getTravelingBike_utils_hr() > 0) {
+		if (c.planCalcScore().getModes().get(TransportMode.bike).getMarginalUtilityOfTraveling() > 0) {
 			log.warn(PlanCalcScoreConfigGroup.GROUP_NAME + ".travelingBike is > 0. This values specifies a utility. " +
 			"Typically, this should be a disutility, i.e. have a negative value.");
 		}
-		if (c.planCalcScore().getTravelingWalk_utils_hr() > 0) {
+		if (c.planCalcScore().getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() > 0) {
 			log.warn(PlanCalcScoreConfigGroup.GROUP_NAME + ".travelingWalk is > 0. This values specifies a utility. " +
 			"Typically, this should be a disutility, i.e. have a negative value.");
 		}
@@ -163,8 +135,13 @@ public final class ConfigConsistencyCheckerImpl implements ConfigConsistencyChec
 		if ((config.qsim().isUseLanes()) &&
 		    !config.controler().isLinkToLinkRoutingEnabled()){
 		  	log.warn("Using lanes without enabling linktolinkrouting might not lead to expected simulation results");
-		   }
+		}
 	}
 
+	private void checkTransit(final Config config) {
+		if ( config.transit().isUseTransit() && config.transit().getVehiclesFile()==null ) {
+			log.warn("Your are using Transit but have not provided a transit vehicles file. This most likely won't work.");
+		}
+	}
 
 }

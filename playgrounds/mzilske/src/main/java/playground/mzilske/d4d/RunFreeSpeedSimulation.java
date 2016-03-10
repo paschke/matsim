@@ -3,6 +3,7 @@ package playground.mzilske.d4d;
 import java.util.Arrays;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -41,9 +42,9 @@ public class RunFreeSpeedSimulation {
 		// sighting.setClosingTime(0.0);
 		sighting.setTypicalDuration(30.0 * 60);
 		config.planCalcScore().addActivityParams(sighting);
-		config.planCalcScore().setTraveling_utils_hr(0);
-		config.planCalcScore().setConstantCar(0);
-		config.planCalcScore().setMonetaryDistanceCostRateCar(0);
+		config.planCalcScore().getModes().get(TransportMode.car).setMarginalUtilityOfTraveling((double) 0);
+		config.planCalcScore().getModes().get(TransportMode.car).setConstant((double) 0);
+		config.planCalcScore().getModes().get(TransportMode.car).setMonetaryDistanceRate((double) 0);
 		// config.planCalcScore().setWriteExperiencedPlans(true);
 		config.setParam("JDEQSim", "flowCapacityFactor", "100");
 		config.setParam("JDEQSim", "storageCapacityFactor", "100");
@@ -51,7 +52,7 @@ public class RunFreeSpeedSimulation {
 		config.setParam("JDEQSim", "endTime", Double.toString(endTime));
 		
 		Scenario scenario = ScenarioUtils.createScenario(config);
-		new MatsimNetworkReader(scenario).readFile("/Users/zilske/d4d/output/network.xml");
+		new MatsimNetworkReader(scenario.getNetwork()).readFile("/Users/zilske/d4d/output/network.xml");
 		AltPopulationReaderMatsimV5 altPopulationReaderMatsimV5 = new AltPopulationReaderMatsimV5(scenario);
 		//	altPopulationReaderMatsimV5.readFile("/Users/zilske/d4d/output/population.xml");
 		altPopulationReaderMatsimV5.readFile("/Users/zilske/d4d/output/population-capital-only.xml");

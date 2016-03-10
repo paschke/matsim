@@ -19,9 +19,13 @@
  * *********************************************************************** */
 package eu.eunoiaproject.bikesharing.examples.example03configurablesimulation;
 
-import java.io.File;
-
 import com.google.inject.Provider;
+import eu.eunoiaproject.bikesharing.framework.BikeSharingConstants;
+import eu.eunoiaproject.bikesharing.framework.qsim.BikeSharingWithoutRelocationQsimFactory;
+import eu.eunoiaproject.bikesharing.framework.router.TransitMultiModalAccessRoutingModule.RoutingData;
+import eu.eunoiaproject.bikesharing.framework.scenario.BikeSharingScenarioUtils;
+import eu.eunoiaproject.bikesharing.scoring.StepBasedFare;
+import eu.eunoiaproject.bikesharing.scoring.StepBasedFareConfigGroup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
@@ -36,7 +40,6 @@ import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.ControlerDefaults;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.mobsim.framework.Mobsim;
-import org.matsim.core.scenario.ScenarioImpl;
 import org.matsim.core.scoring.ScoringFunction;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.SumScoringFunction;
@@ -44,16 +47,10 @@ import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.pt.router.TransitRouterNetwork;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
-
 import playground.ivt.matsim2030.router.TransitRouterNetworkReader;
-import playground.thibautd.utils.SoftCache;
+import playground.ivt.utils.SoftCache;
 
-import eu.eunoiaproject.bikesharing.framework.BikeSharingConstants;
-import eu.eunoiaproject.bikesharing.framework.qsim.BikeSharingWithoutRelocationQsimFactory;
-import eu.eunoiaproject.bikesharing.framework.router.TransitMultiModalAccessRoutingModule.RoutingData;
-import eu.eunoiaproject.bikesharing.framework.scenario.BikeSharingScenarioUtils;
-import eu.eunoiaproject.bikesharing.scoring.StepBasedFare;
-import eu.eunoiaproject.bikesharing.scoring.StepBasedFareConfigGroup;
+import java.io.File;
 
 /**
  * @author thibautd
@@ -62,7 +59,7 @@ public class RunConfigurableBikeSharingSimulation {
 	private static final Logger log =
 		Logger.getLogger(RunConfigurableBikeSharingSimulation.class);
 
-	public static void main(final String[] args) {
+	public static void main(final String... args) {
 		final String configFile = args[ 0 ];
 
 		OutputDirectoryLogging.catchLogEntries();
@@ -84,7 +81,7 @@ public class RunConfigurableBikeSharingSimulation {
 			bikesharing.setConstant( bike.getConstant() );
 			bikesharing.setMarginalUtilityOfDistance( bike.getMarginalUtilityOfDistance() );
 			bikesharing.setMarginalUtilityOfTraveling( bike.getMarginalUtilityOfTraveling() );
-			bikesharing.setMonetaryDistanceCostRate( bike.getMonetaryDistanceCostRate() );
+			bikesharing.setMonetaryDistanceRate( bike.getMonetaryDistanceRate() );
 		}
 
 		final RelocationConfigGroup relocationGroup = new RelocationConfigGroup();
@@ -96,9 +93,8 @@ public class RunConfigurableBikeSharingSimulation {
 		final Controler controler = new Controler( sc );
 
 		final RoutingData ptRouting = createRoutingData( sc, thinnedNetworkGroup );
-		controler.setTripRouterFactory(
+		controler.addOverridingModule(
 				BikeSharingScenarioUtils.createTripRouterFactoryAndConfigureRouteFactories(
-					controler.getTravelDisutilityFactory(),
 					controler.getScenario(),
 					null,
 					ptRouting,
@@ -173,7 +169,6 @@ public class RunConfigurableBikeSharingSimulation {
 				return;
 			}
 
-			((ScenarioImpl) scenario).createTransitScheduleContainer();
 			log.info( "read schedule from "+config.transit().getTransitScheduleFile() );
 			new TransitScheduleReader( scenario ).readFile( config.transit().getTransitScheduleFile() );
 

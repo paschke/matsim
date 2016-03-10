@@ -33,6 +33,7 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Route;
 import org.matsim.contrib.parking.lib.DebugLib;
 import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.qsim.agents.WithinDayAgentUtils;
@@ -41,7 +42,7 @@ import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.population.routes.ModeRouteFactory;
 import org.matsim.core.router.PlanRouter;
 import org.matsim.core.router.TripRouter;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.population.algorithms.PersonAlgorithm;
 import org.matsim.population.algorithms.PersonPrepareForSim;
@@ -64,7 +65,7 @@ public class InsertParkingActivities implements PlanAlgorithm {
 	public InsertParkingActivities(Scenario scenario, TripRouter tripRouter, ParkingInfrastructure parkingInfrastructure) {
 		this.scenario = scenario;
 		this.tripRouter = tripRouter;
-		this.personPrepareForSim = new PersonPrepareForSim(new PlanRouter(tripRouter), (ScenarioImpl) scenario);
+		this.personPrepareForSim = new PersonPrepareForSim(new PlanRouter(tripRouter), scenario);
 		this.parkingInfrastructure = parkingInfrastructure;
 		
 		this.modeRouteFactory = ((PopulationFactoryImpl) scenario.getPopulation().getFactory()).getModeRouteFactory();
@@ -103,9 +104,9 @@ public class InsertParkingActivities implements PlanAlgorithm {
 			
 			// create walk legs and parking activities
 			Leg walkLegToParking = createWalkLeg(carLeg.getDepartureTime(), previousActivity.getLinkId(), previousActivity.getLinkId());
-			Activity firstParkingActivity = createParkingActivity(((Activity) previousActivity).getFacilityId(), vehicleId, firstParking);
+			Activity firstParkingActivity = createParkingActivity(previousActivity.getFacilityId(), vehicleId, firstParking);
 			firstParking = false;
-			Activity secondParkingActivity = createParkingActivity(((Activity) nextActivity).getFacilityId(), vehicleId, firstParking);
+			Activity secondParkingActivity = createParkingActivity(nextActivity.getFacilityId(), vehicleId, firstParking);
 			Leg walkLegFromParking = createWalkLeg(carLeg.getDepartureTime() + carLeg.getTravelTime(), nextActivity.getLinkId(), nextActivity.getLinkId());
 			
 			// add legs and activities to plan
@@ -234,7 +235,7 @@ public class InsertParkingActivities implements PlanAlgorithm {
 			if (nextParkingArrivalAct!=null){
 				if (currentParkingDepartureAct.getLinkId() == nextParkingArrivalAct.getLinkId()) {
 					newParkingFacilityId = pi.getClosestParkingFacilityNotOnLink(nextParkingArrivalAct.getCoord(), nextParkingArrivalAct.getLinkId());
-					nextParkingArrivalAct.setLinkId(((ScenarioImpl) scenario).getActivityFacilities().getFacilities().get(newParkingFacilityId).getLinkId());
+					nextParkingArrivalAct.setLinkId(((MutableScenario) scenario).getActivityFacilities().getFacilities().get(newParkingFacilityId).getLinkId());
 					nextParkingArrivalAct.setFacilityId(newParkingFacilityId);
 
 					
@@ -249,7 +250,7 @@ public class InsertParkingActivities implements PlanAlgorithm {
 			
 			
 			if (nextParkingDepartureAct!=null && newParkingFacilityId != null) {
-				nextParkingDepartureAct.setLinkId(((ScenarioImpl) scenario).getActivityFacilities().getFacilities().get(newParkingFacilityId).getLinkId());
+				nextParkingDepartureAct.setLinkId(((MutableScenario) scenario).getActivityFacilities().getFacilities().get(newParkingFacilityId).getLinkId());
 				nextParkingDepartureAct.setFacilityId(newParkingFacilityId);
 				
 				//update car leg
@@ -263,7 +264,7 @@ public class InsertParkingActivities implements PlanAlgorithm {
 		}
 
 	public static Activity createParkingActivity(Scenario sc, Id parkingFacilityId) {
-		ActivityFacility facility = ((ScenarioImpl) sc).getActivityFacilities().getFacilities().get(parkingFacilityId);
+		ActivityFacility facility = ((MutableScenario) sc).getActivityFacilities().getFacilities().get(parkingFacilityId);
 
 		ActivityImpl activity = (ActivityImpl) sc.getPopulation().getFactory()
 				.createActivityFromLinkId("parking", facility.getLinkId());
@@ -276,13 +277,13 @@ public class InsertParkingActivities implements PlanAlgorithm {
 	private Activity createParkingActivity(Id facilityId, Id vehicleId, boolean firstParking) {
 
 		// get the facility where the activity is performed
-		ActivityFacility facility = ((ScenarioImpl) this.scenario).getActivityFacilities().getFacilities().get(facilityId);
+		ActivityFacility facility = ((MutableScenario) this.scenario).getActivityFacilities().getFacilities().get(facilityId);
 		// Id parkingFacilityId =
 		// this.parkingInfrastructure.getClosestFreeParkingFacility(facility.getCoord());
 		Id parkingFacilityId = this.parkingInfrastructure.getClosestParkingFacility(facility.getCoord());
 
 		// get the closest parking facility
-		ActivityFacility parkingFacility = ((ScenarioImpl) this.scenario).getActivityFacilities().getFacilities()
+		ActivityFacility parkingFacility = ((MutableScenario) this.scenario).getActivityFacilities().getFacilities()
 				.get(parkingFacilityId);
 
 		Id linkId = parkingFacility.getLinkId();
@@ -366,7 +367,7 @@ public class InsertParkingActivities implements PlanAlgorithm {
 		if (nextParkingArrivalAct!=null){
 			if (currentParkingDepartureAct.getLinkId() == nextParkingArrivalAct.getLinkId()) {
 				newParkingFacilityId = pi.getClosestParkingFacilityNotOnLink(nextParkingArrivalAct.getCoord(), nextParkingArrivalAct.getLinkId());
-				nextParkingArrivalAct.setLinkId(((ScenarioImpl) sc).getActivityFacilities().getFacilities().get(newParkingFacilityId).getLinkId());
+				nextParkingArrivalAct.setLinkId(((MutableScenario) sc).getActivityFacilities().getFacilities().get(newParkingFacilityId).getLinkId());
 				nextParkingArrivalAct.setFacilityId(newParkingFacilityId);
 
 				int indexNextParkingArrival = planElements.indexOf(nextParkingArrivalAct);
@@ -386,7 +387,7 @@ public class InsertParkingActivities implements PlanAlgorithm {
 		
 		
 		if (nextParkingDepartureAct!=null && newParkingFacilityId != null) {
-			nextParkingDepartureAct.setLinkId(((ScenarioImpl) sc).getActivityFacilities().getFacilities().get(newParkingFacilityId).getLinkId());
+			nextParkingDepartureAct.setLinkId(((MutableScenario) sc).getActivityFacilities().getFacilities().get(newParkingFacilityId).getLinkId());
 			nextParkingDepartureAct.setFacilityId(newParkingFacilityId);
 			
 			//update car leg
@@ -402,7 +403,7 @@ public class InsertParkingActivities implements PlanAlgorithm {
 	private Leg createWalkLeg(double departureTime, Id startLinkId, Id endLinkId) {
 		Leg walkLeg = this.scenario.getPopulation().getFactory().createLeg(TransportMode.walk);
 		walkLeg.setDepartureTime(departureTime);
-		walkLeg.setRoute(modeRouteFactory.createRoute(TransportMode.walk, startLinkId, endLinkId));
+		walkLeg.setRoute(modeRouteFactory.createRoute(Route.class, startLinkId, endLinkId));
 		return walkLeg;
 	}
 

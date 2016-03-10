@@ -28,18 +28,16 @@ import org.matsim.contrib.locationchoice.bestresponse.DestinationChoiceInitializ
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.network.NetworkImpl;
-import org.matsim.core.router.StageActivityTypesImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.facilities.ActivityFacilities;
 import org.matsim.facilities.algorithms.WorldConnectLocations;
-import org.matsim.pt.PtConstants;
-
 import playground.ivt.kticompatibility.KtiLikeScoringConfigGroup;
-import playground.ivt.matsim2030.scoring.MATSim2010ScoringFunctionFactory;
+import playground.ivt.matsim2030.scoring.MATSim2010ScoringModule;
 
 import java.io.File;
 
@@ -78,9 +76,7 @@ public class RunZurichScenario {
 
 		final Controler controler = new Controler( scenario );
 		controler.getConfig().controler().setOverwriteFileSetting(
-				true ?
-						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles :
-						OutputDirectoryHierarchy.OverwriteFileSetting.failIfDirectoryExists );
+						OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles  );
 
 		connectFacilitiesWithNetwork( controler );
 
@@ -88,16 +84,12 @@ public class RunZurichScenario {
 
 		// We use a specific scoring function, that uses individual preferences
 		// for activity durations.
-		controler.setScoringFunctionFactory(
-			new MATSim2010ScoringFunctionFactory(
-					controler.getScenario(),
-					new StageActivityTypesImpl(
-						PtConstants.TRANSIT_ACTIVITY_TYPE ) ) ); 	
+		controler.addOverridingModule( new MATSim2010ScoringModule() );
 
 		controler.run();
 	}
 
-	private static void connectFacilitiesWithNetwork(Controler controler) {
+	private static void connectFacilitiesWithNetwork(MatsimServices controler) {
         ActivityFacilities facilities = controler.getScenario().getActivityFacilities();
 		//log.warn("number of facilities: " +facilities.getFacilities().size());
         NetworkImpl network = (NetworkImpl) controler.getScenario().getNetwork();
@@ -107,7 +99,7 @@ public class RunZurichScenario {
 		wcl.connectFacilitiesWithLinks(facilities, network);
 	}
 
-	private static void initializeLocationChoice( final Controler controler ) {
+	private static void initializeLocationChoice( final MatsimServices controler ) {
 		final Scenario scenario = controler.getScenario();
 		final DestinationChoiceBestResponseContext lcContext =
 			new DestinationChoiceBestResponseContext( scenario );

@@ -60,11 +60,13 @@ public final class PlansCalcRouteConfigGroup extends ConfigGroup {
 	private static final String BIKE_SPEED = "bikeSpeed";
 	private static final String UNDEFINED_MODE_SPEED = "undefinedModeSpeed";
 	
-	private Collection<String> networkModes = Arrays.asList(TransportMode.car, TransportMode.ride); 
+	private Collection<String> networkModes = Arrays.asList(TransportMode.car);
 
 	private boolean acceptModeParamsWithoutClearing = false;
 	
 	private Double beelineDistanceFactor = 1.3 ;
+
+	private boolean insertingAccessEgressWalk = false ;
 
 	public static class ModeRoutingParams extends ReflectiveConfigGroup implements MatsimParameters {
 		public static final String SET_TYPE = "teleportedModeParameters";
@@ -181,6 +183,19 @@ public final class PlansCalcRouteConfigGroup extends ConfigGroup {
 			walk.setTeleportedModeSpeed( 3.0 / 3.6 ); // 3.0 km/h --> m/s
 			addParameterSet( walk );
 		}
+		
+		// the following two are deliberately different from "walk" since "walk" may become a network routing mode, but these two
+		// will not. kai, dec'15
+		{
+			final ModeRoutingParams walk = new ModeRoutingParams( TransportMode.access_walk );
+			walk.setTeleportedModeSpeed( 3.0 / 3.6 ); // 3.0 km/h --> m/s
+			addParameterSet( walk );
+		}
+		{
+			final ModeRoutingParams walk = new ModeRoutingParams( TransportMode.egress_walk );
+			walk.setTeleportedModeSpeed( 3.0 / 3.6 ); // 3.0 km/h --> m/s
+			addParameterSet( walk );
+		}
 
 		// I'm not sure if anyone needs the "undefined" mode. In particular, it doesn't do anything for modes which are
 		// really unknown, it is just a mode called "undefined". michaz 02-2012
@@ -193,6 +208,12 @@ public final class PlansCalcRouteConfigGroup extends ConfigGroup {
 			final ModeRoutingParams undefined = new ModeRoutingParams( UNDEFINED );
 			undefined.setTeleportedModeSpeed( 50. / 3.6 ); // 50.0 km/h --> m/s
 			addParameterSet( undefined );
+		}
+
+		{
+			final ModeRoutingParams ride = new ModeRoutingParams( TransportMode.ride );
+			ride.setTeleportedModeFreespeedFactor(1.0);
+			addParameterSet( ride );
 		}
 
 		{
@@ -395,7 +416,7 @@ public final class PlansCalcRouteConfigGroup extends ConfigGroup {
 		return map ;
 	}
 	
-	@Deprecated // use mode-specific factors
+	@Deprecated // use mode-specific factors.  kai, apr'15
 	public void setTeleportedModeFreespeedFactor(String mode, double freespeedFactor) {
 		testForLocked() ;
 		// re-create, to trigger erasing of defaults (normally forbidden, see acceptModeParamsWithoutClearing)
@@ -404,7 +425,7 @@ public final class PlansCalcRouteConfigGroup extends ConfigGroup {
 		addParameterSet( pars );
 	}
 
-	@Deprecated // use mode-specific factors
+	@Deprecated // use mode-specific factors.  kai, apr'15
 	public void setTeleportedModeSpeed(String mode, double speed) {
 		testForLocked() ;
 		// re-create, to trigger erasing of defaults (normally forbidden, see acceptModeParamsWithoutClearing)
@@ -413,12 +434,7 @@ public final class PlansCalcRouteConfigGroup extends ConfigGroup {
 		addParameterSet( pars );
 	}
 	
-//	@SuppressWarnings("static-method")
-//	public double getBeelineDistanceFactor() {
-//		return beelineDistanceFactor;
-//	}
-
-	@Deprecated // use mode-specific beeline distance factors!
+	@Deprecated // use mode-specific beeline distance factors! kai, apr'15
 	public void setBeelineDistanceFactor(double val) {
 		testForLocked() ;
 		// yyyy thinking about this: this should in design maybe not be different from the other teleportation factors (reset everything
@@ -433,6 +449,12 @@ public final class PlansCalcRouteConfigGroup extends ConfigGroup {
 		}
 	}
 
+	public boolean isInsertingAccessEgressWalk() {
+		return this.insertingAccessEgressWalk ;
+	}
+	public void setInsertingAccessEgressWalk( boolean val ) {
+		this.insertingAccessEgressWalk = val ;
+	}
 
 
 }

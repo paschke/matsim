@@ -14,15 +14,13 @@ import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup.ModeRoutingParams;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NetworkUtils;
-import org.matsim.core.population.routes.GenericRouteFactory;
 import org.matsim.core.population.routes.ModeRouteFactory;
+import org.matsim.core.router.DefaultRoutingModules;
 import org.matsim.core.router.Dijkstra;
 import org.matsim.core.router.EmptyStageActivityTypes;
 import org.matsim.core.router.RoutingModule;
 import org.matsim.core.router.StageActivityTypes;
 import org.matsim.core.router.costcalculators.OnlyTimeDependentTravelDisutility;
-import org.matsim.core.router.old.DefaultRoutingModules;
-import org.matsim.core.router.old.NetworkLegRouter;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
 import org.matsim.facilities.Facility;
@@ -39,14 +37,13 @@ public class BushwhackingRoutingModule implements RoutingModule {
 
 	public BushwhackingRoutingModule(PopulationFactory pf, NetworkImpl network) {
 		this.network = network;
-		mrf.setRouteFactory("unknown", new GenericRouteFactory());
 		ModeRoutingParams params = new ModeRoutingParams() ;
 		params.setMode("unknown");
 		params.setBeelineDistanceFactor(1.7);
 		params.setTeleportedModeSpeed(2.0);
 		teleportationLegRouter = DefaultRoutingModules.createTeleportationRouter("unknown", pf, params ) ; 
 		TravelTime ttc = new FreeSpeedTravelTime();
-		networkLegRouter = DefaultRoutingModules.createNetworkRouter("unknown", pf, 
+		networkLegRouter = DefaultRoutingModules.createPureNetworkRouter("unknown", pf, 
 				network, new Dijkstra(network, new OnlyTimeDependentTravelDisutility(ttc), ttc) );
 	}
 

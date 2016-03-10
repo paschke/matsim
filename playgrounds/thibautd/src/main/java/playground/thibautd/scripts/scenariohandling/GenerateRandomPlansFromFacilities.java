@@ -19,12 +19,6 @@
  * *********************************************************************** */
 package playground.thibautd.scripts.scenariohandling;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -41,9 +35,14 @@ import org.matsim.core.utils.misc.Time;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.ActivityOption;
 import org.matsim.facilities.MatsimFacilitiesReader;
-
 import playground.ivt.utils.ArgParser;
 import playground.ivt.utils.ArgParser.Args;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * @author thibautd
@@ -149,7 +148,7 @@ public class GenerateRandomPlansFromFacilities {
 		for ( int i=0; i < weights.length; i++ ) {
 			weights[ i ] = Math.exp(
 					betaDist *
-					CoordUtils.calcDistance(
+					CoordUtils.calcEuclideanDistance(
 						home,
 						nonHomeLocations.get( i ).getCoord() ) );
 			if ( weights[ i ] == Double.POSITIVE_INFINITY ) throw new RuntimeException();

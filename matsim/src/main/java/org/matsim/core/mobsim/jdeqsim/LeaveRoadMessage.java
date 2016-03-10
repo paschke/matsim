@@ -19,6 +19,7 @@
 
 package org.matsim.core.mobsim.jdeqsim;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.events.LinkLeaveEvent;
 
@@ -37,7 +38,7 @@ public class LeaveRoadMessage extends EventMessage {
 
 	public LeaveRoadMessage(Scheduler scheduler, Vehicle vehicle) {
 		super(scheduler, vehicle);
-		priority = SimulationParameters.PRIORITY_LEAVE_ROAD_MESSAGE;
+		priority = JDEQSimConfigGroup.PRIORITY_LEAVE_ROAD_MESSAGE;
 	}
 
 	@Override
@@ -45,9 +46,9 @@ public class LeaveRoadMessage extends EventMessage {
 		Road road = (Road) this.getReceivingUnit();
 		Event event = null;
 
-		event = new LinkLeaveEvent(this.getMessageArrivalTime(), vehicle.getOwnerPerson().getId(), road.getLink().getId(), null);
+		event = new LinkLeaveEvent(this.getMessageArrivalTime(), Id.create(vehicle.getOwnerPerson().getId(), org.matsim.vehicles.Vehicle.class), road.getLink().getId());
 
-		SimulationParameters.getProcessEventThread().processEvent(event);
+		eventsManager.processEvent(event);
 	}
 
 }

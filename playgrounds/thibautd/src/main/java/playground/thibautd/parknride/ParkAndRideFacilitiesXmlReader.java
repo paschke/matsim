@@ -19,6 +19,19 @@
  * *********************************************************************** */
 package playground.thibautd.parknride;
 
+import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.network.Link;
+import org.matsim.core.utils.io.MatsimXmlParser;
+import org.matsim.core.utils.misc.Counter;
+import org.matsim.facilities.ActivityFacility;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
+import org.xml.sax.Attributes;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
 import static playground.thibautd.parknride.ParkAndRideFacilitiesXmlSchemaNames.FACILITY_TAG;
 import static playground.thibautd.parknride.ParkAndRideFacilitiesXmlSchemaNames.ID_ATT;
 import static playground.thibautd.parknride.ParkAndRideFacilitiesXmlSchemaNames.LINK_ID_ATT;
@@ -27,20 +40,6 @@ import static playground.thibautd.parknride.ParkAndRideFacilitiesXmlSchemaNames.
 import static playground.thibautd.parknride.ParkAndRideFacilitiesXmlSchemaNames.STOP_TAG;
 import static playground.thibautd.parknride.ParkAndRideFacilitiesXmlSchemaNames.X_COORD_ATT;
 import static playground.thibautd.parknride.ParkAndRideFacilitiesXmlSchemaNames.Y_COORD_ATT;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
-
-import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.network.Link;
-import org.matsim.core.utils.geometry.CoordImpl;
-import org.matsim.core.utils.io.MatsimXmlParser;
-import org.matsim.core.utils.misc.Counter;
-import org.matsim.facilities.ActivityFacility;
-import org.matsim.pt.transitSchedule.api.TransitStopFacility;
-import org.xml.sax.Attributes;
 
 /**
  * reads an xml file containing PnR facilities.
@@ -81,9 +80,7 @@ public class ParkAndRideFacilitiesXmlReader extends MatsimXmlParser {
 		final String x = atts.getValue( X_COORD_ATT );
 		final String y = atts.getValue( Y_COORD_ATT );
 
-		return new CoordImpl(
-				Double.parseDouble( x ),
-				Double.parseDouble( y ));
+		return new Coord(Double.parseDouble(x), Double.parseDouble(y));
 	}
 
 	private static final <T> Id<T> getId( final Attributes atts , final String qName , final Class<T> idType ) {

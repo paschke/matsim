@@ -22,7 +22,8 @@ package playground.jbischoff.taxi.berlin.demand;
 import java.util.Map;
 
 import org.matsim.api.core.v01.*;
-import org.matsim.contrib.dvrp.extensions.taxi.TaxiUtils;
+import org.matsim.contrib.taxi.TaxiUtils;
+import org.matsim.contrib.zone.Zone;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.PopulationWriter;
@@ -31,7 +32,6 @@ import org.matsim.matrices.*;
 
 import playground.michalm.berlin.BerlinZoneUtils;
 import playground.michalm.demand.*;
-import playground.michalm.zone.Zone;
 
 
 public class TaxiDemandGenerator
@@ -119,7 +119,7 @@ public class TaxiDemandGenerator
     TaxiDemandGenerator()
     {
         scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-        new MatsimNetworkReader(scenario).readFile(NETWORKFILE);
+        new MatsimNetworkReader(scenario.getNetwork()).readFile(NETWORKFILE);
         this.matrices = new Matrices();
         new MatsimMatricesReader(matrices, scenario).readFile(ODMATRIX);
         this.zones = BerlinZoneUtils.readZones(ZONESXML, ZONESSHP);

@@ -19,39 +19,30 @@
 
 package playground.johannes.gsv.matrices.analysis;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-import org.matsim.core.utils.collections.Tuple;
-
-import playground.johannes.gsv.sim.cadyts.ODUtils;
-import playground.johannes.gsv.zones.KeyMatrix;
-import playground.johannes.gsv.zones.MatrixOperations;
-import playground.johannes.gsv.zones.Zone;
-import playground.johannes.gsv.zones.ZoneCollection;
-import playground.johannes.gsv.zones.io.KeyMatrixXMLReader;
-import playground.johannes.gsv.zones.io.Zone2GeoJSON;
-import playground.johannes.socialnetworks.gis.CartesianDistanceCalculator;
-import playground.johannes.socialnetworks.gis.DistanceCalculator;
-
 import com.vividsolutions.jts.algorithm.MinimumDiameter;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.matsim.contrib.common.gis.CartesianDistanceCalculator;
+import org.matsim.contrib.common.gis.DistanceCalculator;
+import org.matsim.core.utils.collections.Tuple;
+import playground.johannes.gsv.sim.cadyts.ODUtils;
+import playground.johannes.synpop.gis.Zone;
+import playground.johannes.synpop.gis.ZoneCollection;
+import playground.johannes.synpop.gis.ZoneGeoJsonIO;
+import playground.johannes.synpop.matrix.MatrixOperations;
+import playground.johannes.synpop.matrix.NumericMatrix;
+import playground.johannes.synpop.matrix.NumericMatrixXMLReader;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * @author johannes
@@ -72,29 +63,29 @@ public class DumpRelations {
 		/*
 		 * load ref matrix
 		 */
-		KeyMatrixXMLReader reader = new KeyMatrixXMLReader();
+		NumericMatrixXMLReader reader = new NumericMatrixXMLReader();
 		reader.setValidating(false);
 		reader.parse(refFile1);
-		KeyMatrix itp = reader.getMatrix();
+		NumericMatrix itp = reader.getMatrix();
 
 		MatrixOperations.applyFactor(itp, 1 / 365.0);
 
 		reader.parse(refFile2);
-		KeyMatrix tomtom = reader.getMatrix();
+		NumericMatrix tomtom = reader.getMatrix();
 
 		/*
 		 * load simulated matrix
 		 */
 		reader.parse(simFile);
-		KeyMatrix simulation = reader.getMatrix();
+		NumericMatrix simulation = reader.getMatrix();
 		removeUnknownZones(simulation);
-		// MatrixOperations.symetrize(simulation);
-		// MatrixOperations.applyFactor(simulation, 11.8);
+		// MatrixOperations.symmetrize(simulation);
+		// MatrixOperations.multiply(simulation, 11.8);
 		// MatrixOperations.applyDiagonalFactor(simulation, 1.3);
 
 		ZoneCollection zones = new ZoneCollection();
 		String data = new String(Files.readAllBytes(Paths.get("/home/johannes/gsv/gis/nuts/ger/geojson/de.nuts3.gk3.geojson")));
-		zones.addAll(Zone2GeoJSON.parseFeatureCollection(data));
+		zones.addAll(ZoneGeoJsonIO.parseFeatureCollection(data));
 		data = null;
 		zones.setPrimaryKey("gsvId");
 
@@ -105,7 +96,7 @@ public class DumpRelations {
 //		ODUtils.cleanVolumes(tomtom, zones, numRelations);
 		double c = ODUtils.calcNormalization(tomtom, simulation);
 		MatrixOperations.applyFactor(tomtom, c);
-		MatrixOperations.symetrize(tomtom);
+		MatrixOperations.symmetrize(tomtom);
 
 		List<Tuple<String, String>> relTomTom = getRelations(tomtom);
 		List<Tuple<String, String>> relSimu = getRelations(simulation);
@@ -124,11 +115,11 @@ public class DumpRelations {
 		System.out.println(String.format("Avr rank diff TomTom-Sim: %s", avrRankDiff(rankTomTom, rankSim).getMean()));
 		System.out.println(String.format("Avr rank diff TomTom-Itp: %s", avrRankDiff(rankTomTom, rankItp).getMean()));
 
-		KeyMatrix dist = distanceMatrix(simulation, zones);
+		NumericMatrix dist = distanceMatrix(simulation, zones);
 		writeRelations(tomtom, simulation, itp, dist, relTomTom, "/home/johannes/gsv/matrices/analysis/relations.txt");
 	}
 
-	private static void removeEntries(KeyMatrix m, ZoneCollection zones, double distThreshold) {
+	private static void removeEntries(NumericMatrix m, ZoneCollection zones, double distThreshold) {
 		DistanceCalculator dCalc = new CartesianDistanceCalculator();
 		Set<String> keys = m.keys();
 		int cnt = 0;
@@ -158,8 +149,8 @@ public class DumpRelations {
 		// cnt, distThreshold));
 	}
 
-	private static void writeRelations(KeyMatrix tomtom, KeyMatrix sim, KeyMatrix itp, KeyMatrix dist, List<Tuple<String, String>> relations,
-			String file) throws IOException {
+	private static void writeRelations(NumericMatrix tomtom, NumericMatrix sim, NumericMatrix itp, NumericMatrix dist, List<Tuple<String, String>> relations,
+									   String file) throws IOException {
 		BufferedWriter writer = new BufferedWriter(new FileWriter(file));
 		writer.write("from\tto\ttomtom\tsim\titp");
 		writer.newLine();
@@ -202,7 +193,7 @@ public class DumpRelations {
 		System.out.println("itp: " + itpStats.getMean());
 	}
 
-	private static List<Tuple<String, String>> getRelations(final KeyMatrix m) {
+	private static List<Tuple<String, String>> getRelations(final NumericMatrix m) {
 //		Map<Double, Tuple<String, String>> map = new TreeMap<>(new Comparator<Double>() {
 //
 //			@Override
@@ -282,12 +273,12 @@ public class DumpRelations {
 		return list;
 	}
 
-	private static KeyMatrix distanceMatrix(KeyMatrix m, ZoneCollection zones) {
+	private static NumericMatrix distanceMatrix(NumericMatrix m, ZoneCollection zones) {
 		GeometryFactory factory = new GeometryFactory();
 
 		DistanceCalculator calc = new CartesianDistanceCalculator();
 
-		KeyMatrix m_d = new KeyMatrix();
+		NumericMatrix m_d = new NumericMatrix();
 		Set<String> keys = m.keys();
 		for (String i : keys) {
 			Zone zone = zones.get(i);
@@ -366,7 +357,7 @@ public class DumpRelations {
 		return list1.size();
 	}
 	
-	private static void removeUnknownZones(KeyMatrix m) {
+	private static void removeUnknownZones(NumericMatrix m) {
 		Set<String> keys = m.keys();
 		for(String i : keys) {
 			for(String j : keys) {

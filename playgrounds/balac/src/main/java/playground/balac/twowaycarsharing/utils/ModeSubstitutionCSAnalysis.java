@@ -11,24 +11,24 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 
 public class ModeSubstitutionCSAnalysis {
 
 	
 	public void run(String[] args) {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		PopulationReader populationReader = new MatsimPopulationReader(scenario);
-		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 		networkReader.readFile(args[1]);
 		populationReader.readFile(args[0]);	
 		
-		ScenarioImpl scenario2 = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MutableScenario scenario2 = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		PopulationReader populationReader2 = new MatsimPopulationReader(scenario2);
-		MatsimNetworkReader networkReader2 = new MatsimNetworkReader(scenario2);
+		MatsimNetworkReader networkReader2 = new MatsimNetworkReader(scenario2.getNetwork());
 		networkReader2.readFile(args[1]);
 		populationReader2.readFile(args[2]);	
 		
@@ -58,7 +58,7 @@ public class ModeSubstitutionCSAnalysis {
 						hadow = true;
 						
 						s = findMode(person.getId(), j, scenario);
-						if (!(((PersonImpl)person).getCarAvail()).equals("never"))
+						if (!(PersonUtils.getCarAvail(person)).equals("never"))
 							hasCar.add(person.getId());
 						
 						if (s.getMode().equals("car")) {
@@ -129,7 +129,7 @@ public class ModeSubstitutionCSAnalysis {
     	
 	}
 	
-	public Leg findMode(Id id, int j, ScenarioImpl scenario) {
+	public Leg findMode(Id id, int j, MutableScenario scenario) {
 		
 		Person p = scenario.getPopulation().getPersons().get(id);
 		int i = 0;

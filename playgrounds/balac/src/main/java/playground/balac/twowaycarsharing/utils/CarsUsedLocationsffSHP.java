@@ -13,7 +13,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.PointFeatureFactory;
@@ -25,8 +25,8 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 public class CarsUsedLocationsffSHP {
 
 	public static void main(String[] args) throws IOException {
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 		networkReader.readFile(args[0]);
 	        
 		Set<String> a1 = new TreeSet<String>();
@@ -62,7 +62,7 @@ public class CarsUsedLocationsffSHP {
 				String[] arr = s.split("\\s");
 			
 					
-					SimpleFeature ft = nodeFactory.createPoint(network.getLinks().get(Id.create(arr[3], Link.class)).getCoord(), new Object[] {Integer.toString(i)}, null);
+					SimpleFeature ft = nodeFactory.createPoint(network.getLinks().get(Id.create(arr[4], Link.class)).getCoord(), new Object[] {Integer.toString(i)}, null);
 					featuresMovedIncrease.add(ft);
 					
 				
@@ -72,7 +72,7 @@ public class CarsUsedLocationsffSHP {
 				s = readLink2.readLine();
 			}
 	        
-	        ShapeFileWriter.writeGeometries(featuresMovedIncrease, "C:/Users/balacm/Desktop/SHP_files/used_ff_interval_peak_new.shp");
+	        ShapeFileWriter.writeGeometries(featuresMovedIncrease, "C:/Users/balacm/Desktop/SHP_files/used_ff_low_1x.shp");
 	     
 
 	}

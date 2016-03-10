@@ -3,8 +3,7 @@ package org.matsim.core.mobsim.jdeqsim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.groups.PlansConfigGroup;
-import org.matsim.core.config.groups.PlansConfigGroup.ActivityDurationInterpretation;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.testcases.MatsimTestCase;
 
 public class TestMessageFactory extends MatsimTestCase{
@@ -12,7 +11,7 @@ public class TestMessageFactory extends MatsimTestCase{
 	// check if gc turned on
 	public void testMessageFactory1(){
 		MessageFactory.GC_ALL_MESSAGES();
-		SimulationParameters.setGC_MESSAGES(true);
+		JDEQSimConfigGroup.setGC_MESSAGES(true);
 		MessageFactory.disposeEndLegMessage(new EndLegMessage(null,null));
 		MessageFactory.disposeEnterRoadMessage(new EnterRoadMessage(null,null));
 		MessageFactory.disposeStartingLegMessage(new StartingLegMessage(null,null));
@@ -31,7 +30,7 @@ public class TestMessageFactory extends MatsimTestCase{
 	// check when gc turned off
 	public void testMessageFactory2(){
 		MessageFactory.GC_ALL_MESSAGES();
-		SimulationParameters.setGC_MESSAGES(false);
+		JDEQSimConfigGroup.setGC_MESSAGES(false);
 		MessageFactory.disposeEndLegMessage(new EndLegMessage(null,null));
 		MessageFactory.disposeEnterRoadMessage(new EnterRoadMessage(null,null));
 		MessageFactory.disposeStartingLegMessage(new StartingLegMessage(null,null));
@@ -50,7 +49,7 @@ public class TestMessageFactory extends MatsimTestCase{
 	// check check use of Message factory
 	public void testMessageFactory3(){
 		MessageFactory.GC_ALL_MESSAGES();
-		SimulationParameters.setGC_MESSAGES(false);
+		JDEQSimConfigGroup.setGC_MESSAGES(false);
 		MessageFactory.disposeEndLegMessage(new EndLegMessage(null,null));
 		MessageFactory.disposeEnterRoadMessage(new EnterRoadMessage(null,null));
 		MessageFactory.disposeStartingLegMessage(new StartingLegMessage(null,null));
@@ -76,9 +75,9 @@ public class TestMessageFactory extends MatsimTestCase{
 	// check initialization using constructer
 	public void testMessageFactory5(){
 		MessageFactory.GC_ALL_MESSAGES();
-		SimulationParameters.setGC_MESSAGES(true);
+		JDEQSimConfigGroup.setGC_MESSAGES(true);
 		Scheduler scheduler=new Scheduler(new MessageQueue());
-		PersonImpl person= new PersonImpl(Id.create("abc", Person.class));
+		Person person= PopulationUtils.createPerson(Id.create("abc", Person.class));
 		Vehicle vehicle=new Vehicle(scheduler, person, PlansConfigGroup.ActivityDurationInterpretation.minOfDurationAndEndTime );
 		
 		assertEquals(true,MessageFactory.getEndLegMessage(scheduler, vehicle).scheduler==scheduler);
@@ -99,9 +98,9 @@ public class TestMessageFactory extends MatsimTestCase{
 	// check initialization using rest
 	public void testMessageFactory6(){
 		MessageFactory.GC_ALL_MESSAGES();
-		SimulationParameters.setGC_MESSAGES(false);
+		JDEQSimConfigGroup.setGC_MESSAGES(false);
 		Scheduler scheduler=new Scheduler(new MessageQueue());
-		PersonImpl person= new PersonImpl(Id.create("abc", Person.class));
+		Person person= PopulationUtils.createPerson(Id.create("abc", Person.class));
 		Vehicle vehicle=new Vehicle(scheduler, person, PlansConfigGroup.ActivityDurationInterpretation.minOfDurationAndEndTime );
 		
 		assertEquals(true,MessageFactory.getEndLegMessage(scheduler, vehicle).scheduler==scheduler);

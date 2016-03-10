@@ -19,21 +19,12 @@
 
 package playground.jbischoff.taxi.demand;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Random;
-import java.util.TreeSet;
 
-import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.*;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
@@ -154,7 +145,7 @@ public class MielecDemandExtender
     private void readPlans()
     {
         Scenario sc = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-        new MatsimNetworkReader(sc).readFile(inputNetFile);
+        new MatsimNetworkReader(sc.getNetwork()).readFile(inputNetFile);
         new MatsimPopulationReader(sc).readFile(inputPlansFile);
         agentIds = new HashSet<>();
         for (Entry<Id<Person>, ? extends Person> e : sc.getPopulation().getPersons().entrySet()) {

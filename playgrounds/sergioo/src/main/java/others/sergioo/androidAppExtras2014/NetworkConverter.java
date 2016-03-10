@@ -19,7 +19,6 @@ import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.network.NodeImpl;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
@@ -36,7 +35,7 @@ public class NetworkConverter {
 
 	public static void main0(String[] args) throws FileNotFoundException {
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new MatsimNetworkReader(scenario).readFile(args[0]);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(args[0]);
 		CoordinateTransformation transformation = TransformationFactory.getCoordinateTransformation(TransformationFactory.WGS84_UTM48N, TransformationFactory.WGS84);
 		writeNetwork(scenario.getNetwork(), args[1], transformation);
 	}
@@ -76,7 +75,7 @@ public class NetworkConverter {
 			Coordinate[] coords = ((Geometry) feature.getDefaultGeometry()).getCoordinates();
 			Node[] nodes = new Node[coords.length];
 			for(int n=0; n<nodes.length; n++) {
-				Coord coord = new CoordImpl(coords[n].x, coords[n].y);
+				Coord coord = new Coord(coords[n].x, coords[n].y);
 				for(Node node:network.getNodes().values())
 					if(node.getCoord().equals(coord))
 						nodes[n] = node;
@@ -89,7 +88,7 @@ public class NetworkConverter {
 			Node prevNode = nodes[0];
 			for(int n=0; n<nodes.length-1; n++) {
 				if(network.getNodes().get(nodes[n].getId())==null) {
-					if(n+1==nodes.length-1 || CoordUtils.calcDistance(prevNode.getCoord(), nodes[n+1].getCoord())>MIN_DISTANCE) {
+					if(n+1==nodes.length-1 || CoordUtils.calcEuclideanDistance(prevNode.getCoord(), nodes[n+1].getCoord())>MIN_DISTANCE) {
 						network.addNode(nodes[n]);
 						Link link = network.getFactory().createLink(Id.createLinkId(linkLongId), prevNode, nodes[n+1]);
 						((LinkImpl)link).setOrigId(feature.getID());

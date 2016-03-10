@@ -20,14 +20,10 @@
 
 package playground.meisterk.org.matsim.enterprisecensus;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.regex.Pattern;
-
 import org.apache.log4j.Logger;
+
+import java.util.*;
+import java.util.regex.Pattern;
 
 
 public class EnterpriseCensus {

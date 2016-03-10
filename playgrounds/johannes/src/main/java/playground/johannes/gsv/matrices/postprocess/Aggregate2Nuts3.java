@@ -19,18 +19,18 @@
 
 package playground.johannes.gsv.matrices.postprocess;
 
+import playground.johannes.synpop.gis.Zone;
+import playground.johannes.synpop.gis.ZoneCollection;
+import playground.johannes.synpop.gis.ZoneGeoJsonIO;
+import playground.johannes.synpop.matrix.NumericMatrix;
+import playground.johannes.synpop.matrix.NumericMatrixXMLReader;
+import playground.johannes.synpop.matrix.NumericMatrixXMLWriter;
+import playground.johannes.synpop.matrix.ODMatrixOperations;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
-
-import playground.johannes.gsv.zones.KeyMatrix;
-import playground.johannes.gsv.zones.MatrixOperations;
-import playground.johannes.gsv.zones.Zone;
-import playground.johannes.gsv.zones.ZoneCollection;
-import playground.johannes.gsv.zones.io.KeyMatrixXMLReader;
-import playground.johannes.gsv.zones.io.KeyMatrixXMLWriter;
-import playground.johannes.gsv.zones.io.Zone2GeoJSON;
 
 /**
  * @author johannes
@@ -56,20 +56,20 @@ public class Aggregate2Nuts3 {
 		String idMappingsFile = args[2];
 		String outFile = args[3];
 
-		KeyMatrixXMLReader reader = new KeyMatrixXMLReader();
+		NumericMatrixXMLReader reader = new NumericMatrixXMLReader();
 		reader.setValidating(false);
 		reader.parse(matrixFile);
-		KeyMatrix m = reader.getMatrix();
+		NumericMatrix m = reader.getMatrix();
 
 		ZoneCollection modenaZones = new ZoneCollection();
 		String data = new String(Files.readAllBytes(Paths.get(zonesFile)));
-		modenaZones.addAll(Zone2GeoJSON.parseFeatureCollection(data));
+		modenaZones.addAll(ZoneGeoJsonIO.parseFeatureCollection(data));
 		modenaZones.setPrimaryKey(ZONE_KEY);
 		data = null;
 
 		Map<String, String> idMap = ZoneIDMappings.modena2gsv2008(idMappingsFile);
 
-		for (Zone zone : modenaZones.zoneSet()) {
+		for (Zone zone : modenaZones.getZones()) {
 			String id = zone.getAttribute(ZONE_KEY);
 			String gsvId = idMap.get(id);
 			if (gsvId != null) {
@@ -81,10 +81,10 @@ public class Aggregate2Nuts3 {
 		}
 
 
-		m = MatrixOperations.aggregate(m, modenaZones, TEMP_ID);
+		m = ODMatrixOperations.aggregate(m, modenaZones, TEMP_ID);
 
-//		MatrixOperations.symetrize(m);
-		KeyMatrixXMLWriter writer = new KeyMatrixXMLWriter();
+//		MatrixOperations.symmetrize(m);
+		NumericMatrixXMLWriter writer = new NumericMatrixXMLWriter();
 		writer.write(m, outFile);
 	}
 

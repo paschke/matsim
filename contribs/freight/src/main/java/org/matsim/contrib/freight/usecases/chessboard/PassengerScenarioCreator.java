@@ -15,7 +15,6 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.config.Config;
 import org.matsim.core.network.MatsimNetworkReader;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility;
@@ -35,7 +34,7 @@ public class PassengerScenarioCreator {
 		Config config = new Config();
 		config.addCoreModules();
 		Scenario scenario = ScenarioUtils.createScenario(config);
-		new MatsimNetworkReader(scenario).readFile("input/usecases/chessboard/network/grid9x9.xml");
+		new MatsimNetworkReader(scenario.getNetwork()).readFile("input/usecases/chessboard/network/grid9x9.xml");
 		
 		Population population = scenario.getPopulation(); 
 		
@@ -100,7 +99,7 @@ public class PassengerScenarioCreator {
 			plan.addActivity(popFactory.createActivityFromLinkId("home", homeId));
 
 			person.addPlan(plan);
-			((PersonImpl)person).setSelectedPlan(plan);
+			person.setSelectedPlan(plan);
 			persons.add(person);
 		}
 		return persons;

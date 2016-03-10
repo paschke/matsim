@@ -22,14 +22,13 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 
 import playground.agarwalamit.analysis.congestion.AbsoluteDelays;
 import playground.agarwalamit.analysis.userBenefits.UserBenefitsAndTotalWelfare;
 import playground.agarwalamit.utils.LoadMyScenarios;
 import playground.vsp.congestion.handlers.CongestionHandlerImplV3;
 import playground.vsp.congestion.handlers.CongestionHandlerImplV4;
-import playground.vsp.congestion.handlers.CongestionHandlerImplV6;
 
 /**
  * @author amit
@@ -48,7 +47,6 @@ public class DelaysAndWelfare {
 		for(String runCase :runCases){
 			writeCongestionStatsExternally(runCase);
 		}
-		
 	}
 
 	private static void writeCongestionStatsExternally(String runCase){
@@ -63,10 +61,10 @@ public class DelaysAndWelfare {
 		Scenario sc = LoadMyScenarios.loadScenarioFromOutputDir(outputDir);
 		CongestionHandlerImplV3 impl3 = null ;
 		CongestionHandlerImplV4 implV4 = null ;
-		CongestionHandlerImplV6 implV6 = null ;
+//		CongestionHandlerImplV6 implV6 = null ;
 		switch(runCase){
 		case "implV3" :
-			impl3 = new CongestionHandlerImplV3(manager, (ScenarioImpl) sc);
+			impl3 = new CongestionHandlerImplV3(manager, (MutableScenario) sc);
 			manager.addHandler(impl3);
 			break;
 		case "implV4" : 
@@ -74,8 +72,8 @@ public class DelaysAndWelfare {
 			manager.addHandler(implV4);
 			break;
 		case "implV6" : 
-			implV6 = new CongestionHandlerImplV6(manager, sc);
-			manager.addHandler(implV6);
+//			implV6 = new CongestionHandlerImplV6(manager, sc);
+//			manager.addHandler(implV6);
 			break;
 		}
 
@@ -89,10 +87,8 @@ public class DelaysAndWelfare {
 			implV4.writeCongestionStats(outputDir+"/ITERS/it.1500/congestionStats.csv");
 			break;
 		case "implV6":
-			implV6.writeCongestionStats(outputDir+"/ITERS/it.1500/congestionStats.csv");
+//			implV6.writeCongestionStats(outputDir+"/ITERS/it.1500/congestionStats.csv");
 			break;
 		}
 	}
-
-
 }

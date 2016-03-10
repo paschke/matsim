@@ -9,7 +9,7 @@ import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.utils.collections.QuadTree;
 import org.matsim.facilities.ActivityFacility;
@@ -27,11 +27,11 @@ public class CatchmentAreaRetailerStrategy implements RetailerStrategy {
 	public final static String CONFIG_GROUP = "Retailers";
 	public final static String CONFIG_N_ALTERNATIVES = "alternatives";
 	public final static String CONFIG_RAD_CATCHMENT = "radius_catchment";
-	private Controler controler;
+	private MatsimServices controler;
 	private int alternatives;
 	private Map<Id,ActivityFacilityImpl> movedFacilities = new TreeMap<Id,ActivityFacilityImpl>();
 
-	public CatchmentAreaRetailerStrategy (Controler controler) {
+	public CatchmentAreaRetailerStrategy (MatsimServices controler) {
 		this.controler = controler;
 		String logitAlternatives = controler.getConfig().findParam(CONFIG_GROUP,CONFIG_N_ALTERNATIVES);
 		int alternatives = Integer.parseInt(logitAlternatives);
@@ -46,7 +46,7 @@ public class CatchmentAreaRetailerStrategy implements RetailerStrategy {
 				// example of the use of a bad code style, but works anyway....
 				QuadTree<Person> personQuadTree = Utils.getPersonQuadTree();
 				if (personQuadTree == null) { throw new RuntimeException("QuadTree not set!"); }
-				Collection<? extends Person> persons = personQuadTree.get(f.getCoord().getX(),f.getCoord().getY(),200);
+				Collection<? extends Person> persons = personQuadTree.getDisk(f.getCoord().getX(), f.getCoord().getY(), 200);
 				log.info(" Persons living around the facility " + f.getId() + " are: " + persons.size());
 //				Object[] links = controler.getNetwork().getLinks().values().toArray();
 				controler.getLinkStats().addData(controler.getVolumes(), controler.getLinkTravelTimes());

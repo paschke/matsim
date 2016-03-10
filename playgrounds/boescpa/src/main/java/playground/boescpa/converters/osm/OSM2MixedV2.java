@@ -28,7 +28,6 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.NetworkReaderMatsimV1;
 import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.pt.router.TransitRouterConfig;
 import org.matsim.pt.router.TransitRouterNetwork;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
@@ -41,12 +40,12 @@ import playground.boescpa.converters.osm.networkCreator.MMStreetNetworkCreatorFa
 import playground.boescpa.converters.osm.ptMapping.PTMapperOnlyBusses;
 import playground.boescpa.converters.osm.ptMapping.PseudoNetworkCreator;
 import playground.boescpa.converters.osm.scheduleCreator.PTScheduleCreatorDefaultV2;
-import playground.boescpa.lib.tools.cutter.ScheduleCutter;
-import playground.boescpa.lib.tools.merger.NetworkMerger;
-import playground.boescpa.lib.tools.merger.ScheduleMerger;
-import playground.boescpa.lib.tools.merger.VehicleMerger;
-import playground.christoph.evacuation.pt.TransitRouterNetworkThinner;
-import playground.christoph.evacuation.pt.TransitRouterNetworkWriter;
+import playground.boescpa.converters.osm.tools.TransitRouterNetworkThinner;
+import playground.boescpa.converters.osm.tools.TransitRouterNetworkWriter;
+import playground.boescpa.lib.tools.spatialCutting.ScheduleCutter;
+import playground.boescpa.lib.tools.fileMerging.NetworkMerger;
+import playground.boescpa.lib.tools.fileMerging.ScheduleMerger;
+import playground.boescpa.lib.tools.fileMerging.VehicleMerger;
 
 /**
  * New main to create multimodal MATSim environment from OSM and HAFAS.
@@ -75,7 +74,7 @@ public class OSM2MixedV2 {
 		final String vehicleFile_Mixed = args[2];
 		final String vehicleFile_OnlyPT = args[3];
 		// Set spatial cutter
-		cutCenter = new CoordImpl(Double.parseDouble(args[4]), Double.parseDouble(args[5]));
+		cutCenter = new Coord(Double.parseDouble(args[4]), Double.parseDouble(args[5]));
 		cutRadius = Integer.parseInt(args[6]);
 		// Prepare output
 		final String outputFolder = args[7] + "\\";
@@ -125,10 +124,10 @@ public class OSM2MixedV2 {
 		new VehicleWriterV1(mixedVehicles).writeFile(outbase + "MixedVehicles.xml.gz");
 
 		// **************** Cut Schedule ****************
-		new ScheduleCutter(mixedSchedule, cutCenter, cutRadius).cutSchedule();
+		new ScheduleCutter(mixedSchedule, null, cutCenter, cutRadius).cutSchedule();
 
 		// **************** Route Schedule ****************
-		new NetworkReaderMatsimV1(mixedScenario).parse(networkPath);
+		new NetworkReaderMatsimV1(mixedScenario.getNetwork()).parse(networkPath);
 		final Network mixedNetwork = mixedScenario.getNetwork();
 		new PTMapperOnlyBusses(mixedSchedule).routePTLines(mixedNetwork);
 		final String path_MixedSchedule = outbase + "MixedSchedule.xml.gz";
@@ -160,7 +159,7 @@ public class OSM2MixedV2 {
 		new VehicleWriterV1(onlyPTVehicles).writeFile(outbase + "OnlyPTVehicles.xml.gz");
 
 		// **************** Cut Schedule ****************
-		new ScheduleCutter(onlyPTSchedule, cutCenter, cutRadius).cutSchedule();
+		new ScheduleCutter(onlyPTSchedule, null, cutCenter, cutRadius).cutSchedule();
 
 		// **************** Route Schedule ****************
 		final Network onlyPTNetwork = onlyPTScenario.getNetwork();

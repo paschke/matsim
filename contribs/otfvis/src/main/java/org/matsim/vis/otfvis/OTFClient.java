@@ -19,12 +19,12 @@
  * *********************************************************************** */
 package org.matsim.vis.otfvis;
 
+import com.jogamp.opengl.GLAutoDrawable;
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXMapViewer;
 import org.jdesktop.swingx.mapviewer.GeoPosition;
 import org.jdesktop.swingx.mapviewer.TileFactory;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.vis.otfvis.data.fileio.SettingsSaver;
 import org.matsim.vis.otfvis.gui.OTFHostControlBar;
@@ -86,9 +86,9 @@ public final class OTFClient extends JFrame {
 		return Math.log(scale) / Math.log(2);
 	}
 	
-	public OTFClient() {
+	public OTFClient(GLAutoDrawable canvas) {
 		super("MATSim OTFVis");
-		this.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+		this.setDefaultCloseOperation( WindowConstants.EXIT_ON_CLOSE );
 		JFrame.setDefaultLookAndFeelDecorated(true);
 		boolean isMac = System.getProperty("os.name").equals("Mac OS X");
 		if (isMac){
@@ -97,6 +97,13 @@ public final class OTFClient extends JFrame {
 		}
 		//Make sure menus appear above JOGL Layer
 		JPopupMenu.setDefaultLightWeightPopupEnabled(false);
+		compositePanel = new JPanel();
+		compositePanel.setBackground(Color.white);
+		compositePanel.setOpaque(true);
+		compositePanel.setLayout(new OverlayLayout(compositePanel));
+		compositePanel.add((Component) canvas);
+		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+		compositePanel.setPreferredSize(new Dimension(screenSize.width/2,screenSize.height/2));
 		log.info("created MainFrame");
 	}
 
@@ -147,7 +154,6 @@ public final class OTFClient extends JFrame {
 			public void actionPerformed(final ActionEvent e) {
 				OTFVisConfigGroup visConfig = save.chooseAndReadSettingsFile();
 				OTFClientControl.getInstance().setOTFVisConfig(visConfig);
-				OTFClientControl.getInstance().getMainOTFDrawer().redraw();
 			}
 		};
 		fileMenu.add(openAction);
@@ -155,8 +161,7 @@ public final class OTFClient extends JFrame {
 		Action exitAction = new AbstractAction("Quit") {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				endProgram(0);
-			}
+				dispatchEvent(new WindowEvent(OTFClient.this, WindowEvent.WINDOW_CLOSING));			}
 		};
 		fileMenu.add(exitAction);
 		setJMenuBar(menuBar);
@@ -171,13 +176,6 @@ public final class OTFClient extends JFrame {
 		log.info("created HostControlBar");
 		OTFClientControl.getInstance().setMainOTFDrawer(mainDrawer);
 		log.info("created drawer");
-		compositePanel = new JPanel();
-        compositePanel.setBackground(Color.white);
-        compositePanel.setOpaque(true);
-		compositePanel.setLayout(new OverlayLayout(compositePanel));
-        compositePanel.add(mainDrawer.getComponent());
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        compositePanel.setPreferredSize(new Dimension(screenSize.width/2,screenSize.height/2));
 		getContentPane().add(compositePanel, BorderLayout.CENTER);
 		hostControlBar.setDrawer(mainDrawer);
 	}
@@ -195,7 +193,7 @@ public final class OTFClient extends JFrame {
 			public void stateChanged(ChangeEvent e) {
 				double x = mainDrawer.getViewBoundsAsQuadTreeRect().centerX + mainDrawer.getQuad().offsetEast;
 				double y = mainDrawer.getViewBoundsAsQuadTreeRect().centerY + mainDrawer.getQuad().offsetNorth;
-				Coord center = coordinateTransformation.transform(new CoordImpl(x,y));
+				Coord center = coordinateTransformation.transform(new Coord(x, y));
 				double scale = mainDrawer.getScale();
 				int zoom = (int) log2(scale);
 				jMapViewer.setCenterPosition(new GeoPosition(center.getY(), center.getX()));
@@ -210,17 +208,4 @@ public final class OTFClient extends JFrame {
 		return hostControlBar;
 	}
 
-	@Override
-	protected void processWindowEvent(WindowEvent e) {
-		if (e.getID() == WindowEvent.WINDOW_CLOSING) {
-			this.endProgram(0);
-		} else {
-			super.processWindowEvent(e);
-		}
-	}
-
-	public void endProgram(int code) {
-		System.exit(code);
-	}
-	
 }

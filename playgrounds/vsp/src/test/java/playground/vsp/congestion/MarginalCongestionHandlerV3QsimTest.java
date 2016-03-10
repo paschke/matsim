@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
@@ -37,11 +38,13 @@ import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.IterationStartsEvent;
+import org.matsim.core.controler.listener.ControlerListener;
 import org.matsim.core.controler.listener.IterationStartsListener;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.mobsim.qsim.ActivityEngine;
@@ -55,16 +58,20 @@ import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteFactory;
 import org.matsim.core.population.routes.NetworkRoute;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.testcases.MatsimTestUtils;
 import playground.vsp.congestion.controler.MarginalCongestionPricingContolerListener;
 import playground.vsp.congestion.events.CongestionEvent;
 import playground.vsp.congestion.handlers.CongestionEventHandler;
 import playground.vsp.congestion.handlers.CongestionHandlerImplV3;
+import playground.vsp.congestion.handlers.CongestionHandlerImplV8;
+import playground.vsp.congestion.handlers.CongestionHandlerImplV9;
 import playground.vsp.congestion.handlers.TollHandler;
 import playground.vsp.congestion.routing.TollDisutilityCalculatorFactory;
 
+import javax.inject.Inject;
+import javax.inject.Provider;
 import java.util.*;
 
 /**
@@ -125,7 +132,7 @@ public class MarginalCongestionHandlerV3QsimTest {
 			}	
 		});
 		
-		events.addHandler(new CongestionHandlerImplV3(events, (ScenarioImpl) sc));
+		events.addHandler(new CongestionHandlerImplV3(events, (MutableScenario) sc));
 				
 		QSim sim = createQSim(sc, events);
 		sim.run();
@@ -144,6 +151,89 @@ public class MarginalCongestionHandlerV3QsimTest {
 			
 		}
 		
+	}
+	
+	// the flow capacity on link 3 (1car / 10 seconds) is activated by the first agent,
+	// then the storage capacity on link 3 (only one car) is reached, too
+	// finally, one car on the link before is delayed
+	@Test
+	public final void testFlowAndStorageCongestion_3agents_V9() {
+
+		Scenario sc = loadScenario1();
+		setPopulation1(sc);
+
+		final List<CongestionEvent> congestionEvents = new ArrayList<CongestionEvent>();
+
+		events.addHandler(new CongestionEventHandler() {
+
+			@Override
+			public void reset(int iteration) {
+			}
+
+			@Override
+			public void handleEvent(CongestionEvent event) {
+				congestionEvents.add(event);
+			}
+		});
+
+		events.addHandler(new CongestionHandlerImplV9(events, (MutableScenario) sc));
+
+		QSim sim = createQSim(sc, events);
+		sim.run();
+
+		double totalDelay = 0.;
+		
+		for (CongestionEvent event : congestionEvents) {
+
+			System.out.println(event.toString());
+			totalDelay += event.getDelay();
+		}
+		Assert.assertEquals("wrong total delay.", 50.0, totalDelay, MatsimTestUtils.EPSILON);
+
+	}
+	
+	/**
+	 * the flow capacity on link 3 (1car / 10 seconds) is activated by the first agent,
+	 * then the storage capacity on link 3 (only one car) is reached, too
+	 * finally, one car on the link before is delayed
+	 * 
+	 * V8 is the same as V9 but without charging for spill-back delays
+	 * 
+	 */
+	@Test
+	public final void testFlowAndStorageCongestion_3agents_V8() {
+
+		Scenario sc = loadScenario1();
+		setPopulation1(sc);
+
+		final List<CongestionEvent> congestionEvents = new ArrayList<CongestionEvent>();
+
+		events.addHandler(new CongestionEventHandler() {
+
+			@Override
+			public void reset(int iteration) {
+			}
+
+			@Override
+			public void handleEvent(CongestionEvent event) {
+				congestionEvents.add(event);
+			}
+		});
+
+		events.addHandler(new CongestionHandlerImplV8(events, (MutableScenario) sc));
+
+		QSim sim = createQSim(sc, events);
+		sim.run();
+
+		double totalDelay = 0.;
+		
+		for (CongestionEvent event : congestionEvents) {
+
+			System.out.println(event.toString());
+			totalDelay += event.getDelay();
+		}
+		Assert.assertEquals("wrong total delay.", 30.0, totalDelay, MatsimTestUtils.EPSILON);
+
 	}
 	
 	// three agents moving along the links (unlimited storage capacity)
@@ -180,7 +270,7 @@ public class MarginalCongestionHandlerV3QsimTest {
 			}	
 		});
 		
-		events.addHandler(new CongestionHandlerImplV3(events, (ScenarioImpl) sc));
+		events.addHandler(new CongestionHandlerImplV3(events, (MutableScenario) sc));
 				
 		QSim sim = createQSim(sc, events);
 		sim.run();
@@ -208,19 +298,30 @@ public class MarginalCongestionHandlerV3QsimTest {
 	public final void testRouting(){
 		
 		String configFile = testUtils.getPackageInputDirectory()+"MarginalCongestionHandlerV3QsimTest/configTestRouting.xml";
-
-		Controler controler = new Controler(configFile);
 		
+		Config config = ConfigUtils.loadConfig( configFile ) ;
+		
+		config.plansCalcRoute().setInsertingAccessEgressWalk(false);
+
+		final Scenario scenario = ScenarioUtils.loadScenario( config );
+		Controler controler = new Controler( scenario );
+
 		final TollHandler tollHandler = new TollHandler(controler.getScenario());
-		final TollDisutilityCalculatorFactory tollDisutilityCalculatorFactory = new TollDisutilityCalculatorFactory(tollHandler);
+		final TollDisutilityCalculatorFactory tollDisutilityCalculatorFactory = new TollDisutilityCalculatorFactory(tollHandler, controler.getConfig().planCalcScore());
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
-				bindTravelDisutilityFactory().toInstance(tollDisutilityCalculatorFactory);
+				addControlerListenerBinding().toProvider(new Provider<ControlerListener>() {
+					@Inject Scenario scenario;
+					@Inject EventsManager eventsManager;
+					@Override
+					public ControlerListener get() {
+						return new MarginalCongestionPricingContolerListener(scenario, tollHandler, new CongestionHandlerImplV3(eventsManager, scenario));
+					}
+				});
+				bindCarTravelDisutilityFactory().toInstance(tollDisutilityCalculatorFactory);
 			}
 		});
-		controler.addControlerListener(new MarginalCongestionPricingContolerListener(controler.getScenario(), tollHandler, new CongestionHandlerImplV3(controler.getEvents(), (ScenarioImpl) controler.getScenario())) );
-	
 		final String timeBin1 = "08:00-08:15";
 		final String timeBin2 = "08:15-08:30";
 			
@@ -281,14 +382,14 @@ public class MarginalCongestionHandlerV3QsimTest {
 			@Override
 			public void notifyIterationStarts(IterationStartsEvent event) {
 				// last but one iteration
-				if(((event.getControler().getConfig().controler().getLastIteration())-(event.getIteration()))==1){
+				if(((event.getServices().getConfig().controler().getLastIteration())-(event.getIteration()))==1){
 					avgValue1 = tollHandler.getAvgToll(linkId2_, 28800);
 					avgValue2 = tollHandler.getAvgToll(linkId2_, 29700);
 					avgOldValue1 = tollHandler.getAvgTollOldValue(linkId2_, 28800);
 					avgOldValue2 = tollHandler.getAvgTollOldValue(linkId2_, 28800);
 				}
 				// last iteration
-				else if(((event.getControler().getConfig().controler().getLastIteration())-(event.getIteration()))==0){
+				else if(((event.getServices().getConfig().controler().getLastIteration())-(event.getIteration()))==0){
 					avgValue3 = tollHandler.getAvgToll(linkId2_, 28800);
 					avgValue4 = tollHandler.getAvgToll(linkId2_, 29700);
 					avgOldValue3 = tollHandler.getAvgTollOldValue(linkId2_, 28800);
@@ -360,7 +461,7 @@ public class MarginalCongestionHandlerV3QsimTest {
 			}	
 		});
 		
-		events.addHandler(new CongestionHandlerImplV3(events, (ScenarioImpl) sc));
+		events.addHandler(new CongestionHandlerImplV3(events, (MutableScenario) sc));
 				
 		QSim sim = createQSim(sc, events);
 		sim.run();
@@ -418,7 +519,7 @@ public class MarginalCongestionHandlerV3QsimTest {
 			}	
 		});
 		
-		events.addHandler(new CongestionHandlerImplV3(events, (ScenarioImpl) sc));
+		events.addHandler(new CongestionHandlerImplV3(events, (MutableScenario) sc));
 				
 		QSim sim = createQSim(sc, events);
 		sim.run();
@@ -478,7 +579,7 @@ public class MarginalCongestionHandlerV3QsimTest {
 			}	
 		});
 		
-		events.addHandler(new CongestionHandlerImplV3(events, (ScenarioImpl) sc));
+		events.addHandler(new CongestionHandlerImplV3(events, (MutableScenario) sc));
 				
 		QSim sim = createQSim(sc, events);
 		sim.run();
@@ -547,7 +648,7 @@ public class MarginalCongestionHandlerV3QsimTest {
 			}	
 		});
 		
-		events.addHandler(new CongestionHandlerImplV3(events, (ScenarioImpl) sc));
+		events.addHandler(new CongestionHandlerImplV3(events, (MutableScenario) sc));
 		
 		QSim sim = createQSim(sc, events);
 		sim.run();
@@ -867,13 +968,13 @@ private void setPopulation6(Scenario scenario) {
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		network.setEffectiveCellSize(7.5);
 		network.setCapacityPeriod(3600.);
-		
-		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), scenario.createCoord(0., 0.));
-		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), scenario.createCoord(100., 0.));
-		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), scenario.createCoord(200., 0.));
-		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), scenario.createCoord(300., 0.));
-		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), scenario.createCoord(400., 0.));
-		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), scenario.createCoord(500., 0.));
+
+		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new Coord(0., 0.));
+		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new Coord(100., 0.));
+		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new Coord(200., 0.));
+		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new Coord(300., 0.));
+		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new Coord(400., 0.));
+		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new Coord(500., 0.));
 		
 		Link link1 = network.getFactory().createLink(this.linkId1, node0, node1);
 		Link link2 = network.getFactory().createLink(this.linkId2, node1, node2);
@@ -954,13 +1055,13 @@ private void setPopulation6(Scenario scenario) {
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		network.setEffectiveCellSize(7.5);
 		network.setCapacityPeriod(3600.);
-		
-		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), scenario.createCoord(0., 0.));
-		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), scenario.createCoord(100., 0.));
-		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), scenario.createCoord(200., 0.));
-		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), scenario.createCoord(300., 0.));
-		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), scenario.createCoord(400., 0.));
-		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), scenario.createCoord(500., 0.));
+
+		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new Coord(0., 0.));
+		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new Coord(100., 0.));
+		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new Coord(200., 0.));
+		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new Coord(300., 0.));
+		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new Coord(400., 0.));
+		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new Coord(500., 0.));
 		
 		Link link1 = network.getFactory().createLink(this.linkId1, node0, node1);
 		Link link2 = network.getFactory().createLink(this.linkId2, node1, node2);
@@ -1040,13 +1141,13 @@ private void setPopulation6(Scenario scenario) {
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		network.setEffectiveCellSize(7.5);
 		network.setCapacityPeriod(3600.);
-		
-		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), scenario.createCoord(0., 0.));
-		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), scenario.createCoord(100., 0.));
-		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), scenario.createCoord(200., 0.));
-		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), scenario.createCoord(300., 0.));
-		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), scenario.createCoord(400., 0.));
-		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), scenario.createCoord(500., 0.));
+
+		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new Coord(0., 0.));
+		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new Coord(100., 0.));
+		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new Coord(200., 0.));
+		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new Coord(300., 0.));
+		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new Coord(400., 0.));
+		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new Coord(500., 0.));
 		
 		Link link1 = network.getFactory().createLink(this.linkId1, node0, node1);
 		Link link2 = network.getFactory().createLink(this.linkId2, node1, node2);
@@ -1126,13 +1227,13 @@ private void setPopulation6(Scenario scenario) {
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		network.setEffectiveCellSize(7.5);
 		network.setCapacityPeriod(3600.);
-		
-		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), scenario.createCoord(0., 0.));
-		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), scenario.createCoord(100., 0.));
-		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), scenario.createCoord(200., 0.));
-		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), scenario.createCoord(300., 0.));
-		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), scenario.createCoord(400., 0.));
-		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), scenario.createCoord(500., 0.));
+
+		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new Coord(0., 0.));
+		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new Coord(100., 0.));
+		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new Coord(200., 0.));
+		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new Coord(300., 0.));
+		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new Coord(400., 0.));
+		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new Coord(500., 0.));
 		
 		Link link1 = network.getFactory().createLink(this.linkId1, node0, node1);
 		Link link2 = network.getFactory().createLink(this.linkId2, node1, node2);
@@ -1212,13 +1313,13 @@ private void setPopulation6(Scenario scenario) {
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		network.setEffectiveCellSize(7.5);
 		network.setCapacityPeriod(3600.);
-		
-		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), scenario.createCoord(0., 0.));
-		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), scenario.createCoord(100., 0.));
-		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), scenario.createCoord(200., 0.));
-		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), scenario.createCoord(300., 0.));
-		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), scenario.createCoord(400., 0.));
-		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), scenario.createCoord(500., 0.));
+
+		Node node0 = network.getFactory().createNode(Id.create("0", Node.class), new Coord(0., 0.));
+		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new Coord(100., 0.));
+		Node node2 = network.getFactory().createNode(Id.create("2", Node.class), new Coord(200., 0.));
+		Node node3 = network.getFactory().createNode(Id.create("3", Node.class), new Coord(300., 0.));
+		Node node4 = network.getFactory().createNode(Id.create("4", Node.class), new Coord(400., 0.));
+		Node node5 = network.getFactory().createNode(Id.create("5", Node.class), new Coord(500., 0.));
 		
 		Link link1 = network.getFactory().createLink(this.linkId1, node0, node1);
 		Link link2 = network.getFactory().createLink(this.linkId2, node1, node2);

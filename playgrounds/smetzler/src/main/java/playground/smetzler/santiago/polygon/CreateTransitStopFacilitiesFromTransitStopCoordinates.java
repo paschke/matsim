@@ -52,7 +52,7 @@ public class CreateTransitStopFacilitiesFromTransitStopCoordinates {
 		Map<String, List<StopTableEntry>> ptZoneId2StopTableEntries = ReadStopTable2013.readGenericCSV(transitStopListFilename);
 		
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new MatsimNetworkReader(scenario).readFile(networkFilename);
+		new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFilename);
 		
 		TransitSchedule transitSchedule = createTransitStopFacilitiesFromStopTableEntries(scenario, ptZoneId2StopTableEntries);
 		transitSchedule = filterTransitStopFacilities(scenario, transitSchedule);
@@ -108,7 +108,7 @@ public class CreateTransitStopFacilitiesFromTransitStopCoordinates {
 			TransitStopFacility bestStop = null;
 			
 			for (TransitStopFacility transitStop : linkId2Stops.get(linkId)) {
-				double distance = CoordUtils.calcDistance(transitStop.getCoord(), link.getToNode().getCoord());
+				double distance = CoordUtils.calcEuclideanDistance(transitStop.getCoord(), link.getToNode().getCoord());
 				if (distance < bestDistance) {
 					bestStop = transitStop;
 				}

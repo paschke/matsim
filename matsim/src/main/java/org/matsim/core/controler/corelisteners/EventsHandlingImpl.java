@@ -26,7 +26,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.config.Config;
+import org.matsim.core.config.groups.ControlerConfigGroup;
 import org.matsim.core.config.groups.ControlerConfigGroup.EventsFileFormat;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
@@ -39,11 +39,11 @@ import org.matsim.core.controler.listener.BeforeMobsimListener;
 import org.matsim.core.controler.listener.IterationEndsListener;
 import org.matsim.core.controler.listener.ShutdownListener;
 import org.matsim.core.events.algorithms.EventWriter;
-import org.matsim.core.events.algorithms.EventWriterTXT;
 import org.matsim.core.events.algorithms.EventWriterXML;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.matsim.core.events.handler.EventHandler;
 
 @Singleton
 final class EventsHandlingImpl implements EventsHandling, BeforeMobsimListener,
@@ -63,12 +63,12 @@ final class EventsHandlingImpl implements EventsHandling, BeforeMobsimListener,
 	@Inject
 	EventsHandlingImpl(
 			final EventsManager eventsManager,
-			final Config config,
-			final OutputDirectoryHierarchy controlerIO ) {
-		this.eventsManager = eventsManager ;
-		this.writeEventsInterval = config.controler().getWriteEventsInterval();
-		this.eventsFileFormats = config.controler().getEventsFileFormats();
-		this.controlerIO = controlerIO ;
+			final ControlerConfigGroup config,
+			final OutputDirectoryHierarchy controlerIO) {
+		this.eventsManager = eventsManager;
+		this.writeEventsInterval = config.getWriteEventsInterval();
+		this.eventsFileFormats = config.getEventsFileFormats();
+		this.controlerIO = controlerIO;
 	}
 
     @Override
@@ -77,10 +77,6 @@ final class EventsHandlingImpl implements EventsHandling, BeforeMobsimListener,
 		if ((this.writeEventsInterval > 0) && (event.getIteration() % writeEventsInterval == 0)) {
 			for (EventsFileFormat format : eventsFileFormats) {
 				switch (format) {
-				case txt:
-					this.eventWriters.add(new EventWriterTXT(controlerIO.getIterationFilename(event.getIteration(), 
-							Controler.FILENAME_EVENTS_TXT)));
-					break;
 				case xml:
 					this.eventWriters.add(new EventWriterXML(controlerIO.getIterationFilename(event.getIteration(), 
 							Controler.FILENAME_EVENTS_XML)));

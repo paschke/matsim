@@ -156,7 +156,7 @@ public class ResultsPostProcessor
                     lineId.append('\t').append(e.id);
                     lineN.append('\t').append(s.n);
                     lineM.append('\t').append(s.m);
-                    lineRatio.append('\t').append(ratio);
+                    lineRatio.append('\t').append(String.format("%.2f", ratio));
                 }
             }
 
@@ -200,7 +200,7 @@ public class ResultsPostProcessor
     public static void processMielec()
     {
         String dir = "d:/PP-rad/mielec/2014_02/";
-        String subDirPrefix = "mielec-2-peaks-new-";
+        String subDirPrefix = "";
 
         new ResultsPostProcessor(//
                 "10-50", //
@@ -224,7 +224,7 @@ public class ResultsPostProcessor
 
     public static void processBerlin()
     {
-        String dir = "d:/michalm/Berlin_2014_11/";
+        String dir = "d:/PP-rad/berlin/Only_Berlin_2015_08/";
         String subDirPrefix = "demand_";
 
         new ResultsPostProcessor(//
@@ -233,6 +233,9 @@ public class ResultsPostProcessor
                 "2.0", //
                 "2.5", //
                 "3.0", //
+//                "3.1", //
+//                "3.2", //
+//                "3.3" //
                 "3.5", //
                 "4.0", //
                 "4.5", //
@@ -241,9 +244,120 @@ public class ResultsPostProcessor
     }
 
 
+    public static void processBarcelonaVariableDemand()
+    {
+        String dir = "d:/PP-rad/Barcelona/Barcelona_2015_09/";
+        String subDirPrefix = "demand_";
+
+        new ResultsPostProcessor(//
+                "0.2", //
+                "0.3", //
+                "0.4", //
+                "0.5", //
+                "0.6", //
+                "0.7", //
+                "0.8", //
+                "0.9" //
+                //"1.0"//
+        ).process(dir, subDirPrefix, "stats");
+    }
+
+
+    public static void processBarcelonaVariableSupply()
+    {
+        String dir = "d:/PP-rad/Barcelona/Barcelona_2015_09/";
+        String subDirPrefix = "supply_from_reqs_";
+
+        new ResultsPostProcessor(//
+                //"0.2", //
+                //"0.4", //
+//                "0.6", //
+//                "0.8", //
+//                "1.0", //
+//                "1.2", //
+//                "1.4", //
+//                "1.6", //
+//                "1.8", //
+//                "2.0"//
+                "0.45_DSE"//
+        ).process(dir, subDirPrefix, "stats");
+    }
+
+
+    public static void processAudiAV_10()
+    {
+        String dir = "d:/PP-rad/audi_av/audi_av_10pct_2015_10/";
+        String subDirPrefix = "taxi_vehicles_";
+
+        new ResultsPostProcessor(//
+//                "04000", //
+//                "04500", //
+//                "05000", //
+//                "05500", //
+//                "06000", //
+//                "06500", //
+//                "07000", //
+//                "07500", //
+//                "08000" //
+                "09000", //
+                "10000", //
+                "11000", //
+                "12000", //
+                "13000" //
+//                "14000", //
+//                "15000", //
+//                "16000", //
+//                "17000", //
+//                "18000", //
+//                "19000", //
+//                "20000", //
+//                "21000", //
+//                "22000", //
+//                "23000", //
+//                "24000", //
+//                "25000" //
+        ).process(dir, subDirPrefix, "stats");
+    }
+
+
+    public static void processAudiAV_100()
+    {
+        String dir = "d:/PP-rad/audi_av/audi_av_2015_10/";
+        String subDirPrefix = "taxi_vehicles_";
+
+        new ResultsPostProcessor(//
+//                "050000", //
+//                "060000", //
+//                "070000", //
+                "080000", //
+                "090000", //
+                "100000", //
+                "110000", //
+                "120000" //
+//                "130000", //
+//                "140000", //
+//                "150000", //
+//                "160000", //
+//                "170000", //
+//                "180000", //
+//                "190000", //
+//                "200000", //
+//                "210000", //
+//                "220000", //
+//                "230000", //
+//                "240000", //
+//                "250000" //
+        ).process(dir, subDirPrefix, "stats");
+    }
+
+
     public static void main(String[] args)
     {
         processMielec();
         //processBerlin();
+        //processBarcelonaVariableDemand();
+        //processBarcelonaVariableSupply();
+        //processAudiAV_10();
+        //processAudiAV_100();
     }
 }

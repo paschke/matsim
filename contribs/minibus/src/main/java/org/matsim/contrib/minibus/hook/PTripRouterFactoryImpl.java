@@ -29,18 +29,14 @@ import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.ControlerConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.PopulationFactoryImpl;
 import org.matsim.core.population.routes.ModeRouteFactory;
-import org.matsim.core.router.IntermodalLeastCostPathCalculator;
-import org.matsim.core.router.RoutingContext;
-import org.matsim.core.router.TransitRouterWrapper;
-import org.matsim.core.router.TripRouter;
-import org.matsim.core.router.TripRouterFactory;
+import org.matsim.core.router.*;
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.old.DefaultRoutingModules;
+import org.matsim.core.router.DefaultRoutingModules;
 import org.matsim.core.router.util.AStarLandmarksFactory;
 import org.matsim.core.router.util.DijkstraFactory;
 import org.matsim.core.router.util.FastAStarLandmarksFactory;
@@ -60,14 +56,14 @@ import javax.inject.Provider;
  * config file.
  * @author aneumann, thibautd
  */
-class PTripRouterFactoryImpl implements TripRouterFactory {
+class PTripRouterFactoryImpl implements Provider<TripRouter> {
 	private static final Logger log =
 		Logger.getLogger(PTripRouterFactoryImpl.class);
 
-	private final Controler controler;
+	private final MatsimServices controler;
     private final Provider<TransitRouter> transitRouterFactory;
 
-    public PTripRouterFactoryImpl(final Controler controler, Provider<TransitRouter> transitRouterFactory) {
+    public PTripRouterFactoryImpl(final MatsimServices controler, Provider<TransitRouter> transitRouterFactory) {
 		this.controler = controler;
 		this.transitRouterFactory = transitRouterFactory;
 	}
@@ -84,7 +80,7 @@ class PTripRouterFactoryImpl implements TripRouterFactory {
 	}
 
 	@Override
-	public TripRouter instantiateAndConfigureTripRouter(RoutingContext iterationContext) {
+	public TripRouter get() {
 		// initialize here - controller should be fully initialized by now
 		// use fields to keep the rest of the code clean and comparable
 
@@ -104,8 +100,7 @@ class PTripRouterFactoryImpl implements TripRouterFactory {
 		PlansCalcRouteConfigGroup routeConfigGroup = config.plansCalcRoute();
 		TravelDisutility travelCost =
 			travelDisutilityFactory.createTravelDisutility(
-                    travelTime,
-                    config.planCalcScore());
+                    travelTime);
 
 		LeastCostPathCalculator routeAlgo =
 			leastCostPathAlgorithmFactory.createPathCalculator(
@@ -127,16 +122,17 @@ class PTripRouterFactoryImpl implements TripRouterFactory {
 			// of multimodality unecessary from a behavioral point of view.
 			// However, checking the mode restriction for each link is expensive,
 			// so it is not worth doing it if it is not necessary. (td, oct. 2012)
-			if (routeAlgo instanceof IntermodalLeastCostPathCalculator) {
-				((IntermodalLeastCostPathCalculator) routeAlgo).setModeRestriction(
+			if (routeAlgo instanceof Dijkstra) {
+				((Dijkstra) routeAlgo).setModeRestriction(
 					Collections.singleton( TransportMode.car ));
-				((IntermodalLeastCostPathCalculator) routeAlgoPtFreeFlow).setModeRestriction(
+				((Dijkstra) routeAlgoPtFreeFlow).setModeRestriction(
 					Collections.singleton( TransportMode.car ));
 			}
 			else {
 				// this is impossible to reach when using the algorithms of org.matsim.*
 				// (all implement IntermodalLeastCostPathCalculator)
 				log.warn( "network is multimodal but least cost path algorithm is not an instance of IntermodalLeastCostPathCalculator!" );
+				throw new RuntimeException();
 			}
 		}
 
@@ -159,7 +155,7 @@ class PTripRouterFactoryImpl implements TripRouterFactory {
 		for ( String mainMode : routeConfigGroup.getNetworkModes() ) {
 			tripRouter.setRoutingModule(
 					mainMode,
-					DefaultRoutingModules.createNetworkRouter(mainMode, populationFactory, 
+					DefaultRoutingModules.createPureNetworkRouter(mainMode, populationFactory, 
 					        network,
 						routeAlgo));
 		}

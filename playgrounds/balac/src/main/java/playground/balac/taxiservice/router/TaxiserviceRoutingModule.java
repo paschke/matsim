@@ -10,10 +10,9 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.population.LegImpl;
 import org.matsim.core.population.PopulationFactoryImpl;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.router.EmptyStageActivityTypes;
 import org.matsim.core.router.RoutingModule;
@@ -23,8 +22,8 @@ import org.matsim.facilities.Facility;
 
 public class TaxiserviceRoutingModule implements RoutingModule {
 
-	private final Controler controler;
-	public TaxiserviceRoutingModule (Controler controler) {
+	private final MatsimServices controler;
+	public TaxiserviceRoutingModule (MatsimServices controler) {
 		
 		this.controler = controler;
 	}
@@ -51,8 +50,8 @@ public class TaxiserviceRoutingModule implements RoutingModule {
 		
 		Leg taxiLeg = new LegImpl("taxi");
 		taxiLeg.setTravelTime( travelTime );
-		LinkNetworkRouteImpl route = 
-				(LinkNetworkRouteImpl) ((PopulationFactoryImpl)controler.getScenario().getPopulation().getFactory()).getModeRouteFactory().createRoute("car", fromFacility.getLinkId(), toFacility.getLinkId());
+		NetworkRoute route = 
+				((PopulationFactoryImpl)controler.getScenario().getPopulation().getFactory()).getModeRouteFactory().createRoute(NetworkRoute.class, fromFacility.getLinkId(), toFacility.getLinkId());
 		route.setLinkIds( fromFacility.getLinkId(), ids, toFacility.getLinkId());
 		route.setTravelTime( travelTime);
 		taxiLeg.setRoute(route);

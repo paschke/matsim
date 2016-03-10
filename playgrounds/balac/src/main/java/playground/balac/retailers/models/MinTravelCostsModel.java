@@ -14,7 +14,7 @@ import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.LegImpl;
@@ -44,7 +44,7 @@ public class MinTravelCostsModel extends RetailerModelImpl
 
   private TreeMap<Id<Link>, LinkRetailersImpl> availableLinks = new TreeMap<>();
 
-  public MinTravelCostsModel(Controler controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities)
+  public MinTravelCostsModel(MatsimServices controler, Map<Id<ActivityFacility>, ActivityFacilityImpl> retailerFacilities)
   {
     this.controler = controler;
     this.retailerFacilities = retailerFacilities;
@@ -52,7 +52,7 @@ public class MinTravelCostsModel extends RetailerModelImpl
     this.shops = findScenarioShops(this.controlerFacilities.getFacilities().values());
 
       for (Person p : controler.getScenario().getPopulation().getPersons().values()) {
-      PersonImpl pi = (PersonImpl)p;
+      Person pi = p;
       this.persons.put(pi.getId(), pi);
     }
   }
@@ -65,8 +65,8 @@ public class MinTravelCostsModel extends RetailerModelImpl
     log.info("Initial solution = " + getInitialSolution());
     findScenarioShops(this.controlerFacilities.getFacilities().values());
     Gbl.printMemoryUsage();
-    for (PersonImpl pi : this.persons.values()) {
-      PersonRetailersImpl pr = new PersonRetailersImpl(pi);
+    for (Person pi : this.persons.values()) {
+      PersonRetailersImpl pr = new PersonRetailersImpl((PersonImpl) pi);
       this.retailersPersons.put(pr.getId(), pr);
     }
     Utils.setPersonPrimaryActivityQuadTree(Utils.createPersonPrimaryActivityQuadTree(this.controler));
@@ -78,18 +78,18 @@ public class MinTravelCostsModel extends RetailerModelImpl
       String linkId = this.first.get(i);
       double scoreSum = 0.0D;
         LinkRetailersImpl link = new LinkRetailersImpl(this.controler.getScenario().getNetwork().getLinks().get(Id.create(linkId, Link.class)), this.controler.getScenario().getNetwork(), Double.valueOf(0.0D), Double.valueOf(0.0D));
-      Collection<PersonPrimaryActivity> primaryActivities = Utils.getPersonPrimaryActivityQuadTree().get(link.getCoord().getX(), link.getCoord().getY(), 3000.0D);
+      Collection<PersonPrimaryActivity> primaryActivities = Utils.getPersonPrimaryActivityQuadTree().getDisk(link.getCoord().getX(), link.getCoord().getY(), 3000.0D);
       
       
       for (PersonPrimaryActivity ppa : primaryActivities)
       {
           Network network = this.controler.getScenario().getNetwork();
         TravelTime travelTime = this.controler.getLinkTravelTimes();
-        TravelDisutility travelCost = this.controler.getTravelDisutilityFactory().createTravelDisutility(travelTime, this.controler.getConfig().planCalcScore());
+        TravelDisutility travelCost = this.controler.getTravelDisutilityFactory().createTravelDisutility(travelTime);
 
         LeastCostPathCalculator routeAlgo = this.controler.getLeastCostPathCalculatorFactory().createPathCalculator(network, travelCost, travelTime);
 
-        //PlansCalcRoute pcr = new PlansCalcRoute(this.controler.getConfig().plansCalcRoute(), network, travelCost, travelTime, this.controler.getLeastCostPathCalculatorFactory(), routeFactory);
+        //PlansCalcRoute pcr = new PlansCalcRoute(this.services.getConfig().plansCalcRoute(), network, travelCost, travelTime, this.services.getLeastCostPathCalculatorFactory(), routeFactory);
 
         LegImpl li = new LegImpl(TransportMode.car);
         li.setDepartureTime(0.0D);
@@ -148,7 +148,7 @@ public class MinTravelCostsModel extends RetailerModelImpl
       route.setLinkIds(fromLink.getId(), NetworkUtils.getLinkIds(path.links), toLink.getId());
       route.setTravelTime((int)path.travelTime);
       route.setTravelCost(path.travelCost);
-      route.setDistance(RouteUtils.calcDistance(route, network));
+      route.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(route, network));
       leg.setRoute(route);
       travTime = (int)path.travelTime;
     }

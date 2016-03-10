@@ -19,23 +19,22 @@
 
 package playground.johannes.gsv.matrices.io;
 
+import org.matsim.contrib.common.util.ProgressLogger;
+import org.matsim.matrices.Entry;
+import org.matsim.matrices.Matrix;
+import org.matsim.visum.VisumMatrixReader;
+import playground.johannes.synpop.gis.Zone;
+import playground.johannes.synpop.gis.ZoneCollection;
+import playground.johannes.synpop.gis.ZoneGeoJsonIO;
+import playground.johannes.synpop.matrix.NumericMatrix;
+import playground.johannes.synpop.matrix.NumericMatrixXMLWriter;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.matsim.matrices.Entry;
-import org.matsim.matrices.Matrix;
-import org.matsim.visum.VisumMatrixReader;
-
-import playground.johannes.gsv.zones.KeyMatrix;
-import playground.johannes.gsv.zones.Zone;
-import playground.johannes.gsv.zones.ZoneCollection;
-import playground.johannes.gsv.zones.io.KeyMatrixXMLWriter;
-import playground.johannes.gsv.zones.io.Zone2GeoJSON;
-import playground.johannes.sna.util.ProgressLogger;
 
 /**
  * @author johannes
@@ -55,7 +54,7 @@ public class TomTom2Matrix {
 
 		ZoneCollection zones = new ZoneCollection();
 		String data = new String(Files.readAllBytes(Paths.get(args[1])));
-		zones.addAll(Zone2GeoJSON.parseFeatureCollection(data));
+		zones.addAll(ZoneGeoJsonIO.parseFeatureCollection(data));
 		zones.setPrimaryKey("NO");
 		data = null;
 
@@ -68,7 +67,7 @@ public class TomTom2Matrix {
 			all.addAll(entries);
 		}
 
-		KeyMatrix km = new KeyMatrix();
+		NumericMatrix km = new NumericMatrix();
 
 		ProgressLogger.init(all.size(), 2, 10);
 		for (Entry e : all) {
@@ -80,7 +79,7 @@ public class TomTom2Matrix {
 			}
 		}
 
-		KeyMatrixXMLWriter writer = new KeyMatrixXMLWriter();
+		NumericMatrixXMLWriter writer = new NumericMatrixXMLWriter();
 		writer.write(km, args[2]);
 	}
 

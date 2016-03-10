@@ -19,27 +19,32 @@
  * *********************************************************************** */
 package org.matsim.contrib.signals.router;
 
-import junit.framework.Assert;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
-import org.matsim.api.core.v01.network.*;
+import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.network.NetworkFactory;
+import org.matsim.api.core.v01.network.NetworkWriter;
+import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PersonImpl;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility.Builder;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.costcalculators.TravelTimeAndDistanceBasedTravelDisutilityFactory;
 import org.matsim.core.router.util.DijkstraFactory;
 import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
 import org.matsim.core.router.util.LinkToLinkTravelTime;
 import org.matsim.core.scenario.ScenarioUtils;
 
+import junit.framework.Assert;
 
 
 /**
@@ -60,16 +65,19 @@ public class InvertertedNetworkLegRouterTest {
 	public void testInvertedNetworkLegRouter() {
 		Fixture f = new Fixture();
 		LinkToLinkTravelTimeStub tt = new LinkToLinkTravelTimeStub();
-		TravelDisutilityFactory tc = new TravelTimeAndDistanceBasedTravelDisutilityFactory();
+		TravelDisutilityFactory tc = new Builder( TransportMode.car, f.s.getConfig().planCalcScore() );
 		LeastCostPathCalculatorFactory lcpFactory = new DijkstraFactory();
 
-		Person person = new PersonImpl(Id.create(1, Person.class));
+		Person person = PopulationUtils.createPerson(Id.create(1, Person.class));
 		Leg leg = new LegImpl(TransportMode.car);
 		Activity fromAct = new ActivityImpl("h", Id.create("12", Link.class));
 		Activity toAct = new ActivityImpl("h", Id.create("78", Link.class));
 
-		InvertedNetworkLegRouter router = new InvertedNetworkLegRouter(f.s, lcpFactory, 
-				tc, tt);
+		InvertedNetworkRoutingModule router =
+				new InvertedNetworkRoutingModule(
+						"mode",
+						f.s.getPopulation().getFactory(),
+						f.s, lcpFactory,tc, tt);
 		//test 1
 		tt.setTurningMoveCosts(0.0, 100.0, 50.0);
 		
@@ -148,14 +156,15 @@ public class InvertertedNetworkLegRouterTest {
 		public Fixture() {
 			Network net = this.s.getNetwork();
 			NetworkFactory nf = net.getFactory();
-			Node n1 = nf.createNode(Id.create("1", Node.class), this.s.createCoord(0, 0));
-			Node n2 = nf.createNode(Id.create("2", Node.class), this.s.createCoord(0, 1000));
-			Node n3 = nf.createNode(Id.create("3", Node.class), this.s.createCoord(0, 2000));
-			Node n4 = nf.createNode(Id.create("4", Node.class), this.s.createCoord(500, 3000));
-			Node n5 = nf.createNode(Id.create("5", Node.class), this.s.createCoord(0, 3000));
-			Node n6 = nf.createNode(Id.create("6", Node.class), this.s.createCoord(-500, 3000));
-			Node n7 = nf.createNode(Id.create("7", Node.class), this.s.createCoord(0, 4000));
-			Node n8 = nf.createNode(Id.create("8", Node.class), this.s.createCoord(0, 5000));
+			Node n1 = nf.createNode(Id.create("1", Node.class), new Coord((double) 0, (double) 0));
+			Node n2 = nf.createNode(Id.create("2", Node.class), new Coord((double) 0, (double) 1000));
+			Node n3 = nf.createNode(Id.create("3", Node.class), new Coord((double) 0, (double) 2000));
+			Node n4 = nf.createNode(Id.create("4", Node.class), new Coord((double) 500, (double) 3000));
+			Node n5 = nf.createNode(Id.create("5", Node.class), new Coord((double) 0, (double) 3000));
+			double x = -500;
+			Node n6 = nf.createNode(Id.create("6", Node.class), new Coord(x, (double) 3000));
+			Node n7 = nf.createNode(Id.create("7", Node.class), new Coord((double) 0, (double) 4000));
+			Node n8 = nf.createNode(Id.create("8", Node.class), new Coord((double) 0, (double) 5000));
 			net.addNode(n1);
 			net.addNode(n2);
 			net.addNode(n3);

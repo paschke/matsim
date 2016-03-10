@@ -22,16 +22,15 @@ package playground.jbischoff.taxi.berlin.demand;
 import org.matsim.api.core.v01.*;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Activity;
+import org.matsim.contrib.zone.Zone;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.geotools.MGC;
+
+import com.vividsolutions.jts.geom.*;
 
 import playground.michalm.berlin.BerlinZoneUtils;
 import playground.michalm.demand.DefaultActivityCreator;
-import playground.michalm.zone.Zone;
-
-import com.vividsolutions.jts.geom.*;
 
 
 public class BerlinTaxiActivityCreator
@@ -104,7 +103,7 @@ public class BerlinTaxiActivityCreator
         }
         while (!geometry.contains(p) || !pointAcceptor.acceptPoint(zone, actType, p));
 
-        Coord coord = scenario.createCoord(p.getX(), p.getY());
+        Coord coord = new Coord(p.getX(), p.getY());
         Coord coordt = BerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION.transform(coord);
         Link link = NetworkUtils.getNearestLink(network, coordt);
 

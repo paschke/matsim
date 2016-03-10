@@ -29,6 +29,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -36,31 +37,31 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.NetworkFactory;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.contrib.signals.SignalSystemsConfigGroup;
+import org.matsim.contrib.signals.data.SignalsData;
+import org.matsim.contrib.signals.data.SignalsScenarioLoader;
+import org.matsim.contrib.signals.data.signalgroups.v20.SignalData;
+import org.matsim.contrib.signals.data.signalgroups.v20.SignalGroupData;
+import org.matsim.contrib.signals.data.signalgroups.v20.SignalGroupsData;
+import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemData;
+import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemsData;
+import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemsDataFactory;
+import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemsDataImpl;
+import org.matsim.contrib.signals.model.Signal;
+import org.matsim.contrib.signals.model.SignalGroup;
+import org.matsim.contrib.signals.model.SignalSystem;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.lanes.data.v11.LaneDefinitionsV11ToV20Conversion;
 import org.matsim.lanes.data.v11.LaneData11;
 import org.matsim.lanes.data.v11.LaneDefinitions11;
 import org.matsim.lanes.data.v11.LaneDefinitions11Impl;
 import org.matsim.lanes.data.v11.LaneDefinitionsFactory11;
+import org.matsim.lanes.data.v11.LaneDefinitionsV11ToV20Conversion;
+import org.matsim.lanes.data.v11.LaneDefinitonsV11ToV20Converter;
 import org.matsim.lanes.data.v11.LanesToLinkAssignment11;
 import org.matsim.lanes.data.v20.Lane;
-import org.matsim.lanes.data.v20.LaneDefinitions20;
-import org.matsim.lanes.data.v11.LaneDefinitonsV11ToV20Converter;
-import org.matsim.contrib.signals.data.SignalsScenarioLoader;
-import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemsDataImpl;
-import org.matsim.contrib.signals.data.SignalsData;
-import org.matsim.contrib.signals.data.signalgroups.v20.SignalGroupData;
-import org.matsim.contrib.signals.data.signalgroups.v20.SignalGroupsData;
-import org.matsim.contrib.signals.data.signalgroups.v20.SignalData;
-import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemData;
-import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemsData;
-import org.matsim.contrib.signals.data.signalsystems.v20.SignalSystemsDataFactory;
-import org.matsim.contrib.signals.model.Signal;
-import org.matsim.contrib.signals.model.SignalGroup;
-import org.matsim.contrib.signals.model.SignalSystem;
+import org.matsim.lanes.data.v20.Lanes;
 import org.matsim.testcases.MatsimTestUtils;
 import org.xml.sax.SAXException;
 
@@ -114,14 +115,14 @@ public class DgCalculateSignalGroupsTest {
 		Config config = ConfigUtils.createConfig();
 		config.qsim().setUseLanes(true);
 		ConfigUtils.addOrGetModule(config, SignalSystemsConfigGroup.GROUPNAME, SignalSystemsConfigGroup.class).setUseSignalSystems(true);
-		ScenarioImpl sc = (ScenarioImpl) ScenarioUtils.createScenario(config);
+		MutableScenario sc = (MutableScenario) ScenarioUtils.createScenario(config);
 
 		this.create3WayNetwork(sc);
 		this.createLanesFor3WayNetwork(sc);
 		SignalSystemsData signalSystems = new SignalSystemsDataImpl();
 		this.createManySignalsOn3WayCrossing(signalSystems);
 
-		DgCalculateSignalGroups calcSignalGroups = new DgCalculateSignalGroups(signalSystems, sc.getNetwork(), (LaneDefinitions20) sc.getScenarioElement(LaneDefinitions20.ELEMENT_NAME));
+		DgCalculateSignalGroups calcSignalGroups = new DgCalculateSignalGroups(signalSystems, sc.getNetwork(), (Lanes) sc.getScenarioElement(Lanes.ELEMENT_NAME));
 		SignalGroupsData signalGroups = calcSignalGroups.calculateSignalGroupsData();
 
 		Assert.assertNotNull(signalGroups);
@@ -243,7 +244,7 @@ public class DgCalculateSignalGroupsTest {
 		ConfigUtils.addOrGetModule(conf, SignalSystemsConfigGroup.GROUPNAME, SignalSystemsConfigGroup.class).setSignalSystemFile(signalSystemsFile);
 
 		//load the network
-		ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.loadScenario(conf);
+		MutableScenario scenario = (MutableScenario) ScenarioUtils.loadScenario(conf);
 		scenario.addScenarioElement(SignalsData.ELEMENT_NAME,
 				new SignalsScenarioLoader(ConfigUtils.addOrGetModule(conf, SignalSystemsConfigGroup.GROUPNAME, SignalSystemsConfigGroup.class))
 						.loadSignalsData());
@@ -359,7 +360,7 @@ public class DgCalculateSignalGroupsTest {
 	 * Creates lanes for the 3 way network, ids ascending from left to right
 	 * @param sc 
 	 */
-	private void createLanesFor3WayNetwork(ScenarioImpl sc) {
+	private void createLanesFor3WayNetwork(MutableScenario sc) {
 		LaneDefinitions11 lanes = new LaneDefinitions11Impl();
 		
 		LaneDefinitionsFactory11 fac = lanes.getFactory();
@@ -390,7 +391,7 @@ public class DgCalculateSignalGroupsTest {
 		lane = fac.createLane(Id.create(2, Lane.class));
 		l2l.addLane(lane);
 		lane.addToLinkId(Id.create(32, Link.class));
-		sc.addScenarioElement(LaneDefinitions20.ELEMENT_NAME, LaneDefinitionsV11ToV20Conversion.convertTo20(lanes, sc.getNetwork()));
+		sc.addScenarioElement(Lanes.ELEMENT_NAME, LaneDefinitionsV11ToV20Conversion.convertTo20(lanes, sc.getNetwork()));
 	}
 	
 	/**
@@ -406,27 +407,28 @@ public class DgCalculateSignalGroupsTest {
 	private void create3WayNetwork(Scenario sc) {
 		Network net = sc.getNetwork();
 		NetworkFactory fac = net.getFactory();
-		Node n;
+		Node n1, n2, n3, n4;
 		Link l;
-		n = fac.createNode(Id.create(1, Node.class), sc.createCoord(0.0, 0.0));
-		net.addNode(n);
-		n = fac.createNode(Id.create(2, Node.class), sc.createCoord(-10.0, 10.0));
-		net.addNode(n);
-		n = fac.createNode(Id.create(3, Node.class), sc.createCoord(0.0, 10.0));
-		net.addNode(n);
-		n = fac.createNode(Id.create(4, Node.class), sc.createCoord(10.0, 8.0));
-		net.addNode(n);
-		l = fac.createLink(Id.create(13, Link.class), Id.create(1, Node.class), Id.create(3, Node.class));
+		n1 = fac.createNode(Id.create(1, Node.class), new Coord(0.0, 0.0));
+		net.addNode(n1);
+		double x = -10.0;
+		n2 = fac.createNode(Id.create(2, Node.class), new Coord(x, 10.0));
+		net.addNode(n2);
+		n3 = fac.createNode(Id.create(3, Node.class), new Coord(0.0, 10.0));
+		net.addNode(n3);
+		n4 = fac.createNode(Id.create(4, Node.class), new Coord(10.0, 8.0));
+		net.addNode(n4);
+		l = fac.createLink(Id.create(13, Link.class), n1, n3);
 		net.addLink(l);
-		l = fac.createLink(Id.create(31, Link.class), Id.create(3, Node.class), Id.create(1, Node.class));
+		l = fac.createLink(Id.create(31, Link.class), n3, n1);
 		net.addLink(l);
-		l = fac.createLink(Id.create(23, Link.class), Id.create(2, Node.class), Id.create(3, Node.class));
+		l = fac.createLink(Id.create(23, Link.class), n2, n3);
 		net.addLink(l);
-		l = fac.createLink(Id.create(32, Link.class), Id.create(3, Node.class), Id.create(2, Node.class));
+		l = fac.createLink(Id.create(32, Link.class), n3, n2);
 		net.addLink(l);
-		l = fac.createLink(Id.create(34, Link.class), Id.create(3, Node.class), Id.create(4, Node.class));
+		l = fac.createLink(Id.create(34, Link.class), n3, n4);
 		net.addLink(l);
-		l = fac.createLink(Id.create(43, Link.class), Id.create(4, Node.class), Id.create(3, Node.class));
+		l = fac.createLink(Id.create(43, Link.class), n4, n3);
 		net.addLink(l);
 	}
 

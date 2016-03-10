@@ -2,7 +2,9 @@ package playground.wrashid.parkingChoice;
 
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.parking.lib.EventHandlerAtStartupAdder;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.listener.AfterMobsimListener;
 import playground.wrashid.parkingChoice.api.ParkingSelectionManager;
@@ -18,7 +20,7 @@ import java.util.LinkedList;
 public class ParkingModule {
 
 	
-	private final Controler controler;
+	private final MatsimServices controler;
 	private ParkingScoreAccumulator parkingScoreAccumulator;
 	private ParkingManager parkingManager;
 
@@ -28,7 +30,7 @@ public class ParkingModule {
 	
 	public ParkingModule(Controler controler, LinkedList<PParking> parkingCollection){
 		this.controler = controler;
-		
+		ConfigUtils.addOrGetModule(controler.getConfig(), "parkingChoice", ParkingConfigModule.class);
 		EventHandlerAtStartupAdder eventHandlerAtStartupAdder = new EventHandlerAtStartupAdder();
 		controler.addControlerListener(eventHandlerAtStartupAdder);
 		
@@ -87,7 +89,7 @@ public class ParkingModule {
 		
 		@Override
 		public void notifyAfterMobsim(AfterMobsimEvent event) {
-            for (Person person : event.getControler().getScenario().getPopulation().getPersons().values()) {
+            for (Person person : event.getServices().getScenario().getPopulation().getPersons().values()) {
 				
 				
 				parkingManager.getPlanUsedInPreviousIteration().put(person.getId(), person.getSelectedPlan());

@@ -22,58 +22,23 @@
 
 package org.matsim.core.replanning;
 
-import org.matsim.core.config.Config;
-import org.matsim.core.router.TripRouter;
-import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
-import org.matsim.core.router.util.TravelDisutility;
-import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.scoring.ScoringFunctionFactory;
+import org.matsim.core.controler.events.IterationStartsEvent;
+import org.matsim.core.controler.listener.IterationStartsListener;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Provider;
+import javax.inject.Singleton;
 
-class ReplanningContextImpl implements ReplanningContext {
+@Singleton
+class ReplanningContextImpl implements ReplanningContext, IterationStartsListener {
 
     private int iteration;
-    private Config config;
-    private TravelDisutilityFactory travelDisutility;
-    private Provider<TravelTime> travelTime;
-    private Provider<TripRouter> tripRouter;
-    private Provider<ScoringFunctionFactory> scoringFunctionFactory;
-
-    @Inject
-    ReplanningContextImpl(@Named("iteration") int iteration, Config config, TravelDisutilityFactory travelDisutility, Provider<TravelTime> travelTime, Provider<TripRouter> tripRouter, Provider<ScoringFunctionFactory> scoringFunctionFactory) {
-        this.iteration = iteration;
-        this.config = config;
-        this.travelDisutility = travelDisutility;
-        this.travelTime = travelTime;
-        this.tripRouter = tripRouter;
-        this.scoringFunctionFactory = scoringFunctionFactory;
-    }
-
-    @Override
-    public TravelDisutility getTravelDisutility() {
-        return travelDisutility.createTravelDisutility(travelTime.get(), config.planCalcScore());
-    }
-
-    @Override
-    public TravelTime getTravelTime() {
-        return travelTime.get();
-    }
-
-    @Override
-    public TripRouter getTripRouter() {
-        return tripRouter.get();
-    }
-
-    @Override
-    public ScoringFunctionFactory getScoringFunctionFactory() {
-        return scoringFunctionFactory.get();
-    }
 
     @Override
     public int getIteration() {
         return iteration;
+    }
+
+    @Override
+    public void notifyIterationStarts(IterationStartsEvent event) {
+        this.iteration = event.getIteration();
     }
 }

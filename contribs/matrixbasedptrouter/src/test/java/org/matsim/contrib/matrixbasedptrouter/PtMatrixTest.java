@@ -41,7 +41,6 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.utils.geometry.CoordUtils;
-import org.matsim.testcases.MatsimTestCase;
 
 /**
  * This class tests the pt simulation of MATSim for a simple network created with CreateTestNetwork.java.
@@ -160,7 +159,7 @@ public class PtMatrixTest {
 					// So an upper bound for the pt travel distance is the euclidean distance between the facilities (analog for the travel time).
 					// A lower bound for pt travel distance and time are the values of neighboring origin destination pairs.
 					
-					double euclideanDistance= CoordUtils.calcDistance(facilityList.get( origin ), facilityList.get( destination ));
+					double euclideanDistance= CoordUtils.calcEuclideanDistance(facilityList.get( origin ), facilityList.get( destination ));
 					
 					// test total walk travel distance and time
 					// in the test network the total walk distance always is 100 m, because the euclidean distance between a facility and its nearest pt stop always is 50 m

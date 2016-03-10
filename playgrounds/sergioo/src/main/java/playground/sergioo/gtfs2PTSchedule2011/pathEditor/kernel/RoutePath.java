@@ -45,7 +45,6 @@ import org.matsim.core.router.util.PreProcessEuclidean;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.vehicles.Vehicle;
 
@@ -230,7 +229,7 @@ public class RoutePath {
 		return -1;
 	}
 	public int getIndexNearestLink(double x, double y) {
-		Coord coord = new CoordImpl(x, y);
+		Coord coord = new Coord(x, y);
 		int nearest = -1;
 		double nearestDistance = Double.POSITIVE_INFINITY;
 		for(int i=0; i<links.size(); i++) {
@@ -243,11 +242,11 @@ public class RoutePath {
 		return nearest;
 	}
 	public String getIdNearestStop(double x, double y) {
-		Coord coord = new CoordImpl(x, y);
+		Coord coord = new Coord(x, y);
 		String nearest = "";
 		double nearestDistance = Double.POSITIVE_INFINITY;
 		for(StopTime stopTime:trip.getStopTimes().values()) {
-			double distance = CoordUtils.calcDistance(stops.get(stopTime.getStopId()).getPoint(),coord);
+			double distance = CoordUtils.calcEuclideanDistance(stops.get(stopTime.getStopId()).getPoint(),coord);
 			if(distance<nearestDistance) {
 				nearest = stopTime.getStopId();
 				nearestDistance = distance;
@@ -256,11 +255,11 @@ public class RoutePath {
 		return nearest;
 	}
 	public Node getNearestNode(double x, double y) {
-		Coord point = new CoordImpl(x, y);
+		Coord point = new Coord(x, y);
 		Node nearest = links.get(0).getFromNode();
-		double nearestDistance = CoordUtils.calcDistance(point, nearest.getCoord());
+		double nearestDistance = CoordUtils.calcEuclideanDistance(point, nearest.getCoord());
 		for(Link link:links) {
-			double distance = CoordUtils.calcDistance(point,link.getToNode().getCoord());
+			double distance = CoordUtils.calcEuclideanDistance(point,link.getToNode().getCoord());
 			if(distance<nearestDistance) {
 				nearestDistance = distance;
 				nearest = link.getToNode();
@@ -315,7 +314,7 @@ public class RoutePath {
 		}
 	}
 	public Node createNode(double x, double y) {
-		Node node = network.getFactory().createNode(Id.createNodeId("n"+network.getNodes().size()), new CoordImpl(x, y));
+		Node node = network.getFactory().createNode(Id.createNodeId("n"+network.getNodes().size()), new Coord(x, y));
 		network.addNode(node);
 		try {
 			PrintWriter writer = new PrintWriter(new FileWriter(RoutesPathsGenerator.NEW_NETWORK_NODES_FILE,true));

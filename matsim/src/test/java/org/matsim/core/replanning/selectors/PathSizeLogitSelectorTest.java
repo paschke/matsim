@@ -23,6 +23,7 @@ package org.matsim.core.replanning.selectors;
 import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
@@ -35,12 +36,11 @@ import org.matsim.core.config.Config;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.PlanImpl;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.utils.geometry.CoordImpl;
 
 /**
  * Tests for {@link PathSizeLogitSelector}.
@@ -89,7 +89,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		Link l7 = network.getLinks().get(Id.create("7", Link.class));
 
 		// test with only one plan...
-		PersonImpl person = new PersonImpl(Id.create(1, Person.class));
+		Person person = PopulationUtils.createPerson(Id.create(1, Person.class));
 		PlanImpl p1 = new PlanImpl(person);
 		Activity a = new ActivityImpl("h", l6.getId());
 		Activity b = new ActivityImpl("w", l7.getId());
@@ -102,7 +102,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		ArrayList<Id<Link>> srcRoute = new ArrayList<Id<Link>>();
 		srcRoute.add(l1.getId());
 		r.setLinkIds(l6.getId(), srcRoute, l7.getId());
-		r.setDistance(RouteUtils.calcDistance(r, network));
+		r.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(r, network));
 		leg.setRoute(r);
 		p1.addActivity(a);
 		p1.addLeg(leg);
@@ -125,7 +125,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		srcRoute.add(l2.getId());
 		srcRoute.add(l3.getId());
 		r.setLinkIds(l6.getId(), srcRoute, l7.getId());
-		r.setDistance(RouteUtils.calcDistance(r, network));
+		r.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(r, network));
 		leg.setRoute(r);
 		p2.addActivity(a);
 		p2.addLeg(leg);
@@ -146,7 +146,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		srcRoute.add(l4.getId());
 		srcRoute.add(l5.getId());
 		r.setLinkIds(l6.getId(), srcRoute, l7.getId());
-		r.setDistance(RouteUtils.calcDistance(r, network));
+		r.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(r, network));
 		leg.setRoute(r);
 		p3.addActivity(a);
 		p3.addLeg(leg);
@@ -160,7 +160,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		assertNotNull(selector.selectPlan(person));
 
 		// test with only one plan, but with NEGATIVE_INFINITY...
-		person = new PersonImpl(Id.create(1, Person.class));
+		person = PopulationUtils.createPerson(Id.create(1, Person.class));
 		p1 = new org.matsim.core.population.PlanImpl(person);
 		a = new org.matsim.core.population.ActivityImpl("h", l6.getId());
 		b = new org.matsim.core.population.ActivityImpl("w", l7.getId());
@@ -172,7 +172,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		srcRoute = new ArrayList<Id<Link>>();
 		srcRoute.add(l1.getId());
 		r.setLinkIds(l6.getId(), srcRoute, l7.getId());
-		r.setDistance(RouteUtils.calcDistance(r, network));
+		r.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(r, network));
 		leg.setRoute(r);
 		p1.addActivity(a);
 		p1.addLeg(leg);
@@ -191,7 +191,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		Link l6 = network.getLinks().get(Id.create("6", Link.class));
 		Link l7 = network.getLinks().get(Id.create("7", Link.class));
 
-		PersonImpl person = new PersonImpl(Id.create(1, Person.class));
+		Person person = PopulationUtils.createPerson(Id.create(1, Person.class));
 		PlanImpl p1 = new org.matsim.core.population.PlanImpl(person);
 		ActivityImpl a = new org.matsim.core.population.ActivityImpl("h", l6.getId());
 		ActivityImpl b = new org.matsim.core.population.ActivityImpl("w", l7.getId());
@@ -204,7 +204,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		ArrayList<Id<Link>> srcRoute = new ArrayList<Id<Link>>();
 		srcRoute.add(l1.getId());
 		r.setLinkIds(l6.getId(), srcRoute, l7.getId());
-		r.setDistance(RouteUtils.calcDistance(r, network));
+		r.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(r, network));
 		leg.setRoute(r);
 		p1.addActivity(a);
 		p1.addLeg(leg);
@@ -226,7 +226,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		Link l6 = network.getLinks().get(Id.create("6", Link.class));
 		Link l7 = network.getLinks().get(Id.create("7", Link.class));
 
-		PersonImpl person = new PersonImpl(Id.create(1, Person.class));
+		Person person = PopulationUtils.createPerson(Id.create(1, Person.class));
 		PlanImpl p1 = new org.matsim.core.population.PlanImpl(person);
 		ActivityImpl a = new org.matsim.core.population.ActivityImpl("h", l6.getId());
 		ActivityImpl b = new org.matsim.core.population.ActivityImpl("w", l7.getId());
@@ -238,7 +238,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		ArrayList<Id<Link>> srcRoute = new ArrayList<Id<Link>>();
 		srcRoute.add(l1.getId());
 		r.setLinkIds(l6.getId(), srcRoute, l7.getId());
-		r.setDistance(RouteUtils.calcDistance(r, network));
+		r.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(r, network));
 		leg.setRoute(r);
 		p1.addActivity(a);
 		p1.addLeg(leg);
@@ -258,7 +258,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		srcRoute.add(l2.getId());
 		srcRoute.add(l3.getId());
 		r.setLinkIds(l6.getId(), srcRoute, l7.getId());
-		r.setDistance(RouteUtils.calcDistance(r, network));
+		r.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(r, network));
 		leg.setRoute(r);
 		p2.addActivity(a);
 		p2.addLeg(leg);
@@ -279,7 +279,7 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		srcRoute.add(l4.getId());
 		srcRoute.add(l5.getId());
 		r.setLinkIds(l6.getId(), srcRoute, l7.getId());
-		r.setDistance(RouteUtils.calcDistance(r, network));
+		r.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(r, network));
 		leg.setRoute(r);
 		p3.addActivity(a);
 		p3.addLeg(leg);
@@ -334,12 +334,13 @@ public class PathSizeLogitSelectorTest extends AbstractPlanSelectorTest {
 		//             (5)
 
 		NetworkImpl network = NetworkImpl.createNetwork();
-		Node n1 = network.createAndAddNode(Id.create(1, Node.class), new CoordImpl(0,10));
-		Node n2 = network.createAndAddNode(Id.create(2, Node.class), new CoordImpl(3,2));
-		Node n3 = network.createAndAddNode(Id.create(3, Node.class), new CoordImpl(0,0));
-		Node n4 = network.createAndAddNode(Id.create(4, Node.class), new CoordImpl(4,1));
-		Node n5 = network.createAndAddNode(Id.create(5, Node.class), new CoordImpl(0,-1));
-		Node n6 = network.createAndAddNode(Id.create(6, Node.class), new CoordImpl(0,11));
+		Node n1 = network.createAndAddNode(Id.create(1, Node.class), new Coord((double) 0, (double) 10));
+		Node n2 = network.createAndAddNode(Id.create(2, Node.class), new Coord((double) 3, (double) 2));
+		Node n3 = network.createAndAddNode(Id.create(3, Node.class), new Coord((double) 0, (double) 0));
+		Node n4 = network.createAndAddNode(Id.create(4, Node.class), new Coord((double) 4, (double) 1));
+		final double y = -1;
+		Node n5 = network.createAndAddNode(Id.create(5, Node.class), new Coord((double) 0, y));
+		Node n6 = network.createAndAddNode(Id.create(6, Node.class), new Coord((double) 0, (double) 11));
 		network.createAndAddLink(Id.create(1, Link.class), n1, n3, 10, 1, 10, 1);
 		network.createAndAddLink(Id.create(2, Link.class), n1, n2, 8, 1, 10, 1);
 		network.createAndAddLink(Id.create(3, Link.class), n2, n3, 2, 1, 10, 1);

@@ -13,15 +13,15 @@ import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PopulationReader;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 
 public class TravelDistanceGrocery {
-	ScenarioImpl scenario = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+	MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 
 	PopulationReader populationReader = new MatsimPopulationReader(scenario);
-	MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario);
+	MatsimNetworkReader networkReader = new MatsimNetworkReader(scenario.getNetwork());
 	public void run(String plansFilePath, String networkFilePath) throws IOException {
 		populationReader.readFile(plansFilePath);
 		networkReader.readFile(networkFilePath);
@@ -49,19 +49,19 @@ public class TravelDistanceGrocery {
 					if (((Activity) pe).getType().startsWith( "work")) {
 						if (previousLeg != null) {
 						if (previousLeg.getMode().equals( "car" )) {
-							distanceCar += RouteUtils.calcDistance((NetworkRoute)previousLeg.getRoute(), scenario.getNetwork());
+							distanceCar += RouteUtils.calcDistanceExcludingStartEndLink((NetworkRoute)previousLeg.getRoute(), scenario.getNetwork());
 					//		countC++;
 						}
 						else if (previousLeg.getMode().equals( "bike" )) {
-							distanceBike += CoordUtils.calcDistance(previousActivity.getCoord(), ((Activity) pe).getCoord());
+							distanceBike += CoordUtils.calcEuclideanDistance(previousActivity.getCoord(), ((Activity) pe).getCoord());
 					//		countB++;
 						}
 						else if (previousLeg.getMode().equals( "walk" )) {
-							distanceWalk += CoordUtils.calcDistance(previousActivity.getCoord(), ((Activity) pe).getCoord());
+							distanceWalk += CoordUtils.calcEuclideanDistance(previousActivity.getCoord(), ((Activity) pe).getCoord());
 						//	countW++;
 						}
 						else if (previousLeg.getMode().equals( "pt" )) {
-							distancePt += CoordUtils.calcDistance(previousActivity.getCoord(), ((Activity) pe).getCoord());
+							distancePt += CoordUtils.calcEuclideanDistance(previousActivity.getCoord(), ((Activity) pe).getCoord());
 						//	countPt++;
 						}
 						}

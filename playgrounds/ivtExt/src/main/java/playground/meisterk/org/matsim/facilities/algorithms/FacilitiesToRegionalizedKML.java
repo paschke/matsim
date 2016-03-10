@@ -20,35 +20,21 @@
 
 package playground.meisterk.org.matsim.facilities.algorithms;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.util.Set;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-
-import net.opengis.kml._2.BasicLinkType;
-import net.opengis.kml._2.DocumentType;
-import net.opengis.kml._2.FolderType;
-import net.opengis.kml._2.IconStyleType;
-import net.opengis.kml._2.KmlType;
-import net.opengis.kml._2.ObjectFactory;
-import net.opengis.kml._2.PlacemarkType;
-import net.opengis.kml._2.PointType;
-import net.opengis.kml._2.StyleType;
-import net.opengis.kml._2.TimeSpanType;
-
+import net.opengis.kml._2.*;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.geometry.transformations.CH1903LV03toWGS84;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.OpeningTime;
 import org.matsim.facilities.algorithms.AbstractFacilityAlgorithm;
 
-import playground.meisterk.org.matsim.run.facilities.ShopsOf2005ToFacilities.Day;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.util.Set;
 
 //import com.google.earth.kml._2.BasicLinkType;
 //import com.google.earth.kml._2.DocumentType;
@@ -85,7 +71,6 @@ public class FacilitiesToRegionalizedKML extends AbstractFacilityAlgorithm {
 	final int MONDAY_DAY = 21;
 
 	private static final Logger log = Logger.getLogger(FacilitiesToRegionalizedKML.class);
-	private static final Day[] days = Day.values();
 
 	// documentName should become the facilities::name
 	private String documentName = null;
@@ -140,6 +125,7 @@ public class FacilitiesToRegionalizedKML extends AbstractFacilityAlgorithm {
 
 	}
 
+	@Override
 	public void run(final ActivityFacility facility) {
 
 		PlacemarkType aShopOpeningPeriod = null;
@@ -155,12 +141,11 @@ public class FacilitiesToRegionalizedKML extends AbstractFacilityAlgorithm {
 
 		// transform coordinates incl. toggle easting and northing
 		CH1903LV03toWGS84 trafo = new CH1903LV03toWGS84();
-		Coord northWestCH1903 = new CoordImpl(facility.getCoord().getX(), facility.getCoord().getY());
+		Coord northWestCH1903 = new Coord(facility.getCoord().getX(), facility.getCoord().getY());
 		Coord northWestWGS84 = trafo.transform(northWestCH1903);
 
 		// have to iterate this over opening times
 		int dayCounter = 0;
-		for (Day day : days) {
 			if (facility.getActivityOptions().get(ACTIVITY_TYPE_SHOP) != null) {
 				Set<OpeningTime> dailyOpentimes = facility.getActivityOptions().get(ACTIVITY_TYPE_SHOP).getOpeningTimes();
 				if (dailyOpentimes != null) {
@@ -184,7 +169,6 @@ public class FacilitiesToRegionalizedKML extends AbstractFacilityAlgorithm {
 						aTimeSpanType.setEnd("2008-04-" + Integer.toString(this.MONDAY_DAY + dayCounter) + "T" + Time.writeTime(opentime.getEndTime()) + "+01:00");
 					}
 				}
-			}
 			dayCounter++;
 		}
 	}

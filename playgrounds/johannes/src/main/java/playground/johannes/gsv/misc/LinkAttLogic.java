@@ -19,17 +19,16 @@
 
 package playground.johannes.gsv.misc;
 
-import gnu.trove.TDoubleArrayList;
-import gnu.trove.TDoubleDoubleHashMap;
-import gnu.trove.TDoubleDoubleIterator;
+import gnu.trove.iterator.TDoubleDoubleIterator;
+import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
+import org.matsim.contrib.common.stats.DummyDiscretizer;
+import org.matsim.contrib.common.stats.Histogram;
+import playground.johannes.synpop.source.mid2008.generator.RowHandler;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
-import playground.johannes.synpop.source.mid2008.generator.RowHandler;
-import playground.johannes.sna.math.DummyDiscretizer;
-import playground.johannes.sna.math.Histogram;
 
 /**
  * @author johannes
@@ -93,7 +92,7 @@ public class LinkAttLogic {
 
 	private static void dumpStats(Map<String, TDoubleArrayList> map) {
 		for (Map.Entry<String, TDoubleArrayList> entry : map.entrySet()) {
-			TDoubleDoubleHashMap hist = Histogram.createHistogram(entry.getValue().toNativeArray(), DummyDiscretizer.getInstance(), false);
+			TDoubleDoubleHashMap hist = Histogram.createHistogram(entry.getValue().toArray(), DummyDiscretizer.getInstance(), false);
 
 			System.out.print(entry.getKey());
 //			System.out.print(" = ");

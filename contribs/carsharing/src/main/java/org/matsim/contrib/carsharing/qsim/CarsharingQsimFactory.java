@@ -1,6 +1,7 @@
 package org.matsim.contrib.carsharing.qsim;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.mobsim.qsim.ActivityEngine;
@@ -11,12 +12,17 @@ import org.matsim.core.mobsim.qsim.agents.PopulationAgentSource;
 import org.matsim.core.mobsim.qsim.changeeventsengine.NetworkChangeEventsEngine;
 import org.matsim.core.mobsim.qsim.interfaces.Netsim;
 import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngineModule;
-import org.matsim.core.router.TripRouter;
+import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
+import org.matsim.core.router.util.LeastCostPathCalculator;
+import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
+import org.matsim.core.router.util.TravelDisutility;
+import org.matsim.core.router.util.TravelTime;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  *
@@ -25,20 +31,14 @@ import java.io.IOException;
  */
 
 public class CarsharingQsimFactory implements Provider<Netsim>{
-	private final Scenario sc;
-	private final Provider<TripRouter> tripRouterProvider;	
-	private final EventsManager eventsManager;
-	private final CarSharingVehicles carSharingVehicles;
 
-	@Inject	
-	public CarsharingQsimFactory(Scenario sc,
-			Provider<TripRouter> tripRouterProvider, EventsManager eventsManager, CarSharingVehicles carSharingVehicles) {
-		this.sc = sc;
-		this.tripRouterProvider = tripRouterProvider;
-		this.eventsManager = eventsManager;
-		this.carSharingVehicles = carSharingVehicles;
-	}
 
+	@Inject private  Scenario sc;
+	@Inject private  EventsManager eventsManager;
+	
+	@Inject private LeastCostPathCalculatorFactory pathCalculatorFactory ;
+	@Inject private Map<String,TravelDisutilityFactory> travelDisutilityFactories ;
+	@Inject private Map<String,TravelTime> travelTimes ;
 
 	@Override
 	public Netsim get() {
@@ -63,21 +63,30 @@ public class CarsharingQsimFactory implements Provider<Netsim>{
 		AgentFactory agentFactory = null;			
 			
 		try {
-			this.carSharingVehicles.readVehicleLocations();
+			CarSharingVehicles carSharingVehicles = new CarSharingVehicles(sc);
+		//added part
+		//a simple way to place vehicles at the original location at the start of each simulation
+		carSharingVehicles.readVehicleLocations();
+				
+		TravelTime travelTime = travelTimes.get( TransportMode.car ) ;
 
-			agentFactory = new CarsharingAgentFactory(qSim, sc, tripRouterProvider, this.carSharingVehicles);
+		TravelDisutilityFactory travelDisutilityFactory = travelDisutilityFactories.get( TransportMode.car ) ;
+		TravelDisutility travelDisutility = travelDisutilityFactory.createTravelDisutility(travelTime) ;
 
-			if (sc.getConfig().network().isTimeVariantNetwork()) {
-				qSim.addMobsimEngine(new NetworkChangeEventsEngine());		
-			}
+		LeastCostPathCalculator pathCalculator = pathCalculatorFactory.createPathCalculator(sc.getNetwork(), travelDisutility, travelTime ) ;
 
-			PopulationAgentSource agentSource = new PopulationAgentSource(sc.getPopulation(), agentFactory, qSim);
-
-			//we need to park carsharing vehicles on the network
-			ParkCSVehicles parkSource = new ParkCSVehicles(sc.getPopulation(), agentFactory, qSim,
-					this.carSharingVehicles.getFreeFLoatingVehicles(), this.carSharingVehicles.getOneWayVehicles(), this.carSharingVehicles.getTwoWayVehicles());
-			qSim.addAgentSource(agentSource);
-			qSim.addAgentSource(parkSource);
+		agentFactory = new CarsharingAgentFactory(qSim, sc, carSharingVehicles, pathCalculator);		
+		
+		if (sc.getConfig().network().isTimeVariantNetwork()) 
+			qSim.addMobsimEngine(new NetworkChangeEventsEngine());		
+		
+		PopulationAgentSource agentSource = new PopulationAgentSource(sc.getPopulation(), agentFactory, qSim);
+		
+		//we need to park carsharing vehicles on the network
+		ParkCSVehicles parkSource = new ParkCSVehicles(sc.getPopulation(), agentFactory, qSim,
+				carSharingVehicles.getFreeFLoatingVehicles(), carSharingVehicles.getOneWayVehicles(), carSharingVehicles.getTwoWayVehicles());
+		qSim.addAgentSource(agentSource);
+		qSim.addAgentSource(parkSource);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

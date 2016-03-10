@@ -9,10 +9,9 @@ import org.matsim.core.events.EventsReaderXMLv1;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
+import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.pt.router.*;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
 import org.matsim.vehicles.VehicleReaderV1;
@@ -39,15 +38,15 @@ public class MainTR {
 		int numTests = 100;
 		//saveRoutes(numTests, startTime, endTime);
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.loadConfig(args[0]));
-		(new MatsimNetworkReader(scenario)).readFile(args[1]);
+		(new MatsimNetworkReader(scenario.getNetwork())).readFile(args[1]);
 		(new MatsimPopulationReader(scenario)).readFile(args[2]);
 		(new TransitScheduleReader(scenario)).readFile(args[3]);
-		(new VehicleReaderV1(((ScenarioImpl)scenario).getTransitVehicles())).readFile(args[8]);
+		(new VehicleReaderV1(((MutableScenario)scenario).getTransitVehicles())).readFile(args[8]);
 		WaitTimeCalculator waitTimeCalculator = new WaitTimeCalculator(scenario.getTransitSchedule(), (int)binSize, (int) (endTime-startTime));
 		WaitTimeStuckCalculator waitTimeStuckCalculator = new WaitTimeStuckCalculator(scenario.getPopulation(), scenario.getTransitSchedule(), (int)binSize, (int) (endTime-startTime));
 		StopStopTimeCalculator stopStopTimeCalculator = new StopStopTimeCalculator(scenario.getTransitSchedule(), (int)binSize, (int) (endTime-startTime));
 		StopStopTimeCalculatorTuple stopStopTimeCalculatorTuple = new StopStopTimeCalculatorTuple(scenario.getTransitSchedule(), (int)binSize, (int) (endTime-startTime));
-		VehicleOccupancyCalculator vehicleOccupancyCalculator = new VehicleOccupancyCalculator(scenario.getTransitSchedule(), ((ScenarioImpl)scenario).getTransitVehicles(), (int)binSize, (int) (endTime-startTime));
+		VehicleOccupancyCalculator vehicleOccupancyCalculator = new VehicleOccupancyCalculator(scenario.getTransitSchedule(), ((MutableScenario)scenario).getTransitVehicles(), (int)binSize, (int) (endTime-startTime));
 		TravelTimeCalculator travelTimeCalculator = TravelTimeCalculator.create(scenario.getNetwork(), scenario.getConfig().travelTimeCalculator());
 		EventsManager eventsManager = EventsUtils.createEventsManager(scenario.getConfig());
 		eventsManager.addHandler(waitTimeStuckCalculator);
@@ -140,8 +139,8 @@ public class MainTR {
 		Coord[] origin = new Coord[numTests], destination = new Coord[numTests];
 		double[] dayTime = new double[numTests];
 		for(int i=0; i<numTests; i++) {
-			origin[i] = new CoordImpl(346469+(389194-346469)*Math.random(), 137211+(162536-137211)*Math.random());
-			destination[i] = new CoordImpl(346469+(389194-346469)*Math.random(), 137211+(162536-137211)*Math.random());
+			origin[i] = new Coord(346469 + (389194 - 346469) * Math.random(), 137211 + (162536 - 137211) * Math.random());
+			destination[i] = new Coord(346469 + (389194 - 346469) * Math.random(), 137211 + (162536 - 137211) * Math.random());
 			dayTime[i] = Math.random()*(endTime-startTime)+startTime;
 			//375009, 153261
 		}

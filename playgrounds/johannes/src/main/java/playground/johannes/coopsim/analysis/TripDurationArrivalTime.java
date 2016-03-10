@@ -19,22 +19,20 @@
  * *********************************************************************** */
 package playground.johannes.coopsim.analysis;
 
-import gnu.trove.TDoubleArrayList;
-import gnu.trove.TDoubleDoubleHashMap;
+import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.contrib.common.stats.Correlations;
+import org.matsim.contrib.common.stats.Discretizer;
+import org.matsim.contrib.common.stats.FixedSampleSizeDiscretizer;
+import org.matsim.contrib.common.stats.StatsWriter;
+import playground.johannes.coopsim.pysical.Trajectory;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-import org.matsim.api.core.v01.population.Activity;
-
-import playground.johannes.coopsim.pysical.Trajectory;
-import playground.johannes.sna.math.Discretizer;
-import playground.johannes.sna.math.FixedSampleSizeDiscretizer;
-import playground.johannes.sna.util.TXTWriter;
-import playground.johannes.socialnetworks.statistics.Correlations;
 
 /**
  * @author illenberger
@@ -78,13 +76,13 @@ public class TripDurationArrivalTime extends TrajectoryAnalyzerTask {
 			}
 		}
 		
-		Discretizer disc = FixedSampleSizeDiscretizer.create(arrivals.toNativeArray(), 50, 50);
-		TDoubleDoubleHashMap map = Correlations.mean(arrivals.toNativeArray(), durations.toNativeArray(), disc);
+		Discretizer disc = FixedSampleSizeDiscretizer.create(arrivals.toArray(), 50, 50);
+		TDoubleDoubleHashMap map = Correlations.mean(arrivals.toArray(), durations.toArray(), disc);
 		if(type == null)
 			type = "all";
 		
 		try {
-			TXTWriter.writeMap(map, "arrival", "tripDuration", String.format("%1$s/tripdur_arr.%2$s.txt", getOutputDirectory(), type));
+			StatsWriter.writeHistogram(map, "arrival", "tripDuration", String.format("%1$s/tripdur_arr.%2$s.txt", getOutputDirectory(), type));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
