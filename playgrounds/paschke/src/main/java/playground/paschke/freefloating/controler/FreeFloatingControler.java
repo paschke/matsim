@@ -36,6 +36,8 @@ import playground.paschke.qsim.CarSharingRelocationTimesReader;
 import playground.paschke.qsim.CarSharingRelocationZones;
 import playground.paschke.qsim.CarSharingRelocationZonesReader;
 import playground.paschke.qsim.RelocationAgent;
+import playground.paschke.qsim.RelocationAgentsPlansWriterListener;
+import playground.paschke.qsim.RelocationZoneKmlWriterListener;
 
 
 public class FreeFloatingControler {
@@ -116,5 +118,7 @@ public class FreeFloatingControler {
 		controler.addControlerListener(new CarsharingListener(controler, csConfig.getStatsWriterFrequency()));
 
 		controler.addControlerListener(demandTracker);
+		controler.addControlerListener(new RelocationZoneKmlWriterListener(controler, csConfig.getStatsWriterFrequency()));
+		controler.addControlerListener(new RelocationAgentsPlansWriterListener(controler, relocationAgents));
 	}
 }

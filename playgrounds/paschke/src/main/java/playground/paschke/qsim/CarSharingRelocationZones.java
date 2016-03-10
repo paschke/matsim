@@ -5,15 +5,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -27,7 +30,8 @@ import playground.paschke.qsim.CarSharingDemandTracker.RequestInfo;
 public class CarSharingRelocationZones {
 	private static final Logger log = Logger.getLogger("dummy");
 	public static final String ELEMENT_NAME = "carSharingRelocationZones";
-	private QuadTree<RelocationZone> relocationZoneQuadTree;	
+	private QuadTree<RelocationZone> relocationZoneQuadTree;
+	private HashMap<Double, Map<Coord, List<Integer>>> status= new HashMap<Double, Map<Coord, List<Integer>>>();
 
 	public void setRelocationZoneLocations(List<RelocationZone> relocationZones) {
     	// TODO read QuadTree dimensions from config (the following is just copied from FreeFloatingVehiclesLocation)
@@ -53,6 +57,14 @@ public class CarSharingRelocationZones {
 
 	public QuadTree<RelocationZone> getQuadTree() {
 		return this.relocationZoneQuadTree;
+	}
+
+	public Map<Double, Map<Coord, List<Integer>>> getStatus() {
+		return this.status;
+	}
+
+	public void putStatus(double time, Map<Coord, List<Integer>> status) {
+		this.status.put(new Double(time), status);
 	}
 
 	public void reset() {

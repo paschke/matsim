@@ -1,6 +1,7 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -9,6 +10,8 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
@@ -22,6 +25,9 @@ import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
 import org.matsim.core.mobsim.qsim.agents.PlanBasedDriverAgentImpl;
 import org.matsim.core.mobsim.qsim.interfaces.MobsimVehicle;
 import org.matsim.core.mobsim.qsim.interfaces.Netsim;
+import org.matsim.core.population.ActivityImpl;
+import org.matsim.core.population.LegImpl;
+import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.vehicles.Vehicle;
 
 /**
@@ -50,6 +56,8 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	private ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
 
+	private ArrayList<PlanElement> planElements = new ArrayList<PlanElement>();
+
 	public RelocationAgent(Id<Person> id, Id<Link> homeLinkId, Scenario scenario, CarSharingVehicles carSharingVehicles) {
 		this.id = id;
 		this.currentLinkId = this.homeLinkId = homeLinkId;
@@ -65,6 +73,11 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	public ArrayList<RelocationInfo> getRelocations() {
 		return this.relocations;
+	}
+
+	public ArrayList<PlanElement> getPlanElements()
+	{
+		return this.planElements;
 	}
 
     /**
@@ -94,10 +107,62 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	public void reset() {
 		this.relocations.clear();
+		this.planElements.clear();
 		this.currentLinkId = this.homeLinkId;
 		this.state = State.ACTIVITY;
 
 		log.info("resetting agent " + this.getId());
+	}
+
+	protected void startLeg(String transportMode) {
+		LegImpl leg = new LegImpl(transportMode);
+		leg.setDepartureTime(this.getTimeOfDay());
+		leg.setRoute(new LinkNetworkRouteImpl(this.getCurrentLinkId(), this.getDestinationLinkId()));
+		this.planElements.add(leg);
+	}
+
+	protected void endLeg() {
+		try {
+			LegImpl leg = (LegImpl) this.getCurrentPlanElement();
+			leg.setArrivalTime(this.getTimeOfDay());
+		} catch (Exception e) {
+			// do nothing
+		}
+	}
+
+	protected void addLinkId(Id<Link> linkId) {
+		try {
+			LegImpl leg = (LegImpl) this.getCurrentPlanElement();
+			LinkNetworkRouteImpl route = (LinkNetworkRouteImpl) leg.getRoute();
+
+			List<Id<Link>> linkIds = new ArrayList<Id<Link>>(route.getLinkIds());
+			linkIds.add(linkId);
+			LinkNetworkRouteImpl newRoute = new LinkNetworkRouteImpl(route.getStartLinkId(), linkIds, route.getEndLinkId());
+
+			leg.setRoute(newRoute);
+		} catch (Exception e) {
+			// do nothing
+		}
+	}
+
+	protected void startActivity() {
+		ActivityImpl activity = new ActivityImpl("work", this.getCurrentLinkId());
+		activity.setStartTime(this.getTimeOfDay());
+		this.planElements.add(activity);
+	}
+
+	protected void endActivity() {
+		try {
+			ActivityImpl activity = (ActivityImpl) this.getCurrentPlanElement();
+			activity.setEndTime(this.getTimeOfDay());
+		} catch (Exception e) {
+			// do nothing
+		}
+	}
+
+	protected PlanElement getCurrentPlanElement()
+	{
+		return this.planElements.get(this.planElements.size() - 1);
 	}
 
 	@Override
@@ -140,6 +205,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 	@Override
 	public void endActivityAndComputeNextState(double now) {
 		try {
+			this.endActivity();
 			this.prepareRelocation(this.relocations.get(0));
 		} catch (IndexOutOfBoundsException e) {
 			// do nothing, assuming that the only activity that this user can have is idling at his home link
@@ -150,18 +216,23 @@ public class RelocationAgent implements MobsimDriverAgent {
 		this.destinationLinkId = relocationInfo.getStartLinkId();
 		this.transportMode = TransportMode.bike;
 		this.state = State.LEG;
+		this.startLeg(TransportMode.bike);
 	}
 
 	private void executeRelocation(RelocationInfo relocationInfo) {
 		this.destinationLinkId = relocationInfo.getDestinationLinkId();
 		this.transportMode = TransportMode.car;
 		// TODO: set vehicle
+		this.startLeg(TransportMode.car);
 	}
 
 	@Override
 	public void endLegAndComputeNextState(double now) {
+		this.endLeg();
+
 		if (this.relocations.isEmpty()) {
 			this.state = State.ACTIVITY;
+			this.startActivity();
 		} else {
 			if (this.getDestinationLinkId().equals(this.relocations.get(0).getStartLinkId())) {
 				this.executeRelocation(this.relocations.get(0));
@@ -174,6 +245,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 				} catch (IndexOutOfBoundsException e) {
 					this.destinationLinkId = this.homeLinkId;
 					this.transportMode = TransportMode.bike;
+					this.startLeg(TransportMode.bike);
 				}
 			}
 		}
@@ -227,7 +299,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public void notifyMoveOverNode(Id<Link> newLinkId) {
-		log.info("agent " + this.id + " moving over link " + newLinkId);
+		this.addLinkId(newLinkId);
 		this.currentLinkId = newLinkId ;
 	}
 
