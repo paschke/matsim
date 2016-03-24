@@ -3,28 +3,18 @@ package playground.paschke.events;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.events.BeforeMobsimEvent;
-import org.matsim.core.controler.events.StartupEvent;
 import org.matsim.core.controler.listener.BeforeMobsimListener;
-import org.matsim.core.controler.listener.ControlerListener;
-import org.matsim.core.controler.listener.StartupListener;
 import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PersonImpl;
-import org.matsim.core.population.PlanImpl;
-import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
-import org.matsim.core.utils.geometry.CoordImpl;
-import org.matsim.api.core.v01.Id;
 
 // UNUSED EVER SINCE THE RELOCATION AGENTS ARE NOT PART OF THE POPULATION ANY MORE
 // ALSO, RELOCATION AGENTS DO NOT HAVE PLANS NO MORE
@@ -48,7 +38,7 @@ public class RelocationAgentsDispatchListener implements BeforeMobsimListener {
 
 //		Activity waitBeforeAtFacility = scenario.getPopulation().getFactory().createActivityFromCoord("h", new CoordImpl(-375, 0));
 //		Activity waitBeforeAtFacility = scenario.getPopulation().getFactory().createActivityFromLinkId("h", Id.createLinkId(2));
-		Activity waitBeforeAtFacility = new ActivityImpl("h", new CoordImpl(-375, 0), Id.createLinkId(2));
+		Activity waitBeforeAtFacility = new ActivityImpl("h", new Coord(-375, 0), Id.createLinkId(2));
 		waitBeforeAtFacility.setStartTime(0);
 		waitBeforeAtFacility.setEndTime(36000);
 		plan.addActivity(waitBeforeAtFacility);
@@ -65,7 +55,7 @@ public class RelocationAgentsDispatchListener implements BeforeMobsimListener {
 
 //		Activity dropVehicle = scenario.getPopulation().getFactory().createActivityFromCoord("w", new CoordImpl(1000, -250));
 //		Activity dropVehicle = scenario.getPopulation().getFactory().createActivityFromLinkId("w", Id.createLinkId(1));
-		Activity dropVehicle = new ActivityImpl("w", new CoordImpl(1000, -250), Id.createLinkId(1));
+		Activity dropVehicle = new ActivityImpl("w", new Coord(1000, -250), Id.createLinkId(1));
 		dropVehicle.setMaximumDuration(60);
 		plan.addActivity(dropVehicle);
 
@@ -76,7 +66,7 @@ public class RelocationAgentsDispatchListener implements BeforeMobsimListener {
 
 //		Activity waitAfterAtFacility = scenario.getPopulation().getFactory().createActivityFromCoord("h", new CoordImpl(-375, 0));
 //		Activity waitAfterAtFacility = scenario.getPopulation().getFactory().createActivityFromLinkId("h", Id.createLinkId(2));
-		Activity waitAfterAtFacility = new ActivityImpl("h", new CoordImpl(-375, 0), Id.createLinkId(2));
+		Activity waitAfterAtFacility = new ActivityImpl("h", new Coord(-375, 0), Id.createLinkId(2));
 		waitAfterAtFacility.setStartTime(40000);
 		waitAfterAtFacility.setEndTime(86400);
 		plan.addActivity(waitAfterAtFacility);

@@ -1,11 +1,10 @@
 package playground.paschke.qsim;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Stack;
 
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.core.utils.misc.Counter;
 import org.xml.sax.Attributes;
@@ -39,7 +38,7 @@ public class CarSharingRelocationZonesReader extends MatsimXmlParser {
 			final String x = atts.getValue( "x" );
 			final String y = atts.getValue( "y" );
 
-			CoordImpl coord = new CoordImpl(
+			Coord coord = new Coord(
 					Double.parseDouble( x ),
 					Double.parseDouble( y )
 			);

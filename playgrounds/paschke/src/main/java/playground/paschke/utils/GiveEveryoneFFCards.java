@@ -3,6 +3,7 @@ package playground.paschke.utils;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.ConfigUtils;
@@ -19,9 +20,9 @@ import org.matsim.utils.objectattributes.ObjectAttributesXmlWriter;
 
 public class GiveEveryoneFFCards {
 	public static void main(String[] args) {
-		ScenarioImpl sc = (ScenarioImpl) ScenarioUtils.createScenario(ConfigUtils.createConfig());
+		Scenario sc = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		PopulationReader populationReader = new MatsimPopulationReader(sc);
-		MatsimNetworkReader networkReader = new MatsimNetworkReader(sc);
+		MatsimNetworkReader networkReader = new MatsimNetworkReader(sc.getNetwork());
 		networkReader.readFile(args[0]);
 		populationReader.readFile(args[1]);
 

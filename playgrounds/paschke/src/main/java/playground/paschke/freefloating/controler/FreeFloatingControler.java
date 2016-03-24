@@ -15,12 +15,14 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.carsharing.config.CarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.CarsharingVehicleRelocationConfigGroup;
+import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
+import org.matsim.contrib.carsharing.config.OneWayCarsharingConfigGroup;
+import org.matsim.contrib.carsharing.config.TwoWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.control.listeners.CarsharingListener;
 import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
 import org.matsim.contrib.carsharing.qsim.CarsharingQsimFactory;
 import org.matsim.contrib.carsharing.replanning.CarsharingSubtourModeChoiceStrategy;
 import org.matsim.contrib.carsharing.replanning.RandomTripToCarsharingStrategy;
-import org.matsim.contrib.carsharing.runExample.CarsharingUtils;
 import org.matsim.contrib.carsharing.scoring.CarsharingScoringFunctionFactory;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -28,12 +30,12 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.scoring.ScoringFunctionFactory;
 
 import playground.paschke.events.MobismBeforeSimStepRelocationAgentsDispatcher;
 import playground.paschke.events.RelocationAgentsInsertListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarSharingRelocationTimesReader;
-import playground.paschke.qsim.CarSharingRelocationZones;
 import playground.paschke.qsim.CarSharingRelocationZonesReader;
 import playground.paschke.qsim.RelocationAgent;
 import playground.paschke.qsim.RelocationAgentsPlansWriterListener;
@@ -45,7 +47,20 @@ public class FreeFloatingControler {
 		Logger.getLogger( "org.matsim.core.controler.Injector" ).setLevel(Level.OFF);
 
 		final Config config = ConfigUtils.loadConfig(args[0]);
-		CarsharingUtils.addConfigModules(config);
+		OneWayCarsharingConfigGroup configGroup = new OneWayCarsharingConfigGroup();
+		config.addModule(configGroup);
+
+		FreeFloatingConfigGroup configGroupff = new FreeFloatingConfigGroup();
+		config.addModule(configGroupff);
+
+		TwoWayCarsharingConfigGroup configGrouptw = new TwoWayCarsharingConfigGroup();
+		config.addModule(configGrouptw);
+
+		CarsharingConfigGroup configGroupAll = new CarsharingConfigGroup();
+		config.addModule(configGroupAll);
+
+		CarsharingVehicleRelocationConfigGroup configCarsharingVehicleRelocation = new CarsharingVehicleRelocationConfigGroup();
+		config.addModule(configCarsharingVehicleRelocation);
 
 		final Scenario sc = ScenarioUtils.loadScenario(config);
 
@@ -88,8 +103,6 @@ public class FreeFloatingControler {
 	}
 
 	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Map<Id<Person>, RelocationAgent> relocationAgents) {
-		Scenario sc = controler.getScenario();
-
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
@@ -105,13 +118,11 @@ public class FreeFloatingControler {
 				bindMobsim().toProvider( CarsharingQsimFactory.class );
 				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationAgentsDispatcher.class);
 				this.addMobsimListenerBinding().to(RelocationAgentsInsertListener.class);
+
+				// 2016-03-17 binding this class to avoid calling setScoringFunctionFactory because CarsharingScoringFunctionFactory cannot be instanciated. Will this work?
+				bind(ScoringFunctionFactory.class).to(CarsharingScoringFunctionFactory.class);
 			}
 		});
-
-		controler.setTripRouterFactory(CarsharingUtils.createTripRouterFactory(sc));
-
-		//setting up the scoring function factory, inside different scoring functions are set-up
-		controler.setScoringFunctionFactory(new CarsharingScoringFunctionFactory( sc.getConfig(), sc.getNetwork()));
 
 		final CarsharingConfigGroup csConfig = (CarsharingConfigGroup) controler.getConfig().getModule(CarsharingConfigGroup.GROUP_NAME);
 

@@ -1,12 +1,9 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Stack;
 
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.core.utils.geometry.CoordImpl;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.core.utils.misc.Counter;
 import org.matsim.core.utils.misc.Time;

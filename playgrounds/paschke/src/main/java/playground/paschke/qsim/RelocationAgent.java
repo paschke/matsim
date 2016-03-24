@@ -28,7 +28,10 @@ import org.matsim.core.mobsim.qsim.interfaces.Netsim;
 import org.matsim.core.population.ActivityImpl;
 import org.matsim.core.population.LegImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
+import org.matsim.facilities.Facility;
 import org.matsim.vehicles.Vehicle;
+
+import com.google.inject.Inject;
 
 /**
  * Mostly copied from tutorial.programming.ownMobsimAgentUsingRouter.MyMobsimAgent
@@ -58,6 +61,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	private ArrayList<PlanElement> planElements = new ArrayList<PlanElement>();
 
+	@Inject
 	public RelocationAgent(Id<Person> id, Id<Link> homeLinkId, Scenario scenario, CarSharingVehicles carSharingVehicles) {
 		this.id = id;
 		this.currentLinkId = this.homeLinkId = homeLinkId;
@@ -329,5 +333,17 @@ public class RelocationAgent implements MobsimDriverAgent {
 	@Override
 	public Id<Vehicle> getPlannedVehicleId() {
 		return (this.relocations.get(0) != null) ? Id.create("FF_" + this.relocations.get(0).getVehicleId(), Vehicle.class) : null;
+	}
+
+	@Override
+	public Facility<? extends Facility<?>> getCurrentFacility() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Facility<? extends Facility<?>> getDestinationFacility() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

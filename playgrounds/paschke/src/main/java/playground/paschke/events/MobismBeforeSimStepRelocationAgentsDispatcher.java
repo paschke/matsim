@@ -37,15 +37,12 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 	private CarSharingDemandTracker demandTracker;
 
-	private Provider<TripRouter> routerProvider;
-
 	private Map<Id<Person>, RelocationAgent> relocationAgents;
 
 	@Inject
 	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider, final Map<Id<Person>, RelocationAgent> relocationAgents) {
 		this.carSharingVehicles = carSharingVehicles;
 		this.demandTracker = demandTracker;
-		this.routerProvider = routerProvider;
 		this.relocationAgents = relocationAgents;
 	}
 
@@ -78,15 +75,16 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			// TODO: adding request info could be wrapped inside RelocationZones
 			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), end)) {
 				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());
-				RelocationZone relocationZone = relocationZones.getQuadTree().get(link.getCoord().getX(), link.getCoord().getY());
+				RelocationZone relocationZone = relocationZones.getQuadTree().getClosest(link.getCoord().getX(), link.getCoord().getY());
 				relocationZone.addRequests(link, 1);
 			}
 
 			// count number of vehicles in car sharing relocation zones
 			// TODO: adding vehicles could be wrapped inside RelocationZone
 			for (FreeFloatingStation ffs : carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
-				RelocationZone relocationZone = relocationZones.getQuadTree().get(ffs.getLink().getCoord().getX(), ffs.getLink().getCoord().getY());
-				relocationZone.addVehicles(ffs.getLink(), ffs.getIDs());
+				Link ffsLink = scenario.getNetwork().getLinks().get(ffs.getLinkId());
+				RelocationZone relocationZone = relocationZones.getQuadTree().getClosest(ffsLink.getCoord().getX(), ffsLink.getCoord().getY());
+				relocationZone.addVehicles(ffsLink, ffs.getIDs());
 			}
 
 			// compare available vehicles to demand for each zone, store result

@@ -1,31 +1,20 @@
 package playground.paschke.qsim;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
 import org.matsim.core.utils.collections.QuadTree;
-import org.matsim.core.utils.geometry.CoordImpl;
-
-import playground.paschke.qsim.CarSharingDemandTracker.RequestInfo;
 
 public class CarSharingRelocationZones {
 	private static final Logger log = Logger.getLogger("dummy");
@@ -91,7 +80,7 @@ public class CarSharingRelocationZones {
 			}
 		});
 
-		Iterator iterator = relocationZones.iterator();
+		Iterator<RelocationZone> iterator = relocationZones.iterator();
 		while (iterator.hasNext()) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
 			log.info("relocationZone with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
@@ -104,7 +93,7 @@ public class CarSharingRelocationZones {
 					String vehicleId = null;
 					Collection<RelocationZone> adjacentZones = this.getAdjacentZones(nextZone);
 
-					Iterator adjacentIterator = adjacentZones.iterator();
+					Iterator<RelocationZone> adjacentIterator = adjacentZones.iterator();
 					while (adjacentIterator.hasNext()) {
 						RelocationZone adjacentZone = (RelocationZone) adjacentIterator.next();
 						log.info("adjacentZone has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
@@ -142,7 +131,7 @@ public class CarSharingRelocationZones {
 
 	protected Collection<RelocationZone> getAdjacentZones(RelocationZone currentZone) {
 		// FIXME: hard-coded zone distance here
-		Collection<RelocationZone> zones = this.getQuadTree().get(currentZone.getCoord().getX(), currentZone.getCoord().getY(), 5001);
+		Collection<RelocationZone> zones = this.getQuadTree().getDisk(currentZone.getCoord().getX(), currentZone.getCoord().getY(), 5001);
 		zones.remove(currentZone);
 
 		return zones;
