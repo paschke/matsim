@@ -63,13 +63,15 @@ import playground.vsp.congestion.handlers.CongestionHandlerImplV8;
 import playground.vsp.congestion.handlers.CongestionHandlerImplV9;
 import playground.vsp.congestion.handlers.TollHandler;
 import playground.vsp.congestion.routing.CongestionTollTimeDistanceTravelDisutilityFactory;
+import scenarios.illustrative.analysis.TtAbstractAnalysisTool;
+import scenarios.illustrative.analysis.TtAnalyzedResultsWriter;
 import scenarios.illustrative.analysis.TtListenerToBindAndWriteAnalysis;
 import scenarios.illustrative.braess.analysis.TtAnalyzeBraess;
 import scenarios.illustrative.braess.createInput.TtCreateBraessNetworkAndLanes;
-import scenarios.illustrative.braess.createInput.TtCreateBraessPopulation;
-import scenarios.illustrative.braess.createInput.TtCreateBraessSignals;
 import scenarios.illustrative.braess.createInput.TtCreateBraessNetworkAndLanes.LaneType;
+import scenarios.illustrative.braess.createInput.TtCreateBraessPopulation;
 import scenarios.illustrative.braess.createInput.TtCreateBraessPopulation.InitRoutes;
+import scenarios.illustrative.braess.createInput.TtCreateBraessSignals;
 import scenarios.illustrative.braess.createInput.TtCreateBraessSignals.SignalControlType;
 
 /**
@@ -95,12 +97,12 @@ public final class RunBraessSimulation {
 	private static final Double INIT_PLAN_SCORE = null;
 
 	/// defines which kind of signals should be used
-	private static final SignalControlType SIGNAL_TYPE = SignalControlType.SIGNAL4_ONE_SECOND_Z;
+	private static final SignalControlType SIGNAL_TYPE = SignalControlType.NONE;
 	// defines which kind of lanes should be used
 	private static final LaneType LANE_TYPE = LaneType.NONE;
 	
 	// defines which kind of pricing should be used
-	private static final PricingType PRICING_TYPE = PricingType.NONE;
+	private static final PricingType PRICING_TYPE = PricingType.V3;
 	public enum PricingType{
 		NONE, V3, V4, V8, V9, FLOWBASED
 	}
@@ -111,7 +113,7 @@ public final class RunBraessSimulation {
 		
 	private static final boolean WRITE_INITIAL_FILES = true;
 	
-	private static final String OUTPUT_BASE_DIR = "../../../runs-svn/braess/abmtrans/";
+	private static final String OUTPUT_BASE_DIR = "../../../runs-svn/braess/congestionPricing/";
 	
 	public static void main(String[] args) {
 		Config config = defineConfig();
@@ -146,7 +148,7 @@ public final class RunBraessSimulation {
 			config.travelTimeCalculator().setCalculateLinkTravelTimes(true);
 			
 			// set travelTimeBinSize (only has effect if reRoute is used)
-			config.travelTimeCalculator().setTraveltimeBinSize( 10 );
+			config.travelTimeCalculator().setTraveltimeBinSize( 900 );
 			
 			config.travelTimeCalculator().setTravelTimeCalculatorType(
 					TravelTimeCalculatorType.TravelTimeCalculatorHashMap.toString());
@@ -329,8 +331,17 @@ public final class RunBraessSimulation {
 			});
 		}
 		
-		// add a controller listener to analyze results
-		controler.addControlerListener(new TtListenerToBindAndWriteAnalysis(scenario, new TtAnalyzeBraess(), true));
+		controler.addOverridingModule(new AbstractModule() {			
+			@Override
+			public void install() {
+//				this.bind(TtAnalyzeBraess.class).asEagerSingleton();
+//				this.addEventHandlerBinding().to(TtAnalyzeBraess.class);
+				this.bind(TtAbstractAnalysisTool.class).to(TtAnalyzeBraess.class).asEagerSingleton();
+				this.addEventHandlerBinding().to(TtAbstractAnalysisTool.class);
+				this.bind(TtAnalyzedResultsWriter.class);
+				this.addControlerListenerBinding().to(TtListenerToBindAndWriteAnalysis.class);
+			}
+		});
 		
 		return controler;
 	}

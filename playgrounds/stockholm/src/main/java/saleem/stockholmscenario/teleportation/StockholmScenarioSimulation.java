@@ -15,7 +15,6 @@ import org.matsim.vehicles.VehicleCapacity;
 import org.matsim.vehicles.VehicleType;
 import org.matsim.vehicles.Vehicles;
 
-import saleem.stockholmscenario.teleportation.ptoptimisation.PTControlListener;
 import saleem.stockholmscenario.teleportation.ptoptimisation.TransitScheduleAdapter;
 
 public class StockholmScenarioSimulation {
@@ -32,20 +31,11 @@ public static void main(String[] args) {
         Controler controler = new Controler(config);
 		Scenario scenario = controler.getScenario();
 		
-		Network network = scenario.getNetwork();
-		Vehicles vehicles = scenario.getTransitVehicles();
-		ArrayList<VehicleType> vehcilestypes = toArrayList(vehicles.getVehicleTypes().values().iterator());
-		Iterator vehtypes = vehcilestypes.iterator();
-		while(vehtypes.hasNext()){
-			VehicleType vt = (VehicleType)vehtypes.next();
-			VehicleCapacity cap = vt.getCapacity();
-			cap.setSeats((int)Math.ceil(cap.getSeats()*samplesize));
-			cap.setStandingRoom((int)Math.ceil(cap.getStandingRoom()*samplesize));
-			vt.setCapacity(cap);
-			vt.setPcuEquivalents(vt.getPcuEquivalents()*samplesize);
-			System.out.println("Sample Size is: " + samplesize);
-		}
+		// Changing vehicle and road capacity according to sample size
+		PTCapacityAdjusmentPerSample capadjuster = new PTCapacityAdjusmentPerSample();
+		capadjuster.adjustStoarageAndFlowCapacity(scenario, samplesize);
 		
+		Network network = scenario.getNetwork();
 		TransitSchedule schedule = scenario.getTransitSchedule();
 		new CreatePseudoNetwork(schedule, network, "tr_").createNetwork();
 		NetworkWriter networkWriter =  new NetworkWriter(network);

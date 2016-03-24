@@ -19,7 +19,7 @@
 package playground.johannes.studies.matrix2014.analysis;
 
 import org.matsim.facilities.ActivityFacilities;
-import playground.johannes.studies.matrix2014.matrix.MatrixBuilder;
+import playground.johannes.studies.matrix2014.matrix.DefaultMatrixBuilder;
 import playground.johannes.synpop.analysis.AnalyzerTask;
 import playground.johannes.synpop.analysis.FileIOContext;
 import playground.johannes.synpop.analysis.Predicate;
@@ -39,7 +39,7 @@ import java.util.List;
  */
 public class MatrixWriter implements AnalyzerTask<Collection<? extends Person>> {
 
-    private final MatrixBuilder matrixBuilder;
+    private final DefaultMatrixBuilder matrixBuilder;
 
     private final FileIOContext ioContext;
 
@@ -48,7 +48,7 @@ public class MatrixWriter implements AnalyzerTask<Collection<? extends Person>> 
     private Predicate<Segment> predicate;
 
     public MatrixWriter(ActivityFacilities facilities, ZoneCollection zones, FileIOContext ioContext) {
-        matrixBuilder = new MatrixBuilder(facilities, zones);
+        matrixBuilder = new DefaultMatrixBuilder(facilities, zones);
         this.ioContext = ioContext;
     }
 
