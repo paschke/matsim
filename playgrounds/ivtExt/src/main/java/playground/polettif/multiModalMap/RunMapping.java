@@ -34,9 +34,7 @@ import org.matsim.pt.transitSchedule.api.TransitScheduleWriter;
 import org.matsim.pt.utils.TransitScheduleValidator;
 import playground.polettif.boescpa.converters.osm.Osm2Network;
 import playground.polettif.multiModalMap.gtfs.GTFSReader;
-import playground.polettif.multiModalMap.mapping.PTMapperV1;
-import playground.polettif.multiModalMap.mapping.PTMapperV2;
-import playground.polettif.multiModalMap.mapping.PTMapperV3;
+import playground.polettif.multiModalMap.mapping.PTMapperLinkScoring;
 
 public class RunMapping {
 
@@ -48,14 +46,18 @@ public class RunMapping {
 		boolean reloadGTFS = false;
 		boolean reloadNetwork = false;
 
+		String base = "C:/Users/Flavio/Desktop/";
+
 		// input
-		final String gtfsPath = "C:/Users/polettif/Desktop/data/gtfs/zvv/";
-		final String mtsFile = "C:/Users/polettif/Desktop/data/mts/zvv_unmappedSchedule_WGS84.xml";
+		final String gtfsPath = base + "data/gtfs/zvv/";
+		final String osmFile = base + "data/osm/zurich-plus.osm";
 
-		final String osmFile = "C:/Users/polettif/Desktop/data/osm/zurich-plus.osm";
-		final String networkFile = "C:/Users/polettif/Desktop/data/network/zurich-plus.xml.gz";
+		final String mtsFile = base + "data/mts/zvv_unmappedSchedule_WGS84.xml";
+//		final String mtsFile = base + "data/mts/zvv_69er.xml";
 
-		final String outbase = "C:/Users/polettif/Desktop/output/mtsMapping/";
+		final String networkFile = base + "data/network/zurich-plus.xml.gz";
+
+		final String outbase = base + "output/mtsMapping/";
 
 		final String outCoordinateSystem = "CH1903_LV03_Plus";
 
@@ -64,8 +66,8 @@ public class RunMapping {
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		CoordinateTransformation coordinateTransformation = TransformationFactory.getCoordinateTransformation(TransformationFactory.WGS84, outCoordinateSystem);
 
-		final String path_MixedSchedule = outbase + "MixedSchedule.xml";
-		final String path_MixedNetwork = outbase + "MixedNetwork.xml";
+		final String path_MixedSchedule = outbase + "schedule.xml";
+		final String path_MixedNetwork = outbase + "network.xml";
 
 		// Load Schedule
 		if (reloadGTFS) {
@@ -91,7 +93,7 @@ public class RunMapping {
 		// vgl. OSM2MixedIVT createMixed
 	//	new PTMapperV1(schedule).routePTLines(network);
 //		new PTMapperV2(schedule).routePTLines(network);
-		new PTMapperV3(schedule).routePTLines(network);
+		new PTMapperLinkScoring(schedule).routePTLines(network);
 
 		log.info("Writing schedule and network to file...");
 		new TransitScheduleWriter(schedule).writeFile(path_MixedSchedule);

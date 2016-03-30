@@ -244,7 +244,7 @@ public class PTMATSimDecisionVariableSetEvaluator<U extends DecisionVariable>
 			
 		}
 		PlotInfo pinfo = new PlotInfo();
-		pinfo.PlotWaitingPassengers("C:\\Results Matsim\\Optimisation\\waitingPassengers.png", times, waitingpassengers);
+		pinfo.PlotWaitingPassengers("waitingPassengers.png", times, waitingpassengers);
 		System.out.println("Stuck Agents: " + this.occupancyAnalyser.getTotalStuckOutsideStops());
 		System.out.println("Stuck Agents Left on Stops: " + this.occupancyAnalyser.getTotalLeftOnStopsAtEnd());
 		

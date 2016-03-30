@@ -1,8 +1,9 @@
 /* *********************************************************************** *
  * project: org.matsim.*
+ *                                                                         *
  * *********************************************************************** *
  *                                                                         *
- * copyright       : (C) 2016 by the members listed in the COPYING,        *
+ * copyright       : (C) 2016 by the members listed in the COPYING,       *
  *                   LICENSE and WARRANTY file.                            *
  * email           : info at matsim dot org                                *
  *                                                                         *
@@ -15,32 +16,19 @@
  *   See also COPYING, LICENSE and WARRANTY file                           *
  *                                                                         *
  * *********************************************************************** */
+package playground.johannes.studies.matrix2014.analysis;
 
-
-package playground.polettif.multiModalMap.mapping;
-
-import org.matsim.api.core.v01.network.Network;
-import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import playground.johannes.studies.matrix2014.gis.ActivityLocationLayer;
+import playground.johannes.studies.matrix2014.matrix.DefaultMatrixBuilder;
+import playground.johannes.synpop.gis.ZoneCollection;
 
 /**
- * @author polettif
+ * @author jillenberger
  */
-public class PTMapping {
-	
-	public static void main(final String[] args) {
-		
-	}
+public class DefaultMatrixBuilderFactory implements MatrixBuilderFactory {
 
-	/**
-	 * Maps the basic schedule (with transitStops, routeProfile and departures but without route) to a network.
-	 *
-	 * @param schedule MATSim Transit Schedule without route (sequence of links)
-	 * @param network street network
-	 *
-	 * Based on boescpa.PTMapping
-	 */
-	public static void MTSmapping(TransitSchedule schedule, Network network) {
-
-	}
-
+    @Override
+    public MatrixBuilder create(ActivityLocationLayer locations, ZoneCollection zones) {
+        return new DefaultMatrixBuilder(locations, zones);
+    }
 }

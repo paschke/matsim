@@ -1,5 +1,6 @@
 /* *********************************************************************** *
  * project: org.matsim.*
+ *                                                                         *
  * *********************************************************************** *
  *                                                                         *
  * copyright       : (C) 2016 by the members listed in the COPYING,        *
@@ -16,31 +17,39 @@
  *                                                                         *
  * *********************************************************************** */
 
+package playground.johannes.studies.matrix2014.gis;
 
-package playground.polettif.multiModalMap.mapping.containter;
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import org.matsim.facilities.ActivityFacilities;
+import org.matsim.facilities.ActivityFacility;
 
-import org.matsim.core.utils.collections.Tuple;
-import org.matsim.pt.transitSchedule.api.TransitRouteStop;
-
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class AllInterStopRoutes {
-	
-	private Map<Tuple<TransitRouteStop, TransitRouteStop>, InterStopRoutes> map = new HashMap<>();
+/**
+ * @author johannes
+ */
+public class ActivityLocationLayer {
 
-	public AllInterStopRoutes() {
-	}
+    public static final String ACTIVITY_TYPE = "activity_type";
 
-	public boolean contains(TransitRouteStop fromStop, TransitRouteStop toStop) {
-		return map.containsKey(new Tuple<>(fromStop, toStop));
-	}
+    private final Map<String, Feature> locations;
 
-	public void add(InterStopRoutes interStopRoutes) {
-		map.put(interStopRoutes.getStopsTuple(), interStopRoutes);
-	}
+    public ActivityLocationLayer(ActivityFacilities facilities) {
+        locations = new LinkedHashMap<>();
+        GeometryFactory factory = new GeometryFactory();
+        for(ActivityFacility f : facilities.getFacilities().values()) {
+            Geometry point = factory.createPoint(new Coordinate(f.getCoord().getX(), f.getCoord().getY()));
+            Feature location = new Feature(f.getId().toString(), point);
+            locations.put(location.getId(), location);
+        }
+    }
 
-	public InterStopRoutes get(TransitRouteStop currentStop, TransitRouteStop nextStop) {
-		return map.get(new Tuple<>(currentStop, nextStop));
-	}
+    public Feature get(String id) {
+        return locations.get(id);
+    }
+
+
 }

@@ -27,7 +27,7 @@ public class AnalysisFileWriter {
     		for (int key : map.keySet()) {
     			int binCaption = key * binWidth;
     			double value = map.get(key);
-    			bufferedWriter.write(binCaption + "+" + "\t" + value + "\t" + value/aggregateWeight);
+    			bufferedWriter.write(binCaption + "\t" + value + "\t" + value/aggregateWeight);
     			writeCounter = writeCounter + value;
     			bufferedWriter.newLine();
     		}
@@ -104,7 +104,7 @@ public class AnalysisFileWriter {
 	}
 	
 	
-	public void writeToFileOther(Map<String, Integer> map, String outputFile) {
+	public void writeToFileOther(Map<String, Double> map, String outputFile) {
 		BufferedWriter bufferedWriter = null;
 
 		try {
@@ -113,7 +113,7 @@ public class AnalysisFileWriter {
 			bufferedWriter = new BufferedWriter(fileWriter);
 
 			for (String key : map.keySet()) {
-				int value = map.get(key);
+				double value = map.get(key);
 				bufferedWriter.write(key + "\t" + value);
 				bufferedWriter.newLine();
 			}
@@ -158,7 +158,7 @@ public class AnalysisFileWriter {
     		//bufferedWriter.write("Sum = " + writeCounter);
     		
     		double countDifference = Math.abs(writeCounter - aggregateWeight);
-    		if (countDifference >1.) {
+    		if (countDifference > 1.) {
     			log.error("Weighted number of trips in " + outputFile + " is not equal to aggregate weight!");
     			log.error("writeCounter: " + writeCounter + "; aggregateWeight: " + aggregateWeight);
     		}
@@ -181,7 +181,7 @@ public class AnalysisFileWriter {
 	
 	
 	// file writer for comparison file routed distance vs. beeline distance
-	public void writeRoutedBeelineDistanceComparisonFile(Map<Id<Trip>, Double> mapRouted, Map<Id<Trip>, Double> mapBeeline, String outputFile, int tripCounter) {
+	public void writeRoutedBeelineDistanceComparisonFile(Map<Id<Trip>, Double> mapRouted, Map<Id<Trip>, Double> mapBeeline, String outputFile, double tripCounter) {
 		BufferedWriter bufferedWriter = null;
 		
 		try {
