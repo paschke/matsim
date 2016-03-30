@@ -20,11 +20,6 @@ import org.matsim.contrib.carsharing.config.OneWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.TwoWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.events.NoParkingSpaceEvent;
 import org.matsim.contrib.carsharing.events.NoVehicleCarSharingEvent;
-<<<<<<< HEAD
-import org.matsim.contrib.carsharing.events.CarSharingRequestEvent;
-import org.matsim.contrib.carsharing.facility.DummyFacility;
-=======
->>>>>>> a662426afbe7ca5f6e2e3697b28e69b3ae2a94a8
 import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
 import org.matsim.contrib.carsharing.stations.OneWayCarsharingStation;
 import org.matsim.contrib.carsharing.stations.TwoWayCarsharingStation;
