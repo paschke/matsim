@@ -4,19 +4,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.apache.log4j.Logger;
 import org.jfree.util.Log;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
-import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
 import org.matsim.core.utils.collections.QuadTree;
 
 public class FreeFloatingVehiclesLocation {
-	private static final Logger log = Logger.getLogger(PersonDriverAgentImpl.class);
-
 	private QuadTree<FreeFloatingStation> vehicleLocationQuadTree;	
-
+	       
 	public FreeFloatingVehiclesLocation(Scenario scenario, ArrayList<FreeFloatingStation> stations) throws IOException {
 	    double minx = (1.0D / 0.0D);
 	    double miny = (1.0D / 0.0D);
@@ -114,9 +110,18 @@ public class FreeFloatingVehiclesLocation {
 				for (String s : vehIDs) {
 					newvehIDs.add(s);
 				}
+				newvehIDs.remove(id);
+				FreeFloatingStation fNew = new FreeFloatingStation(link, f.getNumberOfVehicles() - 1, newvehIDs);       
+
+				vehicleLocationQuadTree.remove(link.getCoord().getX(), link.getCoord().getY(), f);
+				vehicleLocationQuadTree.put(link.getCoord().getX(), link.getCoord().getY(), fNew);
+
 			}
 		}
+		else {
 
-		throw new RuntimeException("could not remove ff vehicle " + id + " from link " + link.getId() + " because it could not be found!");
+			Log.error("trying to take a car from the link with no cars, this should never happen");
+
+		}
 	}
 }

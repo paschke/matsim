@@ -23,6 +23,7 @@ import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
 import org.matsim.contrib.carsharing.qsim.CarsharingQsimFactory;
 import org.matsim.contrib.carsharing.replanning.CarsharingSubtourModeChoiceStrategy;
 import org.matsim.contrib.carsharing.replanning.RandomTripToCarsharingStrategy;
+import org.matsim.contrib.carsharing.runExample.CarsharingUtils;
 import org.matsim.contrib.carsharing.scoring.CarsharingScoringFunctionFactory;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -124,6 +125,8 @@ public class FreeFloatingControler {
 				bind(ScoringFunctionFactory.class).to(CarsharingScoringFunctionFactory.class);
 			}
 		});
+
+		controler.addOverridingModule(CarsharingUtils.createModule());
 
 		final CarsharingConfigGroup csConfig = (CarsharingConfigGroup) controler.getConfig().getModule(CarsharingConfigGroup.GROUP_NAME);
 
