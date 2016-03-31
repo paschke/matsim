@@ -47,20 +47,20 @@ public class FreeFloatingControler {
 		Logger.getLogger( "org.matsim.core.controler.Injector" ).setLevel(Level.OFF);
 
 		final Config config = ConfigUtils.loadConfig(args[0]);
-		OneWayCarsharingConfigGroup configGroup = new OneWayCarsharingConfigGroup();
-		config.addModule(configGroup);
+		OneWayCarsharingConfigGroup configGroupOW = new OneWayCarsharingConfigGroup();
+		config.addModule(configGroupOW);
 
-		FreeFloatingConfigGroup configGroupff = new FreeFloatingConfigGroup();
-		config.addModule(configGroupff);
+		FreeFloatingConfigGroup configGroupFF = new FreeFloatingConfigGroup();
+		config.addModule(configGroupFF);
 
-		TwoWayCarsharingConfigGroup configGrouptw = new TwoWayCarsharingConfigGroup();
-		config.addModule(configGrouptw);
+		TwoWayCarsharingConfigGroup configGroupTW = new TwoWayCarsharingConfigGroup();
+		config.addModule(configGroupTW);
 
 		CarsharingConfigGroup configGroupAll = new CarsharingConfigGroup();
 		config.addModule(configGroupAll);
 
-		CarsharingVehicleRelocationConfigGroup configCarsharingVehicleRelocation = new CarsharingVehicleRelocationConfigGroup();
-		config.addModule(configCarsharingVehicleRelocation);
+		CarsharingVehicleRelocationConfigGroup configGroupCVR = new CarsharingVehicleRelocationConfigGroup();
+		config.addModule(configGroupCVR);
 
 		final Scenario sc = ScenarioUtils.loadScenario(config);
 
