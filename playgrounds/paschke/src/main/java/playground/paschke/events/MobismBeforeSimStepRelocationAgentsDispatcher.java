@@ -2,8 +2,10 @@ package playground.paschke.events;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
@@ -13,6 +15,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
 import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
+import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.framework.MobsimAgent.State;
 import org.matsim.core.mobsim.framework.events.MobsimBeforeSimStepEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeSimStepListener;
@@ -37,13 +40,10 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 	private CarSharingDemandTracker demandTracker;
 
-	private Map<Id<Person>, RelocationAgent> relocationAgents;
-
 	@Inject
-	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider, final Map<Id<Person>, RelocationAgent> relocationAgents) {
+	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider) {
 		this.carSharingVehicles = carSharingVehicles;
 		this.demandTracker = demandTracker;
-		this.relocationAgents = relocationAgents;
 	}
 
 	@Override
@@ -111,11 +111,18 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	}
 
 	private RelocationAgent getRelocationAgent(QSim qSim) {
-		for (RelocationAgent agent : this.relocationAgents.values()) {
+		int counter = 0;
+
+		while (counter < 30) {
+			Id<Person> id = Id.createPersonId("DemonAgent" + counter);
+			RelocationAgent agent = (RelocationAgent) qSim.getAgentMap().get(id);
+
 			if ((agent.getState() == State.ACTIVITY) && (agent.getRelocations().size() == 0)) {
 				log.info("RelocationAgent " + agent.getId() + " reused from the agent pool");
 				return agent;
 			}
+
+			counter++;
 		}
 
 		return null;

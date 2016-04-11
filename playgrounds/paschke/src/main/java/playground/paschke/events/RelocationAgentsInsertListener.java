@@ -17,6 +17,8 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 public class RelocationAgentsInsertListener implements MobsimInitializedListener {
+	// DON'T USE THIS, REPLACED BY RelocationAgentSource
+
 	private static final Logger log = Logger.getLogger("dummy");
 
 	private Provider<TripRouter> routerProvider;

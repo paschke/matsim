@@ -1,0 +1,103 @@
+package playground.paschke.qsim;
+
+import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
+import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
+import org.matsim.contrib.carsharing.qsim.CarsharingAgentFactory;
+import org.matsim.contrib.carsharing.qsim.ParkCSVehicles;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.config.groups.QSimConfigGroup;
+import org.matsim.core.mobsim.qsim.ActivityEngine;
+import org.matsim.core.mobsim.qsim.QSim;
+import org.matsim.core.mobsim.qsim.TeleportationEngine;
+import org.matsim.core.mobsim.qsim.agents.AgentFactory;
+import org.matsim.core.mobsim.qsim.agents.PopulationAgentSource;
+import org.matsim.core.mobsim.qsim.changeeventsengine.NetworkChangeEventsEngine;
+import org.matsim.core.mobsim.qsim.interfaces.Netsim;
+import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngineModule;
+import org.matsim.core.router.TripRouter;
+import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
+import org.matsim.core.router.util.LeastCostPathCalculator;
+import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
+import org.matsim.core.router.util.TravelDisutility;
+import org.matsim.core.router.util.TravelTime;
+
+import com.google.inject.Inject;
+import com.google.inject.Provider;
+
+import java.io.IOException;
+import java.util.Map;
+
+/**
+ *
+ *
+ *
+ */
+
+public class RelocationQsimFactory implements Provider<Netsim>{
+
+
+	@Inject private  Scenario sc;
+	@Inject private  EventsManager eventsManager;
+	
+	@Inject private LeastCostPathCalculatorFactory pathCalculatorFactory ;
+	@Inject private Map<String,TravelDisutilityFactory> travelDisutilityFactories ;
+	@Inject private Map<String,TravelTime> travelTimes ;
+
+	@Inject private CarSharingVehicles carSharingVehicles;
+	@Inject private Provider<TripRouter> routerProvider;
+
+
+	@Override
+	public Netsim get() {
+		
+		QSimConfigGroup conf = sc.getConfig().qsim();
+		if (conf == null) {
+			throw new NullPointerException("There is no configuration set for the QSim. Please add the module 'qsim' to your config file.");
+		}
+
+		QSim qSim = new QSim(sc, eventsManager);
+		
+		ActivityEngine activityEngine = new ActivityEngine(eventsManager, qSim.getAgentCounter());
+		qSim.addMobsimEngine(activityEngine);
+		qSim.addActivityHandler(activityEngine);
+
+
+        QNetsimEngineModule.configure(qSim);
+		
+		TeleportationEngine teleportationEngine = new TeleportationEngine(sc, eventsManager);
+		qSim.addMobsimEngine(teleportationEngine);
+				
+		AgentFactory agentFactory = null;
+		RelocationAgentFactory relocationAgentFactory = null;
+			
+		TravelTime travelTime = travelTimes.get( TransportMode.car ) ;
+
+		TravelDisutilityFactory travelDisutilityFactory = travelDisutilityFactories.get( TransportMode.car ) ;
+		TravelDisutility travelDisutility = travelDisutilityFactory.createTravelDisutility(travelTime) ;
+
+		LeastCostPathCalculator pathCalculator = pathCalculatorFactory.createPathCalculator(sc.getNetwork(), travelDisutility, travelTime ) ;
+
+		agentFactory = new CarsharingAgentFactory(qSim, sc, this.carSharingVehicles, pathCalculator);		
+		
+		if (sc.getConfig().network().isTimeVariantNetwork()) 
+			qSim.addMobsimEngine(new NetworkChangeEventsEngine());		
+		
+		PopulationAgentSource agentSource = new PopulationAgentSource(sc.getPopulation(), agentFactory, qSim);
+		
+		//we need to park carsharing vehicles on the network
+		ParkCSVehicles parkSource = new ParkCSVehicles(sc.getPopulation(), agentFactory, qSim,
+				this.carSharingVehicles.getFreeFLoatingVehicles(), this.carSharingVehicles.getOneWayVehicles(), this.carSharingVehicles.getTwoWayVehicles());
+
+		relocationAgentFactory = new RelocationAgentFactory(sc);
+
+		RelocationAgentSource relocationAgentSource = new RelocationAgentSource(relocationAgentFactory, qSim, this.routerProvider, this.carSharingVehicles);
+
+		qSim.addAgentSource(agentSource);
+		qSim.addAgentSource(parkSource);
+		qSim.addAgentSource(relocationAgentSource);
+
+		return qSim;
+	}
+		
+}

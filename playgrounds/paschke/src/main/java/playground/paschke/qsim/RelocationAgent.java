@@ -62,13 +62,16 @@ public class RelocationAgent implements MobsimDriverAgent {
 	private ArrayList<PlanElement> planElements = new ArrayList<PlanElement>();
 
 	@Inject
-	public RelocationAgent(Id<Person> id, Id<Link> homeLinkId, Scenario scenario, CarSharingVehicles carSharingVehicles) {
+	public RelocationAgent(Id<Person> id, Id<Link> homeLinkId, Scenario scenario) {
 		this.id = id;
 		this.currentLinkId = this.homeLinkId = homeLinkId;
 		this.scenario = scenario;
-		this.carSharingVehicles = carSharingVehicles;
 
 		this.state = State.ACTIVITY;
+	}
+
+	public void setCarSharingVehicles(CarSharingVehicles carSharingVehicles) {
+		this.carSharingVehicles = carSharingVehicles;
 	}
 
 	public void setGuidance(Guidance guidance) {
@@ -91,6 +94,8 @@ public class RelocationAgent implements MobsimDriverAgent {
 	public void dispatchRelocation(RelocationInfo info) {
 		this.relocations.add(info);
 		this.carSharingVehicles.getFreeFLoatingVehicles().removeVehicle(this.scenario.getNetwork().getLinks().get(info.getStartLinkId()), info.getVehicleId());
+
+		log.info("relocationAgent " + this.id + " removed vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
 	}
 
 	public void setMobsimTimer(MobsimTimer mobsimTimer) {

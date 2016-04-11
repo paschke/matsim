@@ -40,6 +40,7 @@ import playground.paschke.qsim.CarSharingRelocationTimesReader;
 import playground.paschke.qsim.CarSharingRelocationZonesReader;
 import playground.paschke.qsim.RelocationAgent;
 import playground.paschke.qsim.RelocationAgentsPlansWriterListener;
+import playground.paschke.qsim.RelocationQsimFactory;
 import playground.paschke.qsim.RelocationZoneKmlWriterListener;
 
 
@@ -86,43 +87,35 @@ public class FreeFloatingControler {
 
 		CarSharingDemandTracker demandTracker = new CarSharingDemandTracker(controler);
 
-		Map<Id<Person>, RelocationAgent> relocationAgents = new HashMap<Id<Person>, RelocationAgent>();
-
-		// TODO: number of relocation agents should be configurable
-		Id<Link> relocationAgentBaseLinkId = Id.createLinkId(150535); 
-		int counter = 0;
-		while (counter < 30) {
-			Id<Person> id = Id.createPersonId("DemonAgent" + counter);
-			RelocationAgent agent = new RelocationAgent(id, relocationAgentBaseLinkId, sc, carSharingVehicles);
-			relocationAgents.put(id, agent);
-
-			counter++;
-		}
-
-		installCarSharing(controler, carSharingVehicles, demandTracker, relocationAgents);
+		installCarSharing(controler, carSharingVehicles, demandTracker);
 		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.run();
 	}
 
-	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Map<Id<Person>, RelocationAgent> relocationAgents) {
+	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker) {
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
 				this.addPlanStrategyBinding("RandomTripToCarsharingStrategy").to( RandomTripToCarsharingStrategy.class ) ;
 				this.addPlanStrategyBinding("CarsharingSubtourModeChoiceStrategy").to( CarsharingSubtourModeChoiceStrategy.class ) ;
-			     /*
-			      * This tells Guice that whenever it sees a dependency on a CarSharingVehicles instance,
-			      * it should satisfy the dependency using this static CarSharingVehicles.
-			      */
+				/*
+				 * This tells Guice that whenever it sees a dependency on a CarSharingVehicles instance,
+				 * it should satisfy the dependency using this static CarSharingVehicles.
+				 */
 				bind(CarSharingVehicles.class).toInstance(carSharingVehicles);
 				bind(CarSharingDemandTracker.class).toInstance(demandTracker);
-				bind(new TypeLiteral<Map<Id<Person>, RelocationAgent>>() {}).toInstance(relocationAgents);
-				bindMobsim().toProvider( CarsharingQsimFactory.class );
-				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationAgentsDispatcher.class);
-				this.addMobsimListenerBinding().to(RelocationAgentsInsertListener.class);
+			}
+		});
 
-				// 2016-03-17 binding this class to avoid calling setScoringFunctionFactory because CarsharingScoringFunctionFactory cannot be instanciated. Will this work?
-				bind(ScoringFunctionFactory.class).to(CarsharingScoringFunctionFactory.class);
+		controler.addOverridingModule(new AbstractModule() {
+			@Override
+			public void install() {
+				bindMobsim().toProvider( RelocationQsimFactory.class );
+
+				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationAgentsDispatcher.class);
+				//this.addMobsimListenerBinding().to(RelocationAgentsInsertListener.class);
+				//setting up the scoring function factory, inside different scoring functions are set-up
+				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
 			}
 		});
 
@@ -134,6 +127,6 @@ public class FreeFloatingControler {
 
 		controler.addControlerListener(demandTracker);
 		controler.addControlerListener(new RelocationZoneKmlWriterListener(controler, csConfig.getStatsWriterFrequency()));
-		controler.addControlerListener(new RelocationAgentsPlansWriterListener(controler, relocationAgents));
+//		controler.addControlerListener(new RelocationAgentsPlansWriterListener(controler, relocationAgents));
 	}
 }
