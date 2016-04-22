@@ -20,6 +20,7 @@
 package playground.johannes.synpop.sim;
 
 import gnu.trove.map.TDoubleDoubleMap;
+import org.apache.log4j.Logger;
 import org.matsim.contrib.common.stats.Discretizer;
 import playground.johannes.synpop.analysis.Predicate;
 import playground.johannes.synpop.data.CommonKeys;
@@ -39,6 +40,8 @@ import java.util.Collection;
  */
 public class UnivariatFrequency2 implements Hamiltonian, AttributeChangeListener {
 
+    private final static Logger logger = Logger.getLogger(UnivariatFrequency2.class);
+
     private final DynamicDoubleArray refFreq;
 
     private final HistogramBuilder histBuilder;
@@ -46,6 +49,10 @@ public class UnivariatFrequency2 implements Hamiltonian, AttributeChangeListener
     private DynamicDoubleArray simFreq;
 
     private double scaleFactor;
+
+//    private double refSum;
+
+//    private double simSum;
 
     private double binCount;
 
@@ -69,6 +76,14 @@ public class UnivariatFrequency2 implements Hamiltonian, AttributeChangeListener
 
     private double errorExponent = 1.0;
 
+    private final double noRefValError = 1e6;
+
+    private long iterations = 0;
+
+    private final long resetInterval = (long)1e7;
+
+    private final boolean debugMode = false;
+
     public UnivariatFrequency2(TDoubleDoubleMap refHist, HistogramBuilder histBuilder,
                                String attrKey, Discretizer discretizer, boolean useWeights, boolean absoluteMode) {
         this.histBuilder = histBuilder;
@@ -90,10 +105,21 @@ public class UnivariatFrequency2 implements Hamiltonian, AttributeChangeListener
         this.errorExponent = exponent;
     }
 
-    private void init(Collection<? extends Person> simPersons) {
+    private void initHistogram(Collection<? extends Person> simPersons) {
         TDoubleDoubleMap simHist = histBuilder.build(simPersons);
+        DynamicDoubleArray tempFreq = DynamicArrayBuilder.build(simHist, discretizer);
 
-        simFreq = DynamicArrayBuilder.build(simHist, discretizer);
+        if(simFreq != null) {
+            for (int i = 0; i < tempFreq.size(); i++) {
+                if (tempFreq.get(i) != simFreq.get(i))
+                    logger.warn(String.format("Histogram out of sync: idx = %s, old = %s, new = %s",
+                            i,
+                            simFreq.get(i),
+                            tempFreq.get(i)));
+            }
+        }
+
+        simFreq = tempFreq;
 
         double refSum = 0;
         double simSum = 0;
@@ -105,31 +131,45 @@ public class UnivariatFrequency2 implements Hamiltonian, AttributeChangeListener
         }
 
         scaleFactor = simSum/refSum;
+    }
+
+    private void initHamiltonian() {
+        hamiltonianValue = 0;
+//        double scaleFactor = simSum/refSum;
 
         for (int i = 0; i < binCount; i++) {
             double simVal = simFreq.get(i);
             double refVal = refFreq.get(i) * scaleFactor;
 
-            hamiltonianValue += calculateError(simVal, refVal) / binCount;
+
+            hamiltonianValue += calculateError(simVal, refVal);
         }
     }
 
 
     @Override
     public void onChange(Object dataKey, Object oldValue, Object newValue, CachedElement element) {
-        if (this.dataKey == null) this.dataKey = Converters.getObjectKey(attrKey);
+        if(simFreq != null) {
+            if (this.dataKey == null) this.dataKey = Converters.getObjectKey(attrKey);
 
-        if (this.dataKey.equals(dataKey) && evaluatePredicate(element)) {
-            double delta = 1.0;
-            if(useWeights) delta = (Double)element.getData(weightKey);
+            if (this.dataKey.equals(dataKey) && evaluatePredicate(element)) {
+                double delta = 1.0;
+                if (useWeights) delta = (Double) element.getData(weightKey);
 
-            int bucket = discretizer.index((Double) oldValue);
-            double diff1 = changeBucketContent(bucket, -delta);
+                double diff1 = 0;
+                if (oldValue != null) {
+                    int bucket = discretizer.index((Double) oldValue);
+                    diff1 = changeBucketContent(bucket, -delta);
+                }
 
-            bucket = discretizer.index((Double) newValue);
-            double diff2 = changeBucketContent(bucket, delta);
+                double diff2 = 0;
+                if (newValue != null) {
+                    int bucket = discretizer.index((Double) newValue);
+                    diff2 = changeBucketContent(bucket, delta);
+                }
 
-            hamiltonianValue += (diff1 + diff2) / binCount;
+                hamiltonianValue += (diff1 + diff2);
+            }
         }
     }
 
@@ -147,6 +187,8 @@ public class UnivariatFrequency2 implements Hamiltonian, AttributeChangeListener
     }
 
     private double changeBucketContent(int bucketIndex, double value) {
+//        double scaleFactor = simSum/refSum;
+
         double simVal = simFreq.get(bucketIndex);
         double refVal = refFreq.get(bucketIndex) * scaleFactor;
         double oldDiff = calculateError(simVal, refVal);
@@ -160,10 +202,24 @@ public class UnivariatFrequency2 implements Hamiltonian, AttributeChangeListener
         return newDiff - oldDiff;
     }
 
+
     @Override
     public double evaluate(Collection<CachedPerson> population) {
-        if(simFreq == null) init(population);
-        return hamiltonianValue;
+        if(simFreq == null) {
+            initHistogram(population);
+            initHamiltonian();
+        }
+
+        iterations++;
+        if(iterations % resetInterval == 0) {
+            double h_old = hamiltonianValue;
+            if(debugMode) initHistogram(population);
+            initHamiltonian();
+            if(h_old != hamiltonianValue)
+                logger.trace(String.format("Reset hamiltonian: %s -> %s", h_old, hamiltonianValue));
+        }
+
+        return hamiltonianValue/binCount;
     }
 
     private double calculateError(double simVal, double refVal) {
@@ -176,7 +232,7 @@ public class UnivariatFrequency2 implements Hamiltonian, AttributeChangeListener
                 return err;
             } else {
                 if (simVal == 0) return 0;
-                else return Double.MAX_VALUE;
+                else return noRefValError;
 //                else return simVal/scaleFactor; //TODO: this should be invariant from the sample size of sim values.
                 // Not sure if scaleFactor is the appropriate normalization...
             }
