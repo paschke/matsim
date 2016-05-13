@@ -15,6 +15,7 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
 import org.matsim.contrib.carsharing.config.OneWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.TwoWayCarsharingConfigGroup;
+import org.matsim.contrib.carsharing.config.CarsharingAreasReader;
 import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
 import org.matsim.contrib.carsharing.stations.OneWayCarsharingStation;
 import org.matsim.contrib.carsharing.stations.TwoWayCarsharingStation;
@@ -72,7 +73,16 @@ public class CarSharingVehicles {
 		LinkUtils linkUtils = new LinkUtils(this.scenario.getNetwork());
 		
 		if (configGroupff.useFeeFreeFloating()) {
-			 reader = IOUtils.getBufferedReader(configGroupff.getvehiclelocations());
+			String areasInputFile = configGroupff.getAreas();
+			CarsharingAreas carsharingAreasff = null;
+
+			if (areasInputFile != null) {
+				new CarsharingAreasReader(scenario).parse(areasInputFile, FreeFloatingConfigGroup.GROUP_NAME);
+
+				carsharingAreasff = (CarsharingAreas) scenario.getScenarioElement(CarsharingAreas.ELEMENT_NAME + FreeFloatingConfigGroup.GROUP_NAME);
+			}
+
+			reader = IOUtils.getBufferedReader(configGroupff.getvehiclelocations());
 			    s = reader.readLine();
 			    s = reader.readLine();
 			    int i = 1;
@@ -86,8 +96,17 @@ public class CarSharingVehicles {
 			    	Coord coordStart = new Coord(Double.parseDouble(arr[2]), Double.parseDouble(arr[3]));
 					Link l = linkUtils.getClosestLink(coordStart);		    	
 					ArrayList<String> vehIDs = new ArrayList<String>();
-			    	
-			    	for (int k = 0; k < Integer.parseInt(arr[6]); k++) {
+
+					if (carsharingAreasff != null) {
+						if (carsharingAreasff.contains(l.getCoord()) == false) {
+							log.warn("trying to add a freefloating vehicle at station with ID " + arr[6] + " outside of the defined freefloating area at " + arr[2] + " / " + arr[3] + ". This station will not be available to agents.");
+							s = reader.readLine();
+
+							continue;
+						}
+					}
+
+					for (int k = 0; k < Integer.parseInt(arr[6]); k++) {
 			    		vehIDs.add(Integer.toString(i));
 			    		i++;
 			    	}
