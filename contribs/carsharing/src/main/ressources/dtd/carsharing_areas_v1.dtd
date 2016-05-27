@@ -3,10 +3,10 @@
 <!-- ============================================================ -->
 
 
-<!ELEMENT polygons (polygon)*>
+<!ELEMENT areas (area)*>
 
-<!ELEMENT polygon (node)*>
-<!ATTLIST polygon  id  CDATA #REQUIRED>
+<!ELEMENT area (node)*>
+<!ATTLIST area  id  CDATA #REQUIRED>
 
 <!ELEMENT node EMPTY>
 <!ATTLIST node              x   CDATA #REQUIRED
