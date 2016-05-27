@@ -46,13 +46,13 @@ public class CarsharingAreasReader extends MatsimXmlParser {
 
 	@Override
 	public void startTag(String name, Attributes atts, Stack<String> context) {
-		if (name.equals("polygons")) {
+		if (name.equals("areas")) {
 			this.carsharingAreas = new CarsharingAreas();
 
 			counter = new Counter("reading freefloating area # ");
 		}
 
-		if (name.equals("polygon")) {
+		if (name.equals("area")) {
 			counter.incCounter();
 			this.idString = atts.getValue("id");
 			this.coords = new ArrayList<Coord>();
@@ -73,7 +73,7 @@ public class CarsharingAreasReader extends MatsimXmlParser {
 
 	@Override
 	public void endTag(final String name, final String content, final Stack<String> context) {
-		if (name.equals("polygon")) {
+		if (name.equals("area")) {
 			Coord[] coordsArray = this.coords.toArray(new Coord[this.coords.size()]);
 			SimpleFeature carsharingArea = this.polygonFeatureFactory.createPolygon(coordsArray);
 			carsharingArea.setAttribute("id", this.idString);
@@ -82,7 +82,7 @@ public class CarsharingAreasReader extends MatsimXmlParser {
 			this.carsharingAreas.add(carsharingArea);
 		}
 
-		if (name.equals("polygons")) {
+		if (name.equals("areas")) {
 			counter.printCounter();
 			scenario.addScenarioElement(CarsharingAreas.ELEMENT_NAME + this.groupName, this.carsharingAreas);
 		}
