@@ -24,14 +24,14 @@ public class RelocationZoneKmlWriterListener implements IterationEndsListener {
 	@Override
 	public void notifyIterationEnds(IterationEndsEvent event) {
 		CarSharingRelocationZones relocationZones = (CarSharingRelocationZones) this.controler.getScenario().getScenarioElement(CarSharingRelocationZones.ELEMENT_NAME);
-		Iterator<Entry<Double, Map<Coord, List<Integer>>>> statusIterator = relocationZones.getStatus().entrySet().iterator();
-
+//		Iterator<Entry<Double, Map<Coord, List<Integer>>>> statusIterator = relocationZones.getStatus().entrySet().iterator();
+/*
 		while (statusIterator.hasNext()) {
 			Map.Entry<Double, Map<Coord, List<Integer>>> entry = statusIterator.next();
 			Double time = entry.getKey();
 			String filename = this.controler.getControlerIO().getIterationFilename(event.getIteration(), time + ".relocation_zones.xml");
 
 			this.writer.write(filename, entry.getValue());
-		}
+		}*/
 	}
 }

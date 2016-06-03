@@ -12,52 +12,84 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.log4j.Logger;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.QuadTree;
+import org.matsim.core.utils.gis.PointFeatureFactory;
+import org.opengis.feature.simple.SimpleFeature;
+
+import com.vividsolutions.jts.geom.MultiPolygon;
+import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Polygon;
 
 public class CarSharingRelocationZones {
+	private PointFeatureFactory pointFeatureFactory;
+
 	private static final Logger log = Logger.getLogger("dummy");
+
 	public static final String ELEMENT_NAME = "carSharingRelocationZones";
-	private QuadTree<RelocationZone> relocationZoneQuadTree;
-	private HashMap<Double, Map<Coord, List<Integer>>> status= new HashMap<Double, Map<Coord, List<Integer>>>();
 
-	public void setRelocationZoneLocations(List<RelocationZone> relocationZones) {
-    	// TODO read QuadTree dimensions from config (the following is just copied from FreeFloatingVehiclesLocation)
-    	double minx = (1.0D / 0.0D);
-	    double miny = (1.0D / 0.0D);
-	    double maxx = (-1.0D / 0.0D);
-	    double maxy = (-1.0D / 0.0D);
+	private ArrayList<RelocationZone> relocationZones = new ArrayList<RelocationZone>();
 
-	    for (RelocationZone r: relocationZones) {
-	    	if (r.getCoord().getX() < minx) minx = r.getCoord().getX();
-	    	if (r.getCoord().getY() < miny) miny = r.getCoord().getY();
-	    	if (r.getCoord().getX() > maxx) maxx = r.getCoord().getX();
-	    	if (r.getCoord().getY() <= maxy) continue; maxy = r.getCoord().getY();
-	    }
-	    minx -= 1.0D; miny -= 1.0D; maxx += 1.0D; maxy += 1.0D;
+	private Map<Double, Map<String, List<Integer>>> status = new HashMap<Double, Map<String, List<Integer>>>();
 
-	    relocationZoneQuadTree = new QuadTree<RelocationZone>(minx, miny, maxx, maxy);
-
-	    for (RelocationZone r: relocationZones) {  
-	    	relocationZoneQuadTree.put(r.getCoord().getX(), r.getCoord().getY(), r);
-	    }
+	public CarSharingRelocationZones() {
+		this.pointFeatureFactory = new PointFeatureFactory.Builder()
+				.setName("point")
+				.setCrs(DefaultGeographicCRS.WGS84)
+				.create();
 	}
 
-	public QuadTree<RelocationZone> getQuadTree() {
-		return this.relocationZoneQuadTree;
+	public void add(RelocationZone relocationZone) {
+		// TODO: add checks to avoid overlapping zones
+		this.relocationZones.add(relocationZone);
 	}
 
-	public Map<Double, Map<Coord, List<Integer>>> getStatus() {
+	public List<RelocationZone> getRelocationZones() {
+		return this.relocationZones;
+	}
+
+	public void addRequests(Link link, int numberOfRequests) {
+		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
+		Point point = (Point) pointFeature.getAttribute("the_geom");
+
+		for (RelocationZone relocationZone : this.getRelocationZones()) {
+			MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
+
+			if (polygon.contains(point)) {
+				relocationZone.addRequests(link, numberOfRequests);
+
+				break;
+			}
+		}
+	}
+
+	public void addVehicles(Link link, ArrayList<String> IDs) {
+		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
+		Point point = (Point) pointFeature.getAttribute("the_geom");
+
+		for (RelocationZone relocationZone : this.getRelocationZones()) {
+			MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
+
+			if (polygon.contains(point)) {
+				relocationZone.addVehicles(link, IDs);
+
+				break;
+			}
+		}
+	}
+
+	public Map<Double, Map<String, List<Integer>>> getStatus() {
 		return this.status;
 	}
 
-	public void putStatus(double time, Map<Coord, List<Integer>> status) {
+	public void putStatus(double time, Map<String, List<Integer>> status) {
 		this.status.put(new Double(time), status);
 	}
 
 	public void reset() {
-		for (RelocationZone r : this.getQuadTree().values()) {
+		for (RelocationZone r : this.getRelocationZones()) {
 			r.reset();
 		}
 	}
@@ -65,8 +97,7 @@ public class CarSharingRelocationZones {
 	public ArrayList<RelocationInfo> getRelocations() {
 		ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
 
-		List<RelocationZone> relocationZones = new ArrayList<RelocationZone>(this.getQuadTree().values());
-		Collections.sort(relocationZones, new Comparator<RelocationZone>() {
+		Collections.sort(this.getRelocationZones(), new Comparator<RelocationZone>() {
 
 			@Override
 			public int compare(RelocationZone o1, RelocationZone o2) {
@@ -80,23 +111,24 @@ public class CarSharingRelocationZones {
 			}
 		});
 
-		Iterator<RelocationZone> iterator = relocationZones.iterator();
+		Iterator<RelocationZone> iterator = this.getRelocationZones().iterator();
 		while (iterator.hasNext()) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
-			log.info("relocationZone with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
+			log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
 			if (nextZone.getNumberOfSurplusVehicles() < 0) {
+				Collection<RelocationZone> adjacentZones = this.getAdjacentZones(nextZone);
+
 				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
 					log.info("counting down surplus vehicles: " + i);
 					Link fromLink = null;
 					Link toLink = (Link) ((Set<Link>) nextZone.getRequests().keySet()).iterator().next();
 					String vehicleId = null;
-					Collection<RelocationZone> adjacentZones = this.getAdjacentZones(nextZone);
 
 					Iterator<RelocationZone> adjacentIterator = adjacentZones.iterator();
 					while (adjacentIterator.hasNext()) {
 						RelocationZone adjacentZone = (RelocationZone) adjacentIterator.next();
-						log.info("adjacentZone has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
+						log.info("adjacentZone " + adjacentZone.getId().toString() + " has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
 						if (adjacentZone.getNumberOfSurplusVehicles() > 0) {
 							Iterator<Link> links = adjacentZone.getVehicles().keySet().iterator();
@@ -130,10 +162,19 @@ public class CarSharingRelocationZones {
 	}
 
 	protected Collection<RelocationZone> getAdjacentZones(RelocationZone currentZone) {
-		// FIXME: hard-coded zone distance here
-		Collection<RelocationZone> zones = this.getQuadTree().getDisk(currentZone.getCoord().getX(), currentZone.getCoord().getY(), 5001);
-		zones.remove(currentZone);
+		Collection<RelocationZone> relocationZones = new ArrayList<RelocationZone>(this.getRelocationZones());
+		Collection<RelocationZone> adjacentZones = new ArrayList<RelocationZone>();
+		relocationZones.remove(currentZone);
+		MultiPolygon currentPolygon = (MultiPolygon) currentZone.getPolygon().getAttribute("the_geom");
 
-		return zones;
+		for (RelocationZone relocationZone : relocationZones) {
+			MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
+
+			if (polygon.touches(currentPolygon)) {
+				adjacentZones.add(relocationZone);
+			}
+		}
+
+		return adjacentZones;
 	}
 }

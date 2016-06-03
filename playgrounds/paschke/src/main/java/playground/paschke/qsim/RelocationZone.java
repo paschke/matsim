@@ -8,21 +8,34 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Identifiable;
 import org.matsim.api.core.v01.network.Link;
+import org.opengis.feature.simple.SimpleFeature;
 
-public class RelocationZone {
-	private Coord coord;
+public class RelocationZone implements Identifiable<RelocationZone>{
+	private Id<RelocationZone> id;
+
+	private SimpleFeature polygon;
+
 	private Map<Link, Integer> requests;
+
 	private Map<Link, CopyOnWriteArrayList<String>> vehicles;
 
-	public RelocationZone(Coord coord) {
-		this.coord = coord;
+	public RelocationZone(final Id<RelocationZone> id, SimpleFeature polygon) {
+		this.id = id;
+		this.polygon = polygon;
 		this.requests = new HashMap<Link, Integer>();
 		this.vehicles = new ConcurrentHashMap<Link, CopyOnWriteArrayList<String>>();
 	}
 
-	public Coord getCoord() {
-		return coord;
+	@Override
+	public Id<RelocationZone> getId() {
+		return this.id;
+	}
+
+	public SimpleFeature getPolygon() {
+		return this.polygon;
 	}
 
 	public Map<Link, Integer> getRequests() {

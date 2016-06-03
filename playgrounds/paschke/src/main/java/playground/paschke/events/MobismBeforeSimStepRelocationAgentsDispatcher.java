@@ -72,27 +72,23 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			relocationZones.reset();
 
 			// estimate demand in cells from logged CarSharingRequests
-			// TODO: adding request info could be wrapped inside RelocationZones
 			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), end)) {
 				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());
-				RelocationZone relocationZone = relocationZones.getQuadTree().getClosest(link.getCoord().getX(), link.getCoord().getY());
-				relocationZone.addRequests(link, 1);
+				relocationZones.addRequests(link, 1);
 			}
 
 			// count number of vehicles in car sharing relocation zones
-			// TODO: adding vehicles could be wrapped inside RelocationZone
 			for (FreeFloatingStation ffs : carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
 				Link ffsLink = scenario.getNetwork().getLinks().get(ffs.getLinkId());
-				RelocationZone relocationZone = relocationZones.getQuadTree().getClosest(ffsLink.getCoord().getX(), ffsLink.getCoord().getY());
-				relocationZone.addVehicles(ffsLink, ffs.getIDs());
+				relocationZones.addVehicles(ffsLink, ffs.getIDs());
 			}
 
 			// compare available vehicles to demand for each zone, store result
-			Map<Coord, List<Integer>> relocationZonesStatus = new HashMap<Coord, List<Integer>>();
-			for (RelocationZone relocationZone : relocationZones.getQuadTree().values()) {
-				relocationZonesStatus.put(relocationZone.getCoord(), Arrays.asList(relocationZone.getNumberOfVehicles(), relocationZone.getNumberOfRequests()));
-			}
-			relocationZones.putStatus(now, relocationZonesStatus);
+//			Map<Coord, List<Integer>> relocationZonesStatus = new HashMap<Coord, List<Integer>>();
+//			for (RelocationZone relocationZone : relocationZones.getQuadTree().values()) {
+//				relocationZonesStatus.put(relocationZone.getCoord(), Arrays.asList(relocationZone.getNumberOfVehicles(), relocationZone.getNumberOfRequests()));
+//			}
+//			relocationZones.putStatus(now, relocationZonesStatus);
 
 			for (RelocationInfo info : relocationZones.getRelocations()) {
 				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getDestinationLinkId());
