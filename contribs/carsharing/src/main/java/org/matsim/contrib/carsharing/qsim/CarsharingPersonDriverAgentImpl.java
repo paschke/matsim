@@ -180,9 +180,9 @@ public class CarsharingPersonDriverAgentImpl implements MobsimDriverAgent, Mobsi
 		CarsharingAreas carsharingAreasff = (CarsharingAreas) scenario.getScenarioElement(CarsharingAreas.ELEMENT_NAME + FreeFloatingConfigGroup.GROUP_NAME);
 		if (carsharingAreasff != null) {
 			if ((carsharingAreasff.contains(currentLink.getCoord()) == false) || (carsharingAreasff.contains(destinationLink.getCoord()) == false)) {
-		}
-			this.setStateToAbort(now);
-			return;
+				this.setStateToAbort(now);
+				return;
+			}
 		}
 
 		FreeFloatingStation station = findClosestAvailableCar(currentLink);
