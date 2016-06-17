@@ -84,11 +84,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			}
 
 			// compare available vehicles to demand for each zone, store result
-//			Map<Coord, List<Integer>> relocationZonesStatus = new HashMap<Coord, List<Integer>>();
-//			for (RelocationZone relocationZone : relocationZones.getQuadTree().values()) {
-//				relocationZonesStatus.put(relocationZone.getCoord(), Arrays.asList(relocationZone.getNumberOfVehicles(), relocationZone.getNumberOfRequests()));
-//			}
-//			relocationZones.putStatus(now, relocationZonesStatus);
+			relocationZones.storeStatus(now);
 
 			for (RelocationInfo info : relocationZones.getRelocations()) {
 				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getDestinationLinkId());

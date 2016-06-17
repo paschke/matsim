@@ -1,6 +1,7 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -14,6 +15,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.log4j.Logger;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.QuadTree;
 import org.matsim.core.utils.gis.PointFeatureFactory;
@@ -32,7 +34,7 @@ public class CarSharingRelocationZones {
 
 	private ArrayList<RelocationZone> relocationZones = new ArrayList<RelocationZone>();
 
-	private Map<Double, Map<String, List<Integer>>> status = new HashMap<Double, Map<String, List<Integer>>>();
+	private Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>> status = new HashMap<Double, Map<Id<RelocationZone>, Map<String, Integer>>>();
 
 	public CarSharingRelocationZones() {
 		this.pointFeatureFactory = new PointFeatureFactory.Builder()
@@ -80,12 +82,8 @@ public class CarSharingRelocationZones {
 		}
 	}
 
-	public Map<Double, Map<String, List<Integer>>> getStatus() {
+	public Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>> getStatus() {
 		return this.status;
-	}
-
-	public void putStatus(double time, Map<String, List<Integer>> status) {
-		this.status.put(new Double(time), status);
 	}
 
 	public void reset() {
@@ -114,9 +112,9 @@ public class CarSharingRelocationZones {
 		Iterator<RelocationZone> iterator = this.getRelocationZones().iterator();
 		while (iterator.hasNext()) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
-			log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
 			if (nextZone.getNumberOfSurplusVehicles() < 0) {
+				log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 				Collection<RelocationZone> adjacentZones = this.getAdjacentZones(nextZone);
 
 				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
@@ -159,6 +157,19 @@ public class CarSharingRelocationZones {
 		}
 
 		return relocations;
+	}
+
+	public void storeStatus(double now) {
+		Map<Id<RelocationZone>, Map<String, Integer>> relocationZonesStatus = new HashMap<Id<RelocationZone>, Map<String, Integer>>();
+
+		for (RelocationZone relocationZone : this.getRelocationZones()) {
+			Map<String, Integer> zoneStatus = new HashMap<String, Integer>();
+			zoneStatus.put("vehicles", relocationZone.getNumberOfVehicles());
+			zoneStatus.put("requests", relocationZone.getNumberOfRequests());
+			relocationZonesStatus.put(relocationZone.getId(), zoneStatus);
+		}
+
+		this.status.put(now, relocationZonesStatus);
 	}
 
 	protected Collection<RelocationZone> getAdjacentZones(RelocationZone currentZone) {
