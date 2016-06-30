@@ -80,7 +80,6 @@ public class FreeFloatingControler {
 
 		try {
 			carSharingVehicles = new CarSharingVehicles(sc);
-			carSharingVehicles.readVehicleLocations();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

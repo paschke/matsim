@@ -57,7 +57,7 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 
 		this.writeStartTag("Document", Collections.<Tuple<String, String>>emptyList());
 		this.writeStartTag("name", Collections.<Tuple<String, String>>emptyList());
-		this.writeContent("Drawing", false);
+		this.writeContent("Relocation Zones", false);
 		this.writeEndTag("name");
 
 		Iterator<Entry<Id<RelocationZone>, Map<String, Integer>>> iterator = status.entrySet().iterator();
@@ -76,6 +76,9 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 			}
 
 			this.writeStartTag("Placemark", Arrays.asList(createTuple("id", "linepolygon_" + entry.getKey().toString())));
+			this.writeStartTag("description", Collections.<Tuple<String, String>>emptyList());
+			this.writeContent("vehicles: " + entry.getValue().get("vehicles") + " requests: " + entry.getValue().get("requests"), true);
+			this.writeEndTag("description");
 			this.writeStartTag("Style", Collections.<Tuple<String, String>>emptyList());
 			this.writeStartTag("LineStyle", Collections.<Tuple<String, String>>emptyList());
 			this.writeStartTag("color", Collections.<Tuple<String, String>>emptyList());

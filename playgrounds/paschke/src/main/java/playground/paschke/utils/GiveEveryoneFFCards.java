@@ -5,14 +5,12 @@ import java.util.Map;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.MatsimNetworkReader;
 import org.matsim.core.population.MatsimPopulationReader;
 import org.matsim.core.population.PersonImpl;
 import org.matsim.core.population.PopulationImpl;
 import org.matsim.core.population.PopulationReader;
-import org.matsim.core.scenario.ScenarioImpl;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
@@ -34,9 +32,9 @@ public class GiveEveryoneFFCards {
 		Map<Id<Person>, PersonImpl> persons = (Map<Id<Person>, PersonImpl>) population.getPersons();
 
 		for (PersonImpl person : persons.values()) {
-			if (person.hasLicense()) {
-				atts.putAttribute(person.getId().toString(), "FF_CARD", "true");
-			}
+			//if (person.hasLicense()) {
+			//	atts.putAttribute(person.getId().toString(), "FF_CARD", "true");
+			//}
 		}
 
 		ObjectAttributesXmlWriter betaWriter = new ObjectAttributesXmlWriter(atts);

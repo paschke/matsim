@@ -57,45 +57,51 @@ public class RelocationQsimFactory implements Provider<Netsim>{
 		}
 
 		QSim qSim = new QSim(sc, eventsManager);
-		
+
 		ActivityEngine activityEngine = new ActivityEngine(eventsManager, qSim.getAgentCounter());
 		qSim.addMobsimEngine(activityEngine);
 		qSim.addActivityHandler(activityEngine);
 
-
         QNetsimEngineModule.configure(qSim);
-		
+
 		TeleportationEngine teleportationEngine = new TeleportationEngine(sc, eventsManager);
 		qSim.addMobsimEngine(teleportationEngine);
-				
+
 		AgentFactory agentFactory = null;
 		RelocationAgentFactory relocationAgentFactory = null;
-			
-		TravelTime travelTime = travelTimes.get( TransportMode.car ) ;
 
-		TravelDisutilityFactory travelDisutilityFactory = travelDisutilityFactories.get( TransportMode.car ) ;
-		TravelDisutility travelDisutility = travelDisutilityFactory.createTravelDisutility(travelTime) ;
+		try {
+			//a simple way to place vehicles at the original location at the start of each simulation
+			carSharingVehicles.readVehicleLocations();
 
-		LeastCostPathCalculator pathCalculator = pathCalculatorFactory.createPathCalculator(sc.getNetwork(), travelDisutility, travelTime ) ;
+			TravelTime travelTime = travelTimes.get( TransportMode.car ) ;
 
-		agentFactory = new CarsharingAgentFactory(qSim, sc, this.carSharingVehicles, pathCalculator);		
-		
-		if (sc.getConfig().network().isTimeVariantNetwork()) 
-			qSim.addMobsimEngine(new NetworkChangeEventsEngine());		
-		
-		PopulationAgentSource agentSource = new PopulationAgentSource(sc.getPopulation(), agentFactory, qSim);
-		
-		//we need to park carsharing vehicles on the network
-		ParkCSVehicles parkSource = new ParkCSVehicles(sc.getPopulation(), agentFactory, qSim,
+			TravelDisutilityFactory travelDisutilityFactory = travelDisutilityFactories.get( TransportMode.car ) ;
+			TravelDisutility travelDisutility = travelDisutilityFactory.createTravelDisutility(travelTime) ;
+
+			LeastCostPathCalculator pathCalculator = pathCalculatorFactory.createPathCalculator(sc.getNetwork(), travelDisutility, travelTime ) ;
+
+			agentFactory = new CarsharingAgentFactory(qSim, sc, this.carSharingVehicles, pathCalculator);
+
+			if (sc.getConfig().network().isTimeVariantNetwork())
+				qSim.addMobsimEngine(new NetworkChangeEventsEngine());
+
+			PopulationAgentSource agentSource = new PopulationAgentSource(sc.getPopulation(), agentFactory, qSim);
+
+			//we need to park carsharing vehicles on the network
+			ParkCSVehicles parkSource = new ParkCSVehicles(sc.getPopulation(), agentFactory, qSim,
 				this.carSharingVehicles.getFreeFLoatingVehicles(), this.carSharingVehicles.getOneWayVehicles(), this.carSharingVehicles.getTwoWayVehicles());
 
-		relocationAgentFactory = new RelocationAgentFactory(sc);
+			relocationAgentFactory = new RelocationAgentFactory(sc);
 
-		RelocationAgentSource relocationAgentSource = new RelocationAgentSource(relocationAgentFactory, qSim, this.routerProvider, this.carSharingVehicles);
+			RelocationAgentSource relocationAgentSource = new RelocationAgentSource(relocationAgentFactory, qSim, this.routerProvider, this.carSharingVehicles);
 
-		qSim.addAgentSource(agentSource);
-		qSim.addAgentSource(parkSource);
-		qSim.addAgentSource(relocationAgentSource);
+			qSim.addAgentSource(agentSource);
+			qSim.addAgentSource(parkSource);
+			qSim.addAgentSource(relocationAgentSource);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
 		return qSim;
 	}
