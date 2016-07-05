@@ -51,33 +51,35 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 		return this.coords;
 	}
 
-	public void write(final String filename, Map<Id<RelocationZone>, Map<String, Integer>> status) {
+	public void write(final int iteration, final String filename, Map<Id<RelocationZone>, Map<String, Integer>> status) {
 		this.openFile(filename);
 		this.writeStartTag("kml", Arrays.asList(createTuple("xmlns", "http://www.opengis.net/kml/2.2"), createTuple("xmlns:gx", "http://www.google.com/kml/ext/2.2"), createTuple("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"), createTuple("xsi:schemalocation", "http://www.opengis.net/kml/2.2 https://developers.google.com/kml/schema/kml22gx.xsd")));
 
 		this.writeStartTag("Document", Collections.<Tuple<String, String>>emptyList());
 		this.writeStartTag("name", Collections.<Tuple<String, String>>emptyList());
-		this.writeContent("Relocation Zones", false);
+		this.writeContent("Relocation Zones " + iteration, false);
 		this.writeEndTag("name");
 
 		Iterator<Entry<Id<RelocationZone>, Map<String, Integer>>> iterator = status.entrySet().iterator();
 		while (iterator.hasNext()) {
 			Entry<Id<RelocationZone>, Map<String, Integer>> entry = iterator.next();
 
-			String lineColor = "ff0000ff";
-			String polyColor = "660000ff";
+			Integer numVehicles = entry.getValue().get("vehicles");
+			Integer numRequests = entry.getValue().get("requests");
+			String lineColor = "ffff0000";
+			String polyColor = "66ff0000";
 
-			if (entry.getValue().get("vehicles") - entry.getValue().get("requests") < 0) {
-				lineColor = "ffff0000";
-				polyColor = "66ff0000";
-			} else if (entry.getValue().get("vehicles") - entry.getValue().get("requests") > 0) {
+			if (numVehicles - numRequests < 0) {
+				lineColor = "ff0000ff";
+				polyColor = "660000ff";
+			} else if (numVehicles - numRequests > 0) {
 				lineColor = "ff00ff00";
 				polyColor = "6600ff00";
 			}
 
 			this.writeStartTag("Placemark", Arrays.asList(createTuple("id", "linepolygon_" + entry.getKey().toString())));
 			this.writeStartTag("description", Collections.<Tuple<String, String>>emptyList());
-			this.writeContent("vehicles: " + entry.getValue().get("vehicles") + " requests: " + entry.getValue().get("requests"), true);
+			this.writeContent("vehicles: " + numVehicles.toString() + " requests: " + numRequests.toString(), true);
 			this.writeEndTag("description");
 			this.writeStartTag("Style", Collections.<Tuple<String, String>>emptyList());
 			this.writeStartTag("LineStyle", Collections.<Tuple<String, String>>emptyList());

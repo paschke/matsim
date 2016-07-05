@@ -54,7 +54,6 @@ public class CarSharingDemandTracker implements IterationStartsListener {
 
 			s = reader.readLine();
 		    s = reader.readLine();
-		    int i = 1;
 		    while(s != null) {
 		    	String[] arr = s.split("\t", -1);
 
@@ -71,12 +70,10 @@ public class CarSharingDemandTracker implements IterationStartsListener {
 	}
 
 	public class RequestInfo {
-		private Id<Person> personId = null;
 		private double startTime = 0.0;
 		private Id<Link> accessLinkId = null;
 
 		public RequestInfo(Id<Person> personId, double startTime, Id<Link> accessLinkId) {
-			this.personId = personId;
 			this.startTime = startTime;
 			this.accessLinkId = accessLinkId;
 		}

@@ -1,7 +1,6 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -14,18 +13,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.log4j.Logger;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
-import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.core.utils.collections.QuadTree;
 import org.matsim.core.utils.gis.PointFeatureFactory;
 import org.opengis.feature.simple.SimpleFeature;
 
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.geom.Polygon;
 
-public class CarSharingRelocationZones {
+public class RelocationZones {
 	private PointFeatureFactory pointFeatureFactory;
 
 	private static final Logger log = Logger.getLogger("dummy");
@@ -36,7 +32,7 @@ public class CarSharingRelocationZones {
 
 	private Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>> status = new HashMap<Double, Map<Id<RelocationZone>, Map<String, Integer>>>();
 
-	public CarSharingRelocationZones() {
+	public RelocationZones() {
 		this.pointFeatureFactory = new PointFeatureFactory.Builder()
 				.setName("point")
 				.setCrs(DefaultGeographicCRS.WGS84)

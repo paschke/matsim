@@ -9,14 +9,14 @@ import org.matsim.core.utils.misc.Counter;
 import org.matsim.core.utils.misc.Time;
 import org.xml.sax.Attributes;
 
-public class CarSharingRelocationTimesReader extends MatsimXmlParser {
+public class RelocationTimesReader extends MatsimXmlParser {
 	private final Scenario scenario;
 
 	private ArrayList<Double> relocationTimesList;
 
 	private Counter counter;
 
-	public CarSharingRelocationTimesReader(Scenario scenario) {
+	public RelocationTimesReader(Scenario scenario) {
 		this.scenario = scenario;
 	}
 

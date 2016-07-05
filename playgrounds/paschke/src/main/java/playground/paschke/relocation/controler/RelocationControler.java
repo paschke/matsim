@@ -1,18 +1,10 @@
-package playground.paschke.freefloating.controler;
+package playground.paschke.relocation.controler;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import com.google.inject.TypeLiteral;
-
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.network.Link;
-import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.carsharing.config.CarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.CarsharingVehicleRelocationConfigGroup;
 import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
@@ -20,7 +12,6 @@ import org.matsim.contrib.carsharing.config.OneWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.TwoWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.control.listeners.CarsharingListener;
 import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
-import org.matsim.contrib.carsharing.qsim.CarsharingQsimFactory;
 import org.matsim.contrib.carsharing.replanning.CarsharingSubtourModeChoiceStrategy;
 import org.matsim.contrib.carsharing.replanning.RandomTripToCarsharingStrategy;
 import org.matsim.contrib.carsharing.runExample.CarsharingUtils;
@@ -31,20 +22,15 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.scoring.ScoringFunctionFactory;
-
 import playground.paschke.events.MobismBeforeSimStepRelocationAgentsDispatcher;
-import playground.paschke.events.RelocationAgentsInsertListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
-import playground.paschke.qsim.CarSharingRelocationTimesReader;
-import playground.paschke.qsim.CarSharingRelocationZonesReader;
-import playground.paschke.qsim.RelocationAgent;
-import playground.paschke.qsim.RelocationAgentsPlansWriterListener;
+import playground.paschke.qsim.RelocationTimesReader;
+import playground.paschke.qsim.RelocationZonesReader;
 import playground.paschke.qsim.RelocationQsimFactory;
 import playground.paschke.qsim.RelocationZoneKmlWriterListener;
 
 
-public class FreeFloatingControler {
+public class RelocationControler {
 	public static void main(final String[] args) {
 		Logger.getLogger( "org.matsim.core.controler.Injector" ).setLevel(Level.OFF);
 
@@ -69,10 +55,10 @@ public class FreeFloatingControler {
 		// load relocation zones
 		final CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
 			config.getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
-		new CarSharingRelocationZonesReader(sc).parse(confGroup.getRelocationZones());
+		new RelocationZonesReader(sc).parse(confGroup.getRelocationZones());
 
 		// load relocation times
-		new CarSharingRelocationTimesReader(sc).parse(confGroup.getRelocationTimes());
+		new RelocationTimesReader(sc).parse(confGroup.getRelocationTimes());
 
 		final Controler controler = new Controler(sc);
 

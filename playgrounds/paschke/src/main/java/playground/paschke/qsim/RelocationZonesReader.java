@@ -10,16 +10,15 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.utils.gis.PolygonFeatureFactory;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.core.utils.misc.Counter;
-import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.opengis.feature.simple.SimpleFeature;
 import org.xml.sax.Attributes;
 
-public class CarSharingRelocationZonesReader extends MatsimXmlParser {
+public class RelocationZonesReader extends MatsimXmlParser {
 	private PolygonFeatureFactory polygonFeatureFactory;
 
 	private final Scenario scenario;
 
-	private CarSharingRelocationZones relocationZones;
+	private RelocationZones relocationZones;
 
 	private Counter counter;
 
@@ -27,7 +26,7 @@ public class CarSharingRelocationZonesReader extends MatsimXmlParser {
 
 	private ArrayList<Coord> coords;
 
-	public CarSharingRelocationZonesReader(Scenario scenario) {
+	public RelocationZonesReader(Scenario scenario) {
 		this.polygonFeatureFactory = new PolygonFeatureFactory.Builder()
 				.setName("carsharing_relocation_zone")
 				.setCrs(DefaultGeographicCRS.WGS84)
@@ -40,7 +39,7 @@ public class CarSharingRelocationZonesReader extends MatsimXmlParser {
 	@Override
 	public void startTag(final String name, final Attributes atts, final Stack<String> context) {
 		if (name.equals("relocationZones")) {
-			this.relocationZones = new CarSharingRelocationZones();
+			this.relocationZones = new RelocationZones();
 
 			counter = new Counter("reading car sharing relocation zone # ");
 		}
@@ -75,7 +74,7 @@ public class CarSharingRelocationZonesReader extends MatsimXmlParser {
 
 		if (name.equals("relocationZones")) {
 			counter.printCounter();
-			scenario.addScenarioElement(CarSharingRelocationZones.ELEMENT_NAME, this.relocationZones);
+			scenario.addScenarioElement(RelocationZones.ELEMENT_NAME, this.relocationZones);
 		}
 	}
 }
