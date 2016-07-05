@@ -33,6 +33,7 @@ public class CarSharingVehicles {
 	private static final Logger log = Logger.getLogger(CarSharingVehicles.class);
 
 	private Scenario scenario;
+	private CarsharingAreas carsharingAreasff;
 	private FreeFloatingVehiclesLocation ffvehiclesLocation;
 	private OneWayCarsharingVehicleLocation owvehiclesLocation;
 	private TwoWayCarsharingVehicleLocation twvehiclesLocation;
@@ -74,12 +75,11 @@ public class CarSharingVehicles {
 		
 		if (configGroupff.useFeeFreeFloating()) {
 			String areasInputFile = configGroupff.getAreas();
-			CarsharingAreas carsharingAreasff = null;
 
-			if (areasInputFile != null) {
+			if ((this.carsharingAreasff == null) && (areasInputFile != null)) {
 				new CarsharingAreasReader(scenario).parse(areasInputFile, FreeFloatingConfigGroup.GROUP_NAME);
 
-				carsharingAreasff = (CarsharingAreas) scenario.getScenarioElement(CarsharingAreas.ELEMENT_NAME + FreeFloatingConfigGroup.GROUP_NAME);
+				this.carsharingAreasff = (CarsharingAreas) scenario.getScenarioElement(CarsharingAreas.ELEMENT_NAME + FreeFloatingConfigGroup.GROUP_NAME);
 			}
 
 			reader = IOUtils.getBufferedReader(configGroupff.getvehiclelocations());
@@ -97,8 +97,8 @@ public class CarSharingVehicles {
 					Link l = linkUtils.getClosestLink(coordStart);		    	
 					ArrayList<String> vehIDs = new ArrayList<String>();
 
-					if (carsharingAreasff != null) {
-						if (carsharingAreasff.contains(l.getCoord()) == false) {
+					if (this.carsharingAreasff != null) {
+						if (this.carsharingAreasff.contains(l.getCoord()) == false) {
 							log.warn("trying to add a freefloating vehicle at station with ID " + arr[6] + " outside of the defined freefloating area at " + arr[2] + " / " + arr[3] + ". This station will not be available to agents.");
 							s = reader.readLine();
 

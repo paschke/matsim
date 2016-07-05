@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import org.matsim.contrib.carsharing.control.listeners.FFEventsHandler.RentalInfoFF;
 import org.matsim.contrib.carsharing.control.listeners.NoParkingEventHandler.NoParkingInfo;
 import org.matsim.contrib.carsharing.control.listeners.NoVehicleEventHandler.NoVehicleInfo;
-import org.matsim.contrib.carsharing.control.listeners.CarSharingRequestEventHandler.CarSharingRequestInfo;
 import org.matsim.contrib.carsharing.control.listeners.OWEventsHandler.RentalInfoOW;
 import org.matsim.contrib.carsharing.control.listeners.TwoWayEventsHandler.RentalInfo;
 import org.matsim.core.controler.MatsimServices;
@@ -26,7 +25,6 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 	OWEventsHandler owhandler;
 	NoVehicleEventHandler noVehicleHandler;
 	NoParkingEventHandler noParkingHandler;
-	CarSharingRequestEventHandler carSharingRequestEventHandler;
 	MatsimServices controler;
 	int frequency = 0;
 	
@@ -119,24 +117,6 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 			e.printStackTrace();
 		}
 
-		ArrayList<CarSharingRequestInfo> infoCarSharingRequest = carSharingRequestEventHandler.info();
-
-		final BufferedWriter outCarSharingRequest = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "CarSharing_Requests_Stats.txt"));
-		try {
-			outCarSharingRequest.write("time linkID	CSType");
-			outCarSharingRequest.newLine();
-
-			for (CarSharingRequestInfo i: infoCarSharingRequest) {
-				outCarSharingRequest.write(i.toString());
-				outCarSharingRequest.newLine();
-			}
-
-			outCarSharingRequest.flush();
-			outCarSharingRequest.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
 		ArrayList<NoParkingInfo> infoNoParking = noParkingHandler.info();
 		
 		final BufferedWriter outNoParking = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "No_Parking_Stats.txt"));
@@ -161,26 +141,21 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 		event.getServices().getEvents().removeHandler(this.owhandler);
 		event.getServices().getEvents().removeHandler(this.noVehicleHandler);
 		event.getServices().getEvents().removeHandler(this.noParkingHandler);
-		event.getServices().getEvents().removeHandler(this.carSharingRequestEventHandler);
 		}
 		
 	}
 
 	@Override
 	public void notifyStartup(StartupEvent event) {
-		// TODO Auto-generated method stub
-
         this.cshandler = new TwoWayEventsHandler(event.getServices().getScenario().getNetwork());
 
         this.ffhandler = new FFEventsHandler(event.getServices().getScenario().getNetwork());
 
         this.owhandler = new OWEventsHandler(event.getServices().getScenario().getNetwork());
-		
+
 		this.noVehicleHandler = new NoVehicleEventHandler();
-		
+
 		this.noParkingHandler = new NoParkingEventHandler();
-		
-		this.carSharingRequestEventHandler = new CarSharingRequestEventHandler();
 	}
 
 	@Override
@@ -192,7 +167,6 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 			event.getServices().getEvents().addHandler(this.owhandler);
 			event.getServices().getEvents().addHandler(this.noVehicleHandler);
 			event.getServices().getEvents().addHandler(this.noParkingHandler);
-			event.getServices().getEvents().addHandler(this.carSharingRequestEventHandler);
 		}
 	}
 }

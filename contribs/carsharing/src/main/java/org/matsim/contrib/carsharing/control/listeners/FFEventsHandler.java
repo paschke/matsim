@@ -23,7 +23,6 @@ import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
 import org.matsim.vehicles.Vehicle;
 
 public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonEntersVehicleEventHandler, PersonArrivalEventHandler, PersonDepartureEventHandler, LinkLeaveEventHandler{
-	private static final Logger log = Logger.getLogger(PersonDriverAgentImpl.class);
 	private HashMap<Id<Person>, ArrayList<RentalInfoFF>> ffRentalsStats = new HashMap<Id<Person>, ArrayList<RentalInfoFF>>();
 	private ArrayList<RentalInfoFF> arr = new ArrayList<RentalInfoFF>();
 	private HashMap<Id<Person>, Boolean> inVehicle = new HashMap<Id<Person>, Boolean>();
@@ -46,23 +45,11 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 	
 	@Override
 	public void handleEvent(PersonLeavesVehicleEvent event) {
-		if (event.getPersonId().toString().startsWith("DemonAgent")) {
-			Id<Person> personId = event.getPersonId();
-			Id<Vehicle> vehicleId = event.getVehicleId();
-			log.info("agent " + personId + " leaves vehicle " + vehicleId);
-		}
-
 		personVehicles.remove(event.getVehicleId());
 	}
 
 	@Override
 	public void handleEvent(PersonEntersVehicleEvent event) {
-		if (event.getPersonId().toString().startsWith("DemonAgent")) {
-			Id<Person> personId = event.getPersonId();
-			Id<Vehicle> vehicleId = event.getVehicleId();
-			log.info("agent " + personId + " enters vehicle " + vehicleId);
-		}
-
 		if (event.getVehicleId().toString().startsWith("FF")) {
 			Id<Vehicle> vehicleId = event.getVehicleId();
 			Id<Person> personId = event.getPersonId();
@@ -75,11 +62,6 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 		if (event.getVehicleId().toString().startsWith("FF")) {
 			Id<Person> perid = personVehicles.get(event.getVehicleId());
 
-			if (perid.toString().startsWith("DemonAgent")) {
-				Id<Vehicle> vehicleId = event.getVehicleId();
-				log.info("agent " + perid + " with vehicle " + vehicleId + " leaves link " + event.getLinkId());
-			}
-
 			if (ffRentalsStats.get(perid) != null) {
 				RentalInfoFF info = ffRentalsStats.get(perid).get(ffRentalsStats.get(perid).size() - 1);
 				info.vehId = event.getVehicleId();
@@ -90,11 +72,6 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 
 	@Override
 	public void handleEvent(PersonDepartureEvent event) {
-		if (event.getPersonId().toString().startsWith("DemonAgent")) {
-			Id<Person> personId = event.getPersonId();
-			log.info("agent " + personId + " departs");
-		}
-
 		inVehicle.put(event.getPersonId(), false);
 		if (event.getLegMode().equals("walk_ff")) {
 			RentalInfoFF info = new RentalInfoFF();
@@ -125,11 +102,6 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 
 	@Override
 	public void handleEvent(PersonArrivalEvent event) {
-		if (event.getPersonId().toString().startsWith("DemonAgent")) {
-			Id<Person> personId = event.getPersonId();
-			log.info("agent " + personId + " arrives");
-		}
-		
 		if (event.getLegMode().equals("freefloating")) {
 			Id<Person> personId = event.getPersonId();
 
