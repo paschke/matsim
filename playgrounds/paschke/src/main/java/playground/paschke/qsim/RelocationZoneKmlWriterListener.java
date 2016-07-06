@@ -39,7 +39,7 @@ public class RelocationZoneKmlWriterListener implements IterationEndsListener {
 			Double time = entry.getKey();
 			String filename = this.controler.getControlerIO().getIterationFilename(event.getIteration(), time + ".relocation_zones.xml");
 
-			writer.write(event.getIteration(), filename, entry.getValue());
+			writer.write(time, filename, entry.getValue());
 		}
 	}
 }

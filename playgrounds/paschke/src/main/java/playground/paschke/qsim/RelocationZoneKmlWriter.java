@@ -51,13 +51,13 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 		return this.coords;
 	}
 
-	public void write(final int iteration, final String filename, Map<Id<RelocationZone>, Map<String, Integer>> status) {
+	public void write(final Double time, final String filename, Map<Id<RelocationZone>, Map<String, Integer>> status) {
 		this.openFile(filename);
 		this.writeStartTag("kml", Arrays.asList(createTuple("xmlns", "http://www.opengis.net/kml/2.2"), createTuple("xmlns:gx", "http://www.google.com/kml/ext/2.2"), createTuple("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"), createTuple("xsi:schemalocation", "http://www.opengis.net/kml/2.2 https://developers.google.com/kml/schema/kml22gx.xsd")));
 
 		this.writeStartTag("Document", Collections.<Tuple<String, String>>emptyList());
 		this.writeStartTag("name", Collections.<Tuple<String, String>>emptyList());
-		this.writeContent("Relocation Zones " + iteration, false);
+		this.writeContent("Relocation Zones " + time, false);
 		this.writeEndTag("name");
 
 		Iterator<Entry<Id<RelocationZone>, Map<String, Integer>>> iterator = status.entrySet().iterator();
