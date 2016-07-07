@@ -27,7 +27,7 @@ import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.RelocationTimesReader;
 import playground.paschke.qsim.RelocationZonesReader;
 import playground.paschke.qsim.RelocationQsimFactory;
-import playground.paschke.qsim.RelocationZoneKmlWriterListener;
+import playground.paschke.qsim.RelocationListener;
 
 
 public class RelocationControler {
@@ -111,7 +111,7 @@ public class RelocationControler {
 		controler.addControlerListener(new CarsharingListener(controler, csConfig.getStatsWriterFrequency()));
 
 		controler.addControlerListener(demandTracker);
-		controler.addControlerListener(new RelocationZoneKmlWriterListener(controler, csConfig.getStatsWriterFrequency()));
+		controler.addControlerListener(new RelocationListener(controler, csConfig.getStatsWriterFrequency()));
 //		controler.addControlerListener(new RelocationAgentsPlansWriterListener(controler, relocationAgents));
 	}
 }

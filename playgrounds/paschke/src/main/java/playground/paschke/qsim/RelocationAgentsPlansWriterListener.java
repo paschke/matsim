@@ -13,10 +13,8 @@ public class RelocationAgentsPlansWriterListener implements IterationEndsListene
 	protected Map<Id<Person>, RelocationAgent> relocationAgents;
 	protected RelocationAgentsPlansWriter writer;
 
-	public RelocationAgentsPlansWriterListener(Controler controler,
-			Map<Id<Person>, RelocationAgent> relocationAgents) {
+	public RelocationAgentsPlansWriterListener(Controler controler) {
 		this.controler = controler;
-		this.relocationAgents = relocationAgents;
 		this.writer = new RelocationAgentsPlansWriter();
 	}
 

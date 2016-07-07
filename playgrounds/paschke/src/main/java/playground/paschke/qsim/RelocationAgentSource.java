@@ -37,7 +37,7 @@ public class RelocationAgentSource implements AgentSource {
 		// TODO: number of relocation agents should be configurable
 		Id<Link> relocationAgentBaseLinkId = Id.createLinkId(150535);
 		int counter = 0;
-		while (counter < 30) {
+		while (counter < 100) {
 			Id<Person> id = Id.createPersonId("DemonAgent" + counter);
 			RelocationAgent agent = this.relocationAgentFactory.createRelocationAgent(id, relocationAgentBaseLinkId);
 			agent.setGuidance(new Guidance(this.routerProvider.get()));

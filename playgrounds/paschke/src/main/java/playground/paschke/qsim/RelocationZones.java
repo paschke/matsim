@@ -28,7 +28,9 @@ public class RelocationZones {
 
 	public static final String ELEMENT_NAME = "carSharingRelocationZones";
 
-	private ArrayList<RelocationZone> relocationZones = new ArrayList<RelocationZone>();
+	private ArrayList<RelocationZone> relocationZones;
+
+	private ArrayList<RelocationInfo> relocations;
 
 	private Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>> status = new HashMap<Double, Map<Id<RelocationZone>, Map<String, Integer>>>();
 
@@ -37,6 +39,9 @@ public class RelocationZones {
 				.setName("point")
 				.setCrs(DefaultGeographicCRS.WGS84)
 				.create();
+
+		this.relocationZones = new ArrayList<RelocationZone>();
+		this.relocations = new ArrayList<RelocationInfo>();
 	}
 
 	public void add(RelocationZone relocationZone) {
@@ -46,6 +51,10 @@ public class RelocationZones {
 
 	public List<RelocationZone> getRelocationZones() {
 		return this.relocationZones;
+	}
+
+	public List<RelocationInfo> getRelocations() {
+		return this.relocations;
 	}
 
 	public void addRequests(Link link, int numberOfRequests) {
@@ -82,13 +91,18 @@ public class RelocationZones {
 		return this.status;
 	}
 
-	public void reset() {
+	public void resetRelocationZones() {
 		for (RelocationZone r : this.getRelocationZones()) {
 			r.reset();
 		}
 	}
 
-	public ArrayList<RelocationInfo> getRelocations() {
+	public void reset() {
+		this.resetRelocationZones();
+		this.relocations = new ArrayList<RelocationInfo>();
+	}
+
+	public ArrayList<RelocationInfo> calculateRelocations(double now, double then) {
 		ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
 
 		Collections.sort(this.getRelocationZones(), new Comparator<RelocationZone>() {
@@ -120,8 +134,9 @@ public class RelocationZones {
 					String vehicleId = null;
 
 					Iterator<RelocationZone> adjacentIterator = adjacentZones.iterator();
+					RelocationZone adjacentZone = null;
 					while (adjacentIterator.hasNext()) {
-						RelocationZone adjacentZone = (RelocationZone) adjacentIterator.next();
+						adjacentZone = (RelocationZone) adjacentIterator.next();
 						log.info("adjacentZone " + adjacentZone.getId().toString() + " has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
 						if (adjacentZone.getNumberOfSurplusVehicles() > 0) {
@@ -144,13 +159,16 @@ public class RelocationZones {
 					}
 
 					if ((fromLink != null) && (vehicleId != null)) {
-						relocations.add(new RelocationInfo(vehicleId, fromLink.getId(), toLink.getId()));
+						String timeSlot = Double.toString(now) + " - " + Double.toString(then);
+						relocations.add(new RelocationInfo(timeSlot, nextZone.getId().toString(), adjacentZone.getId().toString(), vehicleId, fromLink.getId(), toLink.getId()));
 					}
 				}
 			} else {
 				break;
 			}
 		}
+
+		this.relocations.addAll(relocations);
 
 		return relocations;
 	}

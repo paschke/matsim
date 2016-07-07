@@ -218,7 +218,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 	}
 
 	private void executeRelocation(RelocationInfo relocationInfo) {
-		this.destinationLinkId = relocationInfo.getDestinationLinkId();
+		this.destinationLinkId = relocationInfo.getEndLinkId();
 		this.transportMode = TransportMode.car;
 		// TODO: set vehicle
 		this.startLeg(TransportMode.car);
@@ -233,11 +233,15 @@ public class RelocationAgent implements MobsimDriverAgent {
 			this.startActivity();
 		} else {
 			if (this.getDestinationLinkId().equals(this.relocations.get(0).getStartLinkId())) {
-				this.executeRelocation(this.relocations.get(0));
-			} else if (this.getDestinationLinkId().equals(this.relocations.get(0).getDestinationLinkId())) {
+				RelocationInfo relocationInfo = this.relocations.get(0);
+				relocationInfo.setStartTime(now);
+				this.executeRelocation(relocationInfo);
+			} else if (this.getDestinationLinkId().equals(this.relocations.get(0).getEndLinkId())) {
 				this.deliverCarSharingVehicle();
 
 				try {
+					RelocationInfo relocationInfo = this.relocations.get(0);
+					relocationInfo.setEndTime(now);
 					this.relocations.remove(0); 
 					this.prepareRelocation(this.relocations.get(0));
 				} catch (IndexOutOfBoundsException e) {

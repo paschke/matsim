@@ -43,7 +43,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 		this.scenario = qSim.getScenario();
 
 		double now = Math.floor(qSim.getSimTimer().getTimeOfDay());
-		double end;
+		double then;
 
 		// relocation times will only be called if there are activities (usually starting with 32400.0), which makes sense
 		@SuppressWarnings("unchecked")
@@ -53,17 +53,17 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 		if (relocationTimes.contains(now)) {
 			int index = relocationTimes.indexOf(now);
 			try {
-				end = relocationTimes.get(index + 1);
+				then = relocationTimes.get(index + 1);
 			} catch (IndexOutOfBoundsException e) {
-				end = 86400.0;
+				then = 86400.0;
 			}
 
 			log.info("is it that time again? " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
 
-			relocationZones.reset();
+			relocationZones.resetRelocationZones();
 
 			// estimate demand in cells from logged CarSharingRequests
-			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), end)) {
+			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), then)) {
 				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());
 				relocationZones.addRequests(link, 1);
 			}
@@ -77,8 +77,8 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			// compare available vehicles to demand for each zone, store result
 			relocationZones.storeStatus(now);
 
-			for (RelocationInfo info : relocationZones.getRelocations()) {
-				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getDestinationLinkId());
+			for (RelocationInfo info : relocationZones.calculateRelocations(now, then)) {
+				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
 
 				this.dispatchRelocation(qSim, info);
 			}
@@ -87,6 +87,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 	private void dispatchRelocation(QSim qSim, RelocationInfo info) {
 		RelocationAgent agent = this.getRelocationAgent(qSim);
+		info.setAgentId(agent.getId());
 
 		if (agent != null) {
 			agent.dispatchRelocation(info);
@@ -96,7 +97,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	private RelocationAgent getRelocationAgent(QSim qSim) {
 		int counter = 0;
 
-		while (counter < 30) {
+		while (counter < 100) {
 			Id<Person> id = Id.createPersonId("DemonAgent" + counter);
 			RelocationAgent agent = (RelocationAgent) qSim.getAgentMap().get(id);
 
