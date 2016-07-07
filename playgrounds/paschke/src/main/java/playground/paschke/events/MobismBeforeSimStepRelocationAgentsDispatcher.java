@@ -98,7 +98,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 		int counter = 0;
 
 		while (counter < 100) {
-			Id<Person> id = Id.createPersonId("DemonAgent" + counter);
+			Id<Person> id = Id.createPersonId("RelocationAgent" + counter);
 			RelocationAgent agent = (RelocationAgent) qSim.getAgentMap().get(id);
 
 			if ((agent.getState() == State.ACTIVITY) && (agent.getRelocations().size() == 0)) {
