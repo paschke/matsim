@@ -12,17 +12,21 @@ public class RelocationAgentsPlansWriterListener implements IterationEndsListene
 	protected Controler controler;
 	protected Map<Id<Person>, RelocationAgent> relocationAgents;
 	protected RelocationAgentsPlansWriter writer;
+	protected int frequency = 0;
 
-	public RelocationAgentsPlansWriterListener(Controler controler) {
+	public RelocationAgentsPlansWriterListener(Controler controler, int frequency) {
 		this.controler = controler;
+		this.frequency = frequency;
 		this.writer = new RelocationAgentsPlansWriter();
 	}
 
 	@Override
 	public void notifyIterationEnds(IterationEndsEvent event) {
-		String filename = this.controler.getControlerIO().getIterationFilename(event.getIteration(), "relocation_agents_plans.xml");
+		if (event.getIteration() % this.frequency == 0) {
+			String filename = this.controler.getControlerIO().getIterationFilename(event.getIteration(), "relocation_agents_plans.xml");
 
-		this.writer.write(filename, this.relocationAgents);
+			this.writer.write(filename, this.relocationAgents);
+		}
 	}
 
 }

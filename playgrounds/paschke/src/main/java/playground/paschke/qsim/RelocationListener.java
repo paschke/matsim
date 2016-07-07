@@ -38,43 +38,45 @@ public class RelocationListener implements IterationStartsListener, IterationEnd
 	public void notifyIterationEnds(IterationEndsEvent event) {
 		RelocationZones relocationZones = (RelocationZones) this.controler.getScenario().getScenarioElement(RelocationZones.ELEMENT_NAME);
 
-		// write relocation zone KML files
-		RelocationZoneKmlWriter writer = new RelocationZoneKmlWriter();
-		Map<Id<RelocationZone>, MultiPolygon> polygons = new HashMap<Id<RelocationZone>, MultiPolygon>();
+		if (event.getIteration() % this.frequency == 0) {
+			// write relocation zone KML files
+			RelocationZoneKmlWriter writer = new RelocationZoneKmlWriter();
+			Map<Id<RelocationZone>, MultiPolygon> polygons = new HashMap<Id<RelocationZone>, MultiPolygon>();
 
-		for (RelocationZone relocationZone : relocationZones.getRelocationZones()) {
-			polygons.put(relocationZone.getId(), (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom"));
-		}
-
-		writer.setPolygons(polygons);
-		Iterator<Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> statusIterator = relocationZones.getStatus().entrySet().iterator();
-
-		while (statusIterator.hasNext()) {
-			Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>> entry = statusIterator.next();
-			Double time = entry.getKey();
-			String filename = this.controler.getControlerIO().getIterationFilename(event.getIteration(), time + ".relocation_zones.xml");
-
-			writer.write(time, filename, entry.getValue());
-		}
-
-		// log relocations
-		ArrayList<RelocationInfo> relocations = (ArrayList<RelocationInfo>) relocationZones.getRelocations();
-		
-		final BufferedWriter outRelocations = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "relocations"));
-		try {
-			outRelocations.write("timeSlot	startZone	endZone	startTime	endTime	startLink	endLink	vehicleID	agentID");
-			outRelocations.newLine();
-
-			for (RelocationInfo i: relocations) {
-				outRelocations.write(i.toString());
-				outRelocations.newLine();
+			for (RelocationZone relocationZone : relocationZones.getRelocationZones()) {
+				polygons.put(relocationZone.getId(), (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom"));
 			}
 
-			outRelocations.flush();
-			outRelocations.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			writer.setPolygons(polygons);
+			Iterator<Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> statusIterator = relocationZones.getStatus().entrySet().iterator();
+
+			while (statusIterator.hasNext()) {
+				Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>> entry = statusIterator.next();
+				Double time = entry.getKey();
+				String filename = this.controler.getControlerIO().getIterationFilename(event.getIteration(), time + ".relocation_zones.xml");
+
+				writer.write(time, filename, entry.getValue());
+			}
+
+			// log relocations
+			ArrayList<RelocationInfo> relocations = (ArrayList<RelocationInfo>) relocationZones.getRelocations();
+		
+			final BufferedWriter outRelocations = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "relocations"));
+			try {
+				outRelocations.write("timeSlot	startZone	endZone	startTime	endTime	startLink	endLink	vehicleID	agentID");
+				outRelocations.newLine();
+
+				for (RelocationInfo i: relocations) {
+					outRelocations.write(i.toString());
+					outRelocations.newLine();
+				}
+
+				outRelocations.flush();
+				outRelocations.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 }
