@@ -79,7 +79,7 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 
 			this.writeStartTag("Placemark", Arrays.asList(createTuple("id", "linepolygon_" + entry.getKey().toString())));
 			this.writeStartTag("description", Collections.<Tuple<String, String>>emptyList());
-			this.writeContent("vehicles: " + numVehicles.toString() + " requests: " + numRequests.toString(), true);
+			this.writeContent("ID: " + entry.getKey().toString() + "vehicles: " + numVehicles.toString() + " requests: " + numRequests.toString(), true);
 			this.writeEndTag("description");
 			this.writeStartTag("Style", Collections.<Tuple<String, String>>emptyList());
 			this.writeStartTag("LineStyle", Collections.<Tuple<String, String>>emptyList());
