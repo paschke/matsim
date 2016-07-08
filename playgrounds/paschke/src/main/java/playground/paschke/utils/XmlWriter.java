@@ -24,7 +24,7 @@ public class XmlWriter extends MatsimXmlWriter {
 			this.writeStartTag("relocationZone", Arrays.asList(createTuple("id", entry.getKey().toString())));
 
 			for (Coord coord : entry.getValue()) {
-				this.writeStartTag("node", Arrays.asList(createTuple("x", coord.getX()), createTuple("y", coord.getY())), true);
+				this.writeStartTag("node", Arrays.asList(createTuple("x", Math.floor(coord.getX())), createTuple("y", Math.floor(coord.getY()))), true);
 			}
 
 			this.writeEndTag("relocationZone");
