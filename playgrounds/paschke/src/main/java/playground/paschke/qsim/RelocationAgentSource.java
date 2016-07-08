@@ -47,6 +47,7 @@ public class RelocationAgentSource implements AgentSource {
 		Iterator<Entry<String, Map<String, Double>>> baseIterator = relocationAgentBasesList.entrySet().iterator();
 		while (baseIterator.hasNext()) {
 			Entry<String, Map<String, Double>> entry = baseIterator.next();
+			String baseId = entry.getKey();
 			HashMap<String, Double> agentBaseData = (HashMap<String, Double>) entry.getValue();
 
 			Coord coord = new Coord(agentBaseData.get("x"), agentBaseData.get("y"));
@@ -54,7 +55,7 @@ public class RelocationAgentSource implements AgentSource {
 
 			int counter = 0;
 			while (counter < agentBaseData.get("number")) {
-				Id<Person> id = Id.createPersonId("RelocationAgent" + counter);
+				Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + baseId + "_"  + counter);
 				RelocationAgent agent = this.relocationAgentFactory.createRelocationAgent(id, link.getId());
 				agent.setGuidance(new Guidance(this.routerProvider.get()));
 				agent.setMobsimTimer(qSim.getSimTimer());

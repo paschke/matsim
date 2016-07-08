@@ -1,6 +1,11 @@
 package playground.paschke.events;
 
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -101,18 +106,28 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	}
 
 	private RelocationAgent getRelocationAgent(QSim qSim) {
-		int counter = 0;
+		Scenario scenario = qSim.getScenario();
+		@SuppressWarnings("unchecked")
+		Map<String, Map<String, Double>> relocationAgentBasesList = (Map<String, Map<String, Double>>) scenario.getScenarioElement("CarSharingRelocationAgents");
 
-		while (counter < 100) {
-			Id<Person> id = Id.createPersonId("RelocationAgent" + counter);
-			RelocationAgent agent = (RelocationAgent) qSim.getAgentMap().get(id);
+		Iterator<Entry<String, Map<String, Double>>> baseIterator = relocationAgentBasesList.entrySet().iterator();
+		while (baseIterator.hasNext()) {
+			Entry<String, Map<String, Double>> entry = baseIterator.next();
+			String baseId = entry.getKey();
+			HashMap<String, Double> agentBaseData = (HashMap<String, Double>) entry.getValue();
 
-			if ((agent.getState() == State.ACTIVITY) && (agent.getRelocations().size() == 0)) {
-				log.info("RelocationAgent " + agent.getId() + " reused from the agent pool");
-				return agent;
+			int counter = 0;
+			while (counter < agentBaseData.get("number")) {
+				Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + baseId + "_"  + counter);
+				RelocationAgent agent = (RelocationAgent) qSim.getAgentMap().get(id);
+
+				if ((agent.getState() == State.ACTIVITY) && (agent.getRelocations().size() == 0)) {
+					log.info("RelocationAgent " + agent.getId() + " reused from the agent pool");
+					return agent;
+				}
+
+				counter++;
 			}
-
-			counter++;
 		}
 
 		return null;

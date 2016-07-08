@@ -102,7 +102,6 @@ public class RelocationControler {
 				bindMobsim().toProvider( RelocationQsimFactory.class );
 
 				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationAgentsDispatcher.class);
-				//this.addMobsimListenerBinding().to(RelocationAgentsInsertListener.class);
 				//setting up the scoring function factory, inside different scoring functions are set-up
 				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
 			}
@@ -116,6 +115,5 @@ public class RelocationControler {
 
 		controler.addControlerListener(demandTracker);
 		controler.addControlerListener(new RelocationListener(controler, csConfig.getStatsWriterFrequency()));
-//		controler.addControlerListener(new RelocationAgentsPlansWriterListener(controler, relocationAgents));
 	}
 }
