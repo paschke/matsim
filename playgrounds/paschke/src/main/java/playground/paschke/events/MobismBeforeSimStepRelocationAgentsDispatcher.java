@@ -6,6 +6,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.carsharing.config.CarsharingVehicleRelocationConfigGroup;
 import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
 import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
 import org.matsim.core.mobsim.framework.MobsimAgent.State;
@@ -41,6 +42,9 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	public void notifyMobsimBeforeSimStep(MobsimBeforeSimStepEvent event) {
 		QSim qSim = (QSim) event.getQueueSimulation();
 		this.scenario = qSim.getScenario();
+
+		CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
+				scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
 
 		double now = Math.floor(qSim.getSimTimer().getTimeOfDay());
 		double then;
@@ -80,7 +84,9 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			for (RelocationInfo info : relocationZones.calculateRelocations(now, then)) {
 				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
 
-				this.dispatchRelocation(qSim, info);
+				if (confGroup.useRelocation()) {
+					this.dispatchRelocation(qSim, info);
+				}
 			}
 		}
 	}
