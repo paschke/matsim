@@ -79,9 +79,9 @@ public class RelocationInfo {
 				this.getEndZoneId() + "	" +
 				Time.writeTime(this.getStartTime()) + "	" +
 				Time.writeTime(this.getEndTime()) + "	" +
-				this.getStartLinkId() == null ? "null	" : this.getStartLinkId().toString() + "	" +
-				this.getEndLinkId() == null ? "null	" : this.getEndLinkId().toString() + "	" +
+				(this.getStartLinkId() == null ? "null" : this.getStartLinkId().toString()) + "	" +
+				(this.getEndLinkId() == null ? "null" : this.getEndLinkId().toString()) + "	" +
 				this.getVehicleId() + "	" +
-				this.getAgentId() == null ? "null" : this.getAgentId().toString();
+				(this.getAgentId() == null ? "null" : this.getAgentId().toString());
 	}
 }
