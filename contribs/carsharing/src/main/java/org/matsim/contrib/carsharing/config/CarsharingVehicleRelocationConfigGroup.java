@@ -10,6 +10,10 @@ public class CarsharingVehicleRelocationConfigGroup extends ReflectiveConfigGrou
 
 	private String relocationTimesInputFile = null;
 
+	private String relocationAgentsInputFile = null;
+
+	private boolean useRelocation = false;
+
 	public CarsharingVehicleRelocationConfigGroup() {
 		super(GROUP_NAME);
 	}
@@ -32,5 +36,25 @@ public class CarsharingVehicleRelocationConfigGroup extends ReflectiveConfigGrou
 	@StringSetter( "relocationTimes" )
 	public void setRelocationTimes(final String relocationTimesInputFile) {
 		this.relocationTimesInputFile = relocationTimesInputFile;
+	}
+
+	@StringGetter( "relocationAgents" )
+	public String getRelocationAgents() {
+		return this.relocationAgentsInputFile;
+	}
+
+	@StringSetter( "relocationAgents" )
+	public void setRelocationAgents(final String relocationAgentsInputFile) {
+		this.relocationAgentsInputFile = relocationAgentsInputFile;
+	}
+
+	@StringGetter( "useRelocation" )
+	public boolean useRelocation() {
+		return this.useRelocation;
+	}
+
+	@StringSetter( "useRelocation" )
+	public void setUseRelocation(final boolean useRelocation) {
+		this.useRelocation = useRelocation;
 	}
 }

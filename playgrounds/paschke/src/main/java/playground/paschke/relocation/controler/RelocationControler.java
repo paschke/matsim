@@ -24,6 +24,7 @@ import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
 import playground.paschke.events.MobismBeforeSimStepRelocationAgentsDispatcher;
 import playground.paschke.qsim.CarSharingDemandTracker;
+import playground.paschke.qsim.RelocationAgentsReader;
 import playground.paschke.qsim.RelocationTimesReader;
 import playground.paschke.qsim.RelocationZonesReader;
 import playground.paschke.qsim.RelocationQsimFactory;
@@ -59,6 +60,9 @@ public class RelocationControler {
 
 		// load relocation times
 		new RelocationTimesReader(sc).parse(confGroup.getRelocationTimes());
+
+		// load relocation agents
+		new RelocationAgentsReader(sc).parse(confGroup.getRelocationAgents());
 
 		final Controler controler = new Controler(sc);
 
