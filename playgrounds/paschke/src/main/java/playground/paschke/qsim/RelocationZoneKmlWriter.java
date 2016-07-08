@@ -13,6 +13,7 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.CH1903LV03toWGS84;
 import org.matsim.core.utils.io.MatsimXmlWriter;
+import org.matsim.core.utils.misc.Time;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.MultiPolygon;
@@ -57,7 +58,7 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 
 		this.writeStartTag("Document", Collections.<Tuple<String, String>>emptyList());
 		this.writeStartTag("name", Collections.<Tuple<String, String>>emptyList());
-		this.writeContent("Relocation Zones " + time, false);
+		this.writeContent("Relocation Zones " + Time.writeTime(time), false);
 		this.writeEndTag("name");
 
 		Iterator<Entry<Id<RelocationZone>, Map<String, Integer>>> iterator = status.entrySet().iterator();
@@ -99,7 +100,6 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 			this.writePolygon(this.getCoords().get(entry.getKey()));
 			this.writeEndTag("Placemark");
 		}
-		
 
 		this.writeEndTag("Document");
 		this.writeEndTag("kml");
