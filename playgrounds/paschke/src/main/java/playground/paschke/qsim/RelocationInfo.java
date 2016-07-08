@@ -3,6 +3,7 @@ package playground.paschke.qsim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.utils.misc.Time;
 
 public class RelocationInfo {
 	private String timeSlot;
@@ -76,8 +77,8 @@ public class RelocationInfo {
 		return this.getTimeSlot() + "	" +
 				this.getStartZoneId() + "	" +
 				this.getEndZoneId() + "	" +
-				Double.toString(this.getStartTime()) + "	" +
-				Double.toString(this.getEndTime()) + "	" +
+				Time.writeTime(this.getStartTime()) + "	" +
+				Time.writeTime(this.getEndTime()) + "	" +
 				this.getStartLinkId().toString() + "	" +
 				this.getEndLinkId().toString() + "	" +
 				this.getVehicleId() + "	" +

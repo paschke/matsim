@@ -16,6 +16,7 @@ import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.gis.PointFeatureFactory;
+import org.matsim.core.utils.misc.Time;
 import org.opengis.feature.simple.SimpleFeature;
 
 import com.vividsolutions.jts.geom.MultiPolygon;
@@ -159,8 +160,7 @@ public class RelocationZones {
 					}
 
 					if ((fromLink != null) && (vehicleId != null)) {
-						String timeSlot = Double.toString(now) + " - " + Double.toString(then);
-						relocations.add(new RelocationInfo(timeSlot, nextZone.getId().toString(), adjacentZone.getId().toString(), vehicleId, fromLink.getId(), toLink.getId()));
+						relocations.add(new RelocationInfo(Time.writeTime(now) + " - " + Time.writeTime(then), nextZone.getId().toString(), adjacentZone.getId().toString(), vehicleId, fromLink.getId(), toLink.getId()));
 					}
 				}
 			} else {
