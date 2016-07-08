@@ -160,7 +160,7 @@ public class RelocationZones {
 					}
 
 					if ((fromLink != null) && (vehicleId != null)) {
-						relocations.add(new RelocationInfo(Time.writeTime(now) + " - " + Time.writeTime(then), nextZone.getId().toString(), adjacentZone.getId().toString(), vehicleId, fromLink.getId(), toLink.getId()));
+						relocations.add(new RelocationInfo(Time.writeTime(now) + " - " + Time.writeTime(then), adjacentZone.getId().toString(), nextZone.getId().toString(), vehicleId, fromLink.getId(), toLink.getId()));
 					}
 				}
 			} else {
