@@ -139,8 +139,10 @@ public class FFEventsHandler implements PersonLeavesVehicleEventHandler, PersonE
 					startLinkId.toString() + "	" +
 					endLinkId.toString()+ "	" +
 					Double.toString(distance) + "	" +
-					Double.toString(accessEndTime - accessStartTime) + "	" +
-					Double.toString(egressEndTime - egressStartTime) + "	" +
+					Double.toString(accessStartTime) + "	" +
+					Double.toString(accessEndTime) + "	" +
+					Double.toString(egressStartTime) + "	" +
+					Double.toString(egressEndTime) + "	" +
 					vehId;
 		}
 	}

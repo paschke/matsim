@@ -58,7 +58,7 @@ public class RelocationZones {
 		return this.relocations;
 	}
 
-	public void addRequests(Link link, int numberOfRequests) {
+	public void addExpectedRequests(Link link, int numberOfRequests) {
 		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
 		Point point = (Point) pointFeature.getAttribute("the_geom");
 
@@ -66,7 +66,22 @@ public class RelocationZones {
 			MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
 
 			if (polygon.contains(point)) {
-				relocationZone.addRequests(link, numberOfRequests);
+				relocationZone.addExpectedRequests(link, numberOfRequests);
+
+				break;
+			}
+		}
+	}
+
+	public void addExpectedReturns(Link link, int numberOfReturns) {
+		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
+		Point point = (Point) pointFeature.getAttribute("the_geom");
+
+		for (RelocationZone relocationZone : this.getRelocationZones()) {
+			MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
+
+			if (polygon.contains(point)) {
+				relocationZone.addExpectedReturns(link, numberOfReturns);
 
 				break;
 			}
@@ -131,16 +146,17 @@ public class RelocationZones {
 				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
 					log.info("counting down surplus vehicles: " + i);
 					Link fromLink = null;
-					Link toLink = (Link) ((Set<Link>) nextZone.getRequests().keySet()).iterator().next();
+					Link toLink = (Link) ((Set<Link>) nextZone.getExpectedRequests().keySet()).iterator().next();
 					String vehicleId = null;
 
 					Iterator<RelocationZone> adjacentIterator = adjacentZones.iterator();
 					RelocationZone adjacentZone = null;
 					while (adjacentIterator.hasNext()) {
+						// expected returns must not be considered here
 						adjacentZone = (RelocationZone) adjacentIterator.next();
-						log.info("adjacentZone " + adjacentZone.getId().toString() + " has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
+						log.info("adjacentZone " + adjacentZone.getId().toString() + " has " + (adjacentZone.getNumberOfVehicles() - adjacentZone.getNumberOfExpectedRequests()) + " surplus vehicles");
 
-						if (adjacentZone.getNumberOfSurplusVehicles() > 0) {
+						if ((adjacentZone.getNumberOfVehicles() - adjacentZone.getNumberOfExpectedRequests()) > 0) {
 							Iterator<Link> links = adjacentZone.getVehicles().keySet().iterator();
 							fromLink = links.next();
 							CopyOnWriteArrayList<String> vehicleIds = adjacentZone.getVehicles().get(fromLink);
@@ -179,7 +195,8 @@ public class RelocationZones {
 		for (RelocationZone relocationZone : this.getRelocationZones()) {
 			Map<String, Integer> zoneStatus = new HashMap<String, Integer>();
 			zoneStatus.put("vehicles", relocationZone.getNumberOfVehicles());
-			zoneStatus.put("requests", relocationZone.getNumberOfRequests());
+			zoneStatus.put("requests", relocationZone.getNumberOfExpectedRequests());
+			zoneStatus.put("returns", relocationZone.getNumberOfExpectedReturns());
 			relocationZonesStatus.put(relocationZone.getId(), zoneStatus);
 		}
 

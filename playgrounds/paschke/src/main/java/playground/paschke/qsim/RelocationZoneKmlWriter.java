@@ -67,20 +67,21 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 
 			Integer numVehicles = entry.getValue().get("vehicles");
 			Integer numRequests = entry.getValue().get("requests");
+			Integer numReturns = entry.getValue().get("returns");
 			String lineColor = "ffff0000";
 			String polyColor = "66ff0000";
 
-			if (numVehicles - numRequests < 0) {
+			if (numVehicles + numReturns - numRequests < 0) {
 				lineColor = "ff0000ff";
 				polyColor = "660000ff";
-			} else if (numVehicles - numRequests > 0) {
+			} else if (numVehicles + numReturns - numRequests > 0) {
 				lineColor = "ff00ff00";
 				polyColor = "6600ff00";
 			}
 
 			this.writeStartTag("Placemark", Arrays.asList(createTuple("id", "linepolygon_" + entry.getKey().toString())));
 			this.writeStartTag("description", Collections.<Tuple<String, String>>emptyList());
-			this.writeContent("ID: " + entry.getKey().toString() + " vehicles: " + numVehicles.toString() + " requests: " + numRequests.toString(), true);
+			this.writeContent("ID: " + entry.getKey().toString() + " vehicles: " + numVehicles.toString() + " requests: " + numRequests.toString() + " returns: " + numReturns.toString(), true);
 			this.writeEndTag("description");
 			this.writeStartTag("Style", Collections.<Tuple<String, String>>emptyList());
 			this.writeStartTag("LineStyle", Collections.<Tuple<String, String>>emptyList());

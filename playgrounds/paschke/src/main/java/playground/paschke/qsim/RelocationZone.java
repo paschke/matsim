@@ -17,14 +17,17 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 
 	private SimpleFeature polygon;
 
-	private Map<Link, Integer> requests;
+	private Map<Link, Integer> expectedRequests;
+
+	private Map<Link, Integer> expectedReturns;
 
 	private Map<Link, CopyOnWriteArrayList<String>> vehicles;
 
 	public RelocationZone(final Id<RelocationZone> id, SimpleFeature polygon) {
 		this.id = id;
 		this.polygon = polygon;
-		this.requests = new HashMap<Link, Integer>();
+		this.expectedRequests = new HashMap<Link, Integer>();
+		this.expectedReturns = new HashMap<Link, Integer>();
 		this.vehicles = new ConcurrentHashMap<Link, CopyOnWriteArrayList<String>>();
 	}
 
@@ -37,8 +40,12 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 		return this.polygon;
 	}
 
-	public Map<Link, Integer> getRequests() {
-		return this.requests;
+	public Map<Link, Integer> getExpectedRequests() {
+		return this.expectedRequests;
+	}
+
+	public Map<Link, Integer> getExpectedReturns() {
+		return this.expectedReturns;
 	}
 
 	public Map<Link, CopyOnWriteArrayList<String>> getVehicles() {
@@ -55,11 +62,21 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 		return Ids;
 	}
 
-	public int getNumberOfRequests() {
+	public int getNumberOfExpectedRequests() {
 		int number = 0;
 
-		for (Integer linkRequests : requests.values()) {
+		for (Integer linkRequests : this.expectedRequests.values()) {
 			number += linkRequests.intValue();
+		}
+
+		return number;
+	}
+
+	public int getNumberOfExpectedReturns() {
+		int number = 0;
+
+		for (Integer linkReturns : this.expectedReturns.values()) {
+			number += linkReturns.intValue();
 		}
 
 		return number;
@@ -76,16 +93,25 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	}
 
 	public int getNumberOfSurplusVehicles() {
-		return this.getNumberOfVehicles() - this.getNumberOfRequests();
+		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests();
 	}
 
-	public void addRequests(Link link, int numberOfRequests) {
-		if (this.requests.containsKey(link)) {
-			int previousNumberOfRequests = this.requests.get(link);
+	public void addExpectedRequests(Link link, int numberOfRequests) {
+		if (this.expectedRequests.containsKey(link)) {
+			int previousNumberOfRequests = this.expectedRequests.get(link);
 			numberOfRequests += previousNumberOfRequests;
 		}
 
-		requests.put(link, numberOfRequests);
+		expectedRequests.put(link, numberOfRequests);
+	}
+
+	public void addExpectedReturns(Link link, int numberOfReturns) {
+		if (this.expectedReturns.containsKey(link)) {
+			int previousNumberOfReturns = this.expectedReturns.get(link);
+			numberOfReturns += previousNumberOfReturns;
+		}
+
+		expectedReturns.put(link, numberOfReturns);
 	}
 
 	public void addVehicles(Link link, ArrayList<String> IDs) {
@@ -99,7 +125,8 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	}
 
 	public void reset() {
-		this.requests.clear();
+		this.expectedRequests.clear();
+		this.expectedReturns.clear();
 		this.vehicles.clear();
 	}
 }

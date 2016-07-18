@@ -21,7 +21,7 @@ import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.router.TripRouter;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.RelocationAgent;
-import playground.paschke.qsim.CarSharingDemandTracker.RequestInfo;
+import playground.paschke.qsim.CarSharingDemandTracker.RentalInfoFF;
 import playground.paschke.qsim.RelocationZones;
 import playground.paschke.qsim.RelocationInfo;
 import com.google.inject.Inject;
@@ -72,9 +72,12 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			relocationZones.resetRelocationZones();
 
 			// estimate demand in cells from logged CarSharingRequests
-			for (RequestInfo info : demandTracker.getCarSharingRequestsInInterval(Math.floor(qSim.getSimTimer().getTimeOfDay()), then)) {
-				Link link = scenario.getNetwork().getLinks().get(info.getAccessLinkId());
-				relocationZones.addRequests(link, 1);
+			for (RentalInfoFF info : demandTracker.getRentalsInInterval(now, then)) {
+				Link accessLink = scenario.getNetwork().getLinks().get(info.accessLinkId);
+				relocationZones.addExpectedRequests(accessLink, 1);
+
+				Link endLink = scenario.getNetwork().getLinks().get(info.endLinkId);
+				relocationZones.addExpectedReturns(endLink, 1);
 			}
 
 			// count number of vehicles in car sharing relocation zones
