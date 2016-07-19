@@ -64,7 +64,7 @@ public class CarsharingListener implements StartupListener, IterationEndsListene
 		
 		final BufferedWriter outLinkff = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "FF_CS"));
 		try {
-			outLinkff.write("personID	startTime	endTIme	accessLink	startLink	endLink	distance	accessTime	vehicleID");
+			outLinkff.write("personID	startTime	endTIme	accessLink	startLink	endLink	distance	accessStartTime	accessEndTime	egressStartTime	egressEndTime	vehicleID");
 			outLinkff.newLine();
 
 			for (RentalInfoFF i: infoff) {
