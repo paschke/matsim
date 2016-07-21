@@ -135,40 +135,53 @@ public class RelocationZones {
 			}
 		});
 
+		int evenIndex = 0;
 		Iterator<RelocationZone> iterator = this.getRelocationZones().iterator();
+		while (iterator.hasNext()) {
+			RelocationZone nextZone = (RelocationZone) iterator.next();
+
+			if (nextZone.getNumberOfSurplusVehicles() <= 0) {
+				evenIndex++;
+			} else {
+				break;
+			}
+		}
+
+		List<RelocationZone> surplusZones = this.getRelocationZones().subList(evenIndex, (this.getRelocationZones().size() - 1));
+		Collections.reverse(surplusZones);
+
+		iterator = this.getRelocationZones().iterator();
 		while (iterator.hasNext()) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
 
 			if (nextZone.getNumberOfSurplusVehicles() < 0) {
 				log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
-				Collection<RelocationZone> adjacentZones = this.getAdjacentZones(nextZone);
 
 				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
 					log.info("counting down surplus vehicles: " + i);
 					Link fromLink = null;
 					Link toLink = (Link) ((Set<Link>) nextZone.getExpectedRequests().keySet()).iterator().next();
+					String surplusZoneId = null;
 					String vehicleId = null;
 
-					Iterator<RelocationZone> adjacentIterator = adjacentZones.iterator();
-					RelocationZone adjacentZone = null;
-					while (adjacentIterator.hasNext()) {
-						// expected returns must not be considered here
-						adjacentZone = (RelocationZone) adjacentIterator.next();
-						log.info("adjacentZone " + adjacentZone.getId().toString() + " has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
+					Iterator<RelocationZone> surplusZonesIterator = surplusZones.iterator();
+					while (surplusZonesIterator.hasNext()) {
+						RelocationZone surplusZone = surplusZonesIterator.next();
 
-						if (adjacentZone.getNumberOfSurplusVehicles() > 0) {
-							Iterator<Link> links = adjacentZone.getVehicles().keySet().iterator();
+						if (surplusZone.getNumberOfSurplusVehicles() > 0) {
+							surplusZoneId = surplusZone.getId().toString();
+							Iterator<Link> links = surplusZone.getVehicles().keySet().iterator();
 							fromLink = links.next();
-							CopyOnWriteArrayList<String> vehicleIds = adjacentZone.getVehicles().get(fromLink);
+							CopyOnWriteArrayList<String> vehicleIds = surplusZone.getVehicles().get(fromLink);
 
 							if (vehicleIds.size() == 1) {
 								log.info("found one vehicle at link " + fromLink.getId());
 								vehicleId = vehicleIds.get(0);
-								adjacentZone.getVehicles().remove(fromLink);
+								surplusZone.getVehicles().remove(fromLink);
 							} else {
 								log.info("found multiple vehicles at link " + fromLink.getId());
 								vehicleId = vehicleIds.remove(0);
-								adjacentZone.getVehicles().put(fromLink, vehicleIds);
+								surplusZone.getVehicles().put(fromLink, vehicleIds);
 							}
 
 							break;
@@ -176,7 +189,7 @@ public class RelocationZones {
 					}
 
 					if ((fromLink != null) && (vehicleId != null)) {
-						relocations.add(new RelocationInfo(Time.writeTime(now) + " - " + Time.writeTime(then), adjacentZone.getId().toString(), nextZone.getId().toString(), vehicleId, fromLink.getId(), toLink.getId()));
+						relocations.add(new RelocationInfo(Time.writeTime(now) + " - " + Time.writeTime(then), surplusZoneId, nextZone.getId().toString(), vehicleId, fromLink.getId(), toLink.getId()));
 					}
 				}
 			} else {
