@@ -154,9 +154,9 @@ public class RelocationZones {
 					while (adjacentIterator.hasNext()) {
 						// expected returns must not be considered here
 						adjacentZone = (RelocationZone) adjacentIterator.next();
-						log.info("adjacentZone " + adjacentZone.getId().toString() + " has " + (adjacentZone.getNumberOfVehicles() - adjacentZone.getNumberOfExpectedRequests()) + " surplus vehicles");
+						log.info("adjacentZone " + adjacentZone.getId().toString() + " has " + adjacentZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
-						if ((adjacentZone.getNumberOfVehicles() - adjacentZone.getNumberOfExpectedRequests()) > 0) {
+						if (adjacentZone.getNumberOfSurplusVehicles() > 0) {
 							Iterator<Link> links = adjacentZone.getVehicles().keySet().iterator();
 							fromLink = links.next();
 							CopyOnWriteArrayList<String> vehicleIds = adjacentZone.getVehicles().get(fromLink);

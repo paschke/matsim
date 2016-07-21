@@ -63,13 +63,17 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	}
 
 	public int getNumberOfExpectedRequests() {
+		return getNumberOfExpectedRequests(1.0);
+	}
+
+	public int getNumberOfExpectedRequests(double safetyFactor) {
 		int number = 0;
 
 		for (Integer linkRequests : this.expectedRequests.values()) {
 			number += linkRequests.intValue();
 		}
 
-		return number;
+		return (int) Math.ceil(number * safetyFactor);
 	}
 
 	public int getNumberOfExpectedReturns() {
@@ -93,7 +97,7 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	}
 
 	public int getNumberOfSurplusVehicles() {
-		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests();
+		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests(1.1);
 	}
 
 	public void addExpectedRequests(Link link, int numberOfRequests) {

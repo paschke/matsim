@@ -72,7 +72,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			relocationZones.resetRelocationZones();
 
 			// estimate demand in cells from logged CarSharingRequests
-			for (RentalInfoFF info : demandTracker.getRentalsInInterval(now, then)) {
+			for (RentalInfoFF info : this.demandTracker.getRentalsInInterval(now, then)) {
 				Link accessLink = scenario.getNetwork().getLinks().get(info.accessLinkId);
 				relocationZones.addExpectedRequests(accessLink, 1);
 
@@ -81,7 +81,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 			}
 
 			// count number of vehicles in car sharing relocation zones
-			for (FreeFloatingStation ffs : carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
+			for (FreeFloatingStation ffs : this.carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
 				Link ffsLink = scenario.getNetwork().getLinks().get(ffs.getLinkId());
 				relocationZones.addVehicles(ffsLink, ffs.getIDs());
 			}
