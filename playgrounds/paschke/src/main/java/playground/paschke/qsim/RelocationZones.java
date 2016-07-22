@@ -171,20 +171,22 @@ public class RelocationZones {
 						if (surplusZone.getNumberOfSurplusVehicles() > 0) {
 							surplusZoneId = surplusZone.getId().toString();
 							Iterator<Link> links = surplusZone.getVehicles().keySet().iterator();
-							fromLink = links.next();
-							CopyOnWriteArrayList<String> vehicleIds = surplusZone.getVehicles().get(fromLink);
+							if (links.hasNext()) {
+								fromLink = links.next();
+								CopyOnWriteArrayList<String> vehicleIds = surplusZone.getVehicles().get(fromLink);
 
-							if (vehicleIds.size() == 1) {
-								log.info("found one vehicle at link " + fromLink.getId());
-								vehicleId = vehicleIds.get(0);
-								surplusZone.getVehicles().remove(fromLink);
-							} else {
-								log.info("found multiple vehicles at link " + fromLink.getId());
-								vehicleId = vehicleIds.remove(0);
-								surplusZone.getVehicles().put(fromLink, vehicleIds);
+								if (vehicleIds.size() == 1) {
+									log.info("found one vehicle at link " + fromLink.getId());
+									vehicleId = vehicleIds.get(0);
+									surplusZone.getVehicles().remove(fromLink);
+								} else {
+									log.info("found multiple vehicles at link " + fromLink.getId());
+									vehicleId = vehicleIds.remove(0);
+									surplusZone.getVehicles().put(fromLink, vehicleIds);
+								}
+
+								break;
 							}
-
-							break;
 						}
 					}
 
