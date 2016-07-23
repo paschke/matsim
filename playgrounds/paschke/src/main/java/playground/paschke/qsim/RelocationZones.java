@@ -140,7 +140,7 @@ public class RelocationZones {
 		while (iterator.hasNext()) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
 
-			if (nextZone.getNumberOfSurplusVehicles() <= 0) {
+			if (nextZone.getNumberOfSurplusVehicles(1.1) <= 0) {
 				evenIndex++;
 			} else {
 				break;
@@ -168,7 +168,7 @@ public class RelocationZones {
 					while (surplusZonesIterator.hasNext()) {
 						RelocationZone surplusZone = surplusZonesIterator.next();
 
-						if (surplusZone.getNumberOfSurplusVehicles() > 0) {
+						if (surplusZone.getNumberOfSurplusVehicles(1.1) > 0) {
 							surplusZoneId = surplusZone.getId().toString();
 							Iterator<Link> links = surplusZone.getVehicles().keySet().iterator();
 							if (links.hasNext()) {

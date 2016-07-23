@@ -97,7 +97,11 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	}
 
 	public int getNumberOfSurplusVehicles() {
-		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests(1.1);
+		return this.getNumberOfSurplusVehicles(1.0);
+	}
+
+	public int getNumberOfSurplusVehicles(double safetyFactor) {
+		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests(safetyFactor);
 	}
 
 	public void addExpectedRequests(Link link, int numberOfRequests) {
