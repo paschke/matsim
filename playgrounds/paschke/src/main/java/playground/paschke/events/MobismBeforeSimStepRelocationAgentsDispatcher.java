@@ -101,9 +101,9 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 
 	private void dispatchRelocation(QSim qSim, RelocationInfo info) {
 		RelocationAgent agent = this.getRelocationAgent(qSim);
-		info.setAgentId(agent.getId());
 
 		if (agent != null) {
+			info.setAgentId(agent.getId());
 			agent.dispatchRelocation(info);
 		}
 	}

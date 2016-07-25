@@ -53,6 +53,8 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 	}
 
 	public void write(final Double time, final String filename, Map<Id<RelocationZone>, Map<String, Integer>> status) {
+		String[] colors = {"ff", "f0", "dc", "c8", "b4", "a0", "8c", "78", "64", "50"};
+
 		this.openFile(filename);
 		this.writeStartTag("kml", Arrays.asList(createTuple("xmlns", "http://www.opengis.net/kml/2.2"), createTuple("xmlns:gx", "http://www.google.com/kml/ext/2.2"), createTuple("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"), createTuple("xsi:schemalocation", "http://www.opengis.net/kml/2.2 https://developers.google.com/kml/schema/kml22gx.xsd")));
 
@@ -68,15 +70,23 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 			Integer numVehicles = entry.getValue().get("vehicles");
 			Integer numRequests = entry.getValue().get("requests");
 			Integer numReturns = entry.getValue().get("returns");
-			String lineColor = "ffff0000";
-			String polyColor = "66ff0000";
+			String lineColor = "00000000";
+			String polyColor = "00000000";
+			int diff = (numVehicles + numReturns - numRequests);
 
-			if (numVehicles + numReturns - numRequests < 0) {
-				lineColor = "ff0000ff";
-				polyColor = "660000ff";
-			} else if (numVehicles + numReturns - numRequests > 0) {
-				lineColor = "ff00ff00";
-				polyColor = "6600ff00";
+			if (diff < 0) {
+				diff = (diff < -9) ? -9 : diff;
+
+				lineColor = "ff1400" + colors[Math.abs(diff)];
+				polyColor = "991400" + colors[Math.abs(diff)];
+			} else if (diff > 0) {
+				diff = (diff > 9) ? 9 : diff;
+
+				lineColor = "ff00" + colors[diff] + "14";
+				polyColor = "9900" + colors[diff] + "14";
+			} else if (numVehicles > 0) {
+				lineColor = "ff00FF14";
+				polyColor = "9900FF14";
 			}
 
 			this.writeStartTag("Placemark", Arrays.asList(createTuple("id", "linepolygon_" + entry.getKey().toString())));
