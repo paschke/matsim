@@ -154,7 +154,7 @@ public class RelocationZones {
 		while (iterator.hasNext()) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
 
-			if (nextZone.getNumberOfSurplusVehicles() < 0) {
+			if (nextZone.getNumberOfSurplusVehicles() < -1) {
 				log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
 				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
