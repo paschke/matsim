@@ -1,6 +1,7 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -9,8 +10,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.apache.log4j.Logger;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Id;
@@ -130,7 +129,7 @@ public class RelocationZones {
 				} else if (o1.getNumberOfSurplusVehicles() > o2.getNumberOfSurplusVehicles()) {
 					return 1;
 				} else {
-					return 0;
+					return o1.getId().toString().compareTo(o2.getId().toString());
 				}
 			}
 		});
@@ -173,17 +172,9 @@ public class RelocationZones {
 							Iterator<Link> links = surplusZone.getVehicles().keySet().iterator();
 							if (links.hasNext()) {
 								fromLink = links.next();
-								CopyOnWriteArrayList<String> vehicleIds = surplusZone.getVehicles().get(fromLink);
-
-								if (vehicleIds.size() == 1) {
-									log.info("found one vehicle at link " + fromLink.getId());
-									vehicleId = vehicleIds.get(0);
-									surplusZone.getVehicles().remove(fromLink);
-								} else {
-									log.info("found multiple vehicles at link " + fromLink.getId());
-									vehicleId = vehicleIds.remove(0);
-									surplusZone.getVehicles().put(fromLink, vehicleIds);
-								}
+								ArrayList<String> vehicleIds = surplusZone.getVehicles().get(fromLink);
+								vehicleId = vehicleIds.get(0);
+								surplusZone.removeVehicles(fromLink, new ArrayList<String>(Arrays.asList(new String[]{vehicleId})));
 
 								break;
 							}

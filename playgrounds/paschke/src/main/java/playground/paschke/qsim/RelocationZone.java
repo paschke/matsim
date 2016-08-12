@@ -1,12 +1,11 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-
+import java.util.TreeMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Identifiable;
 import org.matsim.api.core.v01.network.Link;
@@ -21,14 +20,21 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 
 	private Map<Link, Integer> expectedReturns;
 
-	private Map<Link, CopyOnWriteArrayList<String>> vehicles;
+	private Map<Link, ArrayList<String>> vehicles;
+
+	private Comparator<Link> linkComparator = new Comparator<Link>() {
+		@Override
+		public int compare(Link l1, Link l2) {
+			return l1.getId().toString().compareTo(l2.getId().toString());
+		}
+	};
 
 	public RelocationZone(final Id<RelocationZone> id, SimpleFeature polygon) {
 		this.id = id;
 		this.polygon = polygon;
-		this.expectedRequests = new HashMap<Link, Integer>();
-		this.expectedReturns = new HashMap<Link, Integer>();
-		this.vehicles = new ConcurrentHashMap<Link, CopyOnWriteArrayList<String>>();
+		this.expectedRequests = new TreeMap<Link, Integer>(linkComparator);
+		this.expectedReturns = new TreeMap<Link, Integer>(linkComparator);
+		this.vehicles = new TreeMap<Link, ArrayList<String>>(linkComparator);
 	}
 
 	@Override
@@ -48,7 +54,7 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 		return this.expectedReturns;
 	}
 
-	public Map<Link, CopyOnWriteArrayList<String>> getVehicles() {
+	public Map<Link, ArrayList<String>> getVehicles() {
 		return this.vehicles;
 	}
 
@@ -89,7 +95,7 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	public int getNumberOfVehicles() {
 		int number = 0;
 
-		for (CopyOnWriteArrayList<String> IDs : vehicles.values()) {
+		for (ArrayList<String> IDs : this.getVehicles().values()) {
 			number += IDs.size();
 		}
 
@@ -123,12 +129,32 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	}
 
 	public void addVehicles(Link link, ArrayList<String> IDs) {
+		ArrayList<String> linkIDs = new ArrayList<String>();
+		linkIDs.addAll(IDs);
+
 		if (this.getVehicles().containsKey(link)) {
+			linkIDs.addAll(this.getVehicles().get(link));
+		}
+
+		Collections.sort(linkIDs);
+
+		this.getVehicles().put(link, linkIDs);
+	}
+
+	public void removeVehicles(Link link, ArrayList<String> IDs) {
+		if (this.getVehicles().containsKey(link)) {
+			ArrayList<String> linkIDs = this.getVehicles().get(link);
+
 			for (String ID : IDs) {
-				this.getVehicles().get(link).add(ID);
+				linkIDs.remove(ID);
 			}
-		} else {
-			this.getVehicles().put(link, new CopyOnWriteArrayList<String>(IDs));
+			Collections.sort(linkIDs);
+
+			if (linkIDs.size() > 0) {
+				this.getVehicles().put(link, linkIDs);
+			} else {
+				this.getVehicles().remove(link);
+			}
 		}
 	}
 
