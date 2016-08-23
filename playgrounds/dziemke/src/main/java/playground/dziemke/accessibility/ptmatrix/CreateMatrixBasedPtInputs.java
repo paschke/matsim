@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.contrib.accessibility.AccessibilityConfigGroup;
@@ -17,6 +16,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.facilities.ActivityFacilitiesImpl;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.facilities.Facility;
 import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
 import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
@@ -47,14 +47,15 @@ public class CreateMatrixBasedPtInputs {
 //		String transitScheduleFile = "../../../../Workspace/shared-svn/projects/accessibility_berlin/gtfs/2015-07-03/transitschedule.xml";
 		
 //		String outputRoot = "../../../shared-svn/projects/maxess/data/nmb/transit/matrix/07/";
-		String outputRoot = "../../../runs-svn/nmbm_minibuses/nmbm/output/jtlu14b/matrix_03/";
+		String outputRoot = "../../../shared-svn/projects/maxess/data/nmb/minibus-pt/jtlu14b/matrix_grid_500/";
 //		String outputRoot = "../../../../Workspace/shared-svn/projects/accessibility_berlin/travel_matrix/2016-01-05/";
 //		String outputFileRoot = "../../data/accessibility/be_002/";
 		LogToOutputSaver.setOutputDirectory(outputRoot);
 		
 		// Parameters
-		Boolean measuringPointsAsPTStops = true;
-		Double cellSize = 1000.; // only relevant if "meauringPointsAsPTStops = true"
+		Boolean measuringPointsAsPTStops = true; // if "true" -> use regular, user-defined locations instead of stops from schedule
+//		Double cellSize = 1000.; // only relevant if "meauringPointsAsPTStops = true"
+		Double cellSize = 500.; // only relevant if "meauringPointsAsPTStops = true"
 		Double departureTime = 8. * 60 * 60;
 		Integer numberOfThreads = 1;
 //		Integer numberOfThreads = 20;
@@ -96,9 +97,11 @@ public class CreateMatrixBasedPtInputs {
 		/* A LinkedHashMap is a hash table and linked list implementation of the Map interface, with predictable iteration order.
 		 * It differs from HashMap in that it maintains a doubly-linked list running through all of its entries. This linked list
 		 * defines the iteration ordering, which is normally the order in which keys were inserted into the map insertion order. */
-		Map<Id<Coord>, Coord> ptMatrixLocationsMap = new LinkedHashMap<Id<Coord>, Coord>();
+//		Map<Id<Coord>, Coord> ptMatrixLocationsMap = new LinkedHashMap<Id<Coord>, Coord>();
+//		Map<Id<? extends ActivityFacility>,Facility> ptMatrixLocationsMap = null ;
 		
-		if (measuringPointsAsPTStops == true) { // i.e. use regular, user-defined locations instead of stops from schedule
+		Map<? extends Id<? extends Facility>, ? extends Facility> ptMatrixLocationsMap;
+		if (measuringPointsAsPTStops == true) { 
 			
 			BoundingBox boundingBox;
 			if (bounds == "network") {
@@ -114,26 +117,30 @@ public class CreateMatrixBasedPtInputs {
 					boundingBox.getXMin(), boundingBox.getYMin(), boundingBox.getXMax(), boundingBox.getYMax(), cellSize);
 
 			// Conversion from ActivityFacilities=measuringPoints to coordinates
-			for (ActivityFacility activityFacility : measuringPoints.getFacilities().values()) {
-				Id<Coord> id = Id.create(activityFacility.getId(), Coord.class);
-				Coord coord = activityFacility.getCoord();
-				ptMatrixLocationsMap.put(id, coord);
-			}
+//			for (ActivityFacility activityFacility : measuringPoints.getFacilities().values()) {
+//				Id<Coord> id = Id.create(activityFacility.getId(), Coord.class);
+//				Coord coord = activityFacility.getCoord();
+//				ptMatrixLocationsMap.put(id, coord);
+//			}
+			
+			ptMatrixLocationsMap = measuringPoints.getFacilities() ;
 
 			// Create pt stops file
-			MatrixBasedPtInputUtils.createStopsFile(ptMatrixLocationsMap, outputRoot + "ptStops.csv", ",");
+			MatrixBasedPtInputUtils.createStopsFile(measuringPoints.getFacilities(), outputRoot + "ptStops.csv", ",");
 			
 		} else { // i.e. measuringPointsAsPTStops == false, i.e. use actual pt stops from schedule
 			
 			// Conversion from TransitFacilities to coordinates
-			for (TransitStopFacility transitStopFacility : scenario.getTransitSchedule().getFacilities().values()) {		
-				Id<Coord> id = Id.create(transitStopFacility.getId(), Coord.class);
-				Coord coord = transitStopFacility.getCoord();
-				ptMatrixLocationsMap.put(id, coord);
-			}
+//			for (TransitStopFacility transitStopFacility : scenario.getTransitSchedule().getFacilities().values()) {		
+//				Id<Coord> id = Id.create(transitStopFacility.getId(), Coord.class);
+//				Coord coord = transitStopFacility.getCoord();
+//				ptMatrixLocationsMap.put(id, coord);
+//			}
 
 			// Create pt stops file
-			MatrixBasedPtInputUtils.createStopsFile(ptMatrixLocationsMap, outputRoot + "ptStops.csv", ",");
+			MatrixBasedPtInputUtils.createStopsFile(scenario.getTransitSchedule().getFacilities(), outputRoot + "ptStops.csv", ",");
+			
+			ptMatrixLocationsMap = scenario.getTransitSchedule().getFacilities() ;
 		}
 
 		/* Split up map of locations into (approximately) equal parts */
@@ -142,23 +149,33 @@ public class CreateMatrixBasedPtInputs {
 		int arrayNumber = 0;
 		int locationsAdded = 0;
 
-		Map<Integer, Map<Id<Coord>, Coord>> mapOfLocationFacilitiesMaps = new HashMap<Integer, Map<Id<Coord>, Coord>>();
+		Map<Integer, Map> mapOfLocationFacilitiesMaps = new HashMap<>();
 		for (int i = 0; i < numberOfThreads; i++) {
-			Map<Id<Coord>, Coord> locationFacilitiesPartialMap = new LinkedHashMap<Id<Coord>, Coord>();
+			Map locationFacilitiesPartialMap = new LinkedHashMap<>();
 			mapOfLocationFacilitiesMaps.put(i, locationFacilitiesPartialMap);
 		}
 
 		/* Now iterate over all locations and copy them into separate maps. Once the number of copied locations reaches a certain
 		 * share of all measuringPoints, they are copied to the next map. This separation is necessary to be able to do the travel
 		 * matrix computation multi-threaded. */
-		for (Id<Coord> locationFacilityId : ptMatrixLocationsMap.keySet()) {
-			mapOfLocationFacilitiesMaps.get(arrayNumber).put(locationFacilityId, ptMatrixLocationsMap.get(locationFacilityId));
+//		for (Id<Coord> locationFacilityId : ptMatrixLocationsMap.keySet()) {
+//			mapOfLocationFacilitiesMaps.get(arrayNumber).put(locationFacilityId, ptMatrixLocationsMap.get(locationFacilityId));
+//			locationsAdded++;
+//			if (locationsAdded == (numberOfMeasuringPoints / numberOfThreads) + 1) {
+//				arrayNumber++;
+//				locationsAdded = 0;
+//			}
+//		}
+		
+		for ( Facility fac : ptMatrixLocationsMap.values() ) {
+			mapOfLocationFacilitiesMaps.get(arrayNumber).put( fac.getId(), fac ) ;
 			locationsAdded++;
 			if (locationsAdded == (numberOfMeasuringPoints / numberOfThreads) + 1) {
 				arrayNumber++;
 				locationsAdded = 0;
 			}
 		}
+		
 
 		for (int currentThreadNumber = 0; currentThreadNumber < numberOfThreads; currentThreadNumber++) {
 			new ThreadedMatrixCreator(scenario, mapOfLocationFacilitiesMaps.get(currentThreadNumber), 

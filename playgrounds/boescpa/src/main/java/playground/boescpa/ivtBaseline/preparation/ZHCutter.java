@@ -21,47 +21,87 @@
 
 package playground.boescpa.ivtBaseline.preparation;
 
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.FACILITIES;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.FACILITIES2LINKS;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.HOUSEHOLDS;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.HOUSEHOLD_ATTRIBUTES;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.NETWORK;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.POPULATION;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.POPULATION_ATTRIBUTES;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.SCHEDULE;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.VEHICLES;
+import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.getStrategySetting;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.*;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.PopulationFactory;
+import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.ConfigWriter;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.core.config.groups.StrategyConfigGroup;
-import org.matsim.core.network.NetworkReaderMatsimV1;
 import org.matsim.core.network.NetworkUtils;
-import org.matsim.core.network.NetworkWriter;
 import org.matsim.core.network.algorithms.NetworkCleaner;
-import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.population.PopulationReaderMatsimV5;
+import org.matsim.core.network.io.NetworkReaderMatsimV1;
+import org.matsim.core.network.io.NetworkWriter;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.population.PopulationWriter;
+import org.matsim.core.population.io.PopulationReader;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.misc.Counter;
-import org.matsim.facilities.*;
-import org.matsim.households.*;
-import org.matsim.pt.transitSchedule.api.*;
+import org.matsim.facilities.ActivityFacilities;
+import org.matsim.facilities.ActivityFacility;
+import org.matsim.facilities.FacilitiesReaderMatsimV1;
+import org.matsim.facilities.FacilitiesUtils;
+import org.matsim.facilities.FacilitiesWriter;
+import org.matsim.households.Household;
+import org.matsim.households.Households;
+import org.matsim.households.HouseholdsImpl;
+import org.matsim.households.HouseholdsReaderV10;
+import org.matsim.households.HouseholdsWriterV10;
+import org.matsim.pt.transitSchedule.api.Departure;
+import org.matsim.pt.transitSchedule.api.TransitLine;
+import org.matsim.pt.transitSchedule.api.TransitRoute;
+import org.matsim.pt.transitSchedule.api.TransitRouteStop;
+import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.pt.transitSchedule.api.TransitScheduleReader;
+import org.matsim.pt.transitSchedule.api.TransitScheduleWriter;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlWriter;
-import org.matsim.vehicles.*;
+import org.matsim.vehicles.Vehicle;
+import org.matsim.vehicles.VehicleReaderV1;
+import org.matsim.vehicles.VehicleUtils;
+import org.matsim.vehicles.VehicleWriterV1;
+import org.matsim.vehicles.Vehicles;
+
 import playground.boescpa.lib.tools.fileCreation.F2LCreator;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-
-import static playground.boescpa.ivtBaseline.preparation.IVTConfigCreator.*;
 
 /**
  * Cuts an IVT baseline scenario to a predefined area.
@@ -82,12 +122,12 @@ public class ZHCutter {
 		this.filteredAgents = new HashMap<>();
 		final String pathToInputScenarioFolder = cutterConfig.getPathToInputScenarioFolder() + File.separator;
 		this.scenario = ScenarioUtils.createScenario(ConfigUtils.loadConfig(pathToInputScenarioFolder + PreparationScript.CONFIG));
-		new PopulationReaderMatsimV5(scenario).readFile(pathToInputScenarioFolder + POPULATION);
-		new ObjectAttributesXmlReader(scenario.getPopulation().getPersonAttributes()).parse(pathToInputScenarioFolder + POPULATION_ATTRIBUTES);
+		new PopulationReader(scenario).readFile(pathToInputScenarioFolder + POPULATION);
+		new ObjectAttributesXmlReader(scenario.getPopulation().getPersonAttributes()).readFile(pathToInputScenarioFolder + POPULATION_ATTRIBUTES);
 		new HouseholdsReaderV10(scenario.getHouseholds()).readFile(pathToInputScenarioFolder + HOUSEHOLDS);
-		new ObjectAttributesXmlReader(scenario.getHouseholds().getHouseholdAttributes()).parse(pathToInputScenarioFolder + HOUSEHOLD_ATTRIBUTES);
+		new ObjectAttributesXmlReader(scenario.getHouseholds().getHouseholdAttributes()).readFile(pathToInputScenarioFolder + HOUSEHOLD_ATTRIBUTES);
 		new FacilitiesReaderMatsimV1(scenario).readFile(pathToInputScenarioFolder + FACILITIES);
-		new NetworkReaderMatsimV1(scenario.getNetwork()).parse(pathToInputScenarioFolder + NETWORK);
+		new NetworkReaderMatsimV1(scenario.getNetwork()).readFile(pathToInputScenarioFolder + NETWORK);
 		new TransitScheduleReader(scenario).readFile(pathToInputScenarioFolder + SCHEDULE);
 		new VehicleReaderV1(scenario.getTransitVehicles()).readFile(pathToInputScenarioFolder + VEHICLES);
 		this.commuterTag = cutterConfig.getCommuterTag();
@@ -126,6 +166,7 @@ public class ZHCutter {
 		strategySettings.add(getStrategySetting("ChangeExpBeta", 0.5));
 		strategySettings.add(getStrategySetting("ReRoute", 0.2));
 		strategySettings.add(getStrategySetting("BlackListedTimeAllocationMutator", 0.1));
+		strategySettings.add(getStrategySetting("org.matsim.contrib.locationchoice.BestReplyLocationChoicePlanStrategy", 0.1));
 		for (StrategyConfigGroup.StrategySettings strategy : strategySettings) {
 			strategy.setSubpopulation(cutterConfig.commuterTag);
 			config.getModule(StrategyConfigGroup.GROUP_NAME).addParameterSet(strategy);
@@ -155,7 +196,7 @@ public class ZHCutter {
 					activity.setMaximumDuration(oldActivity.getMaximumDuration());
 					activity.setStartTime(oldActivity.getStartTime());
 					if (oldActivity.getFacilityId() != null) {
-						final ActivityImpl activityImpl = (ActivityImpl) activity;
+						final Activity activityImpl = (Activity) activity;
 						activityImpl.setFacilityId(Id.create(oldActivity.getFacilityId().toString(), ActivityFacility.class));
 					}
 					newPlan.addActivity(activity);
@@ -338,8 +379,8 @@ public class ZHCutter {
 			if (p.getSelectedPlan() != null) {
 				actInArea = false; actNotInArea = false;
 				for (PlanElement pe : p.getSelectedPlan().getPlanElements()) {
-					if (pe instanceof ActivityImpl) {
-						ActivityImpl act = (ActivityImpl) pe;
+					if (pe instanceof Activity) {
+						Activity act = (Activity) pe;
 						if (inArea(act.getCoord())) {
 							actInArea = true;
 						} else {
@@ -351,15 +392,19 @@ public class ZHCutter {
 					filteredPopulation.addPerson(p);
 					filteredAgents.put(p.getId(), p);
 					if (actNotInArea) {
-						personAttributes.putAttribute(p.toString(), "subpopulation", commuterTag);
+						if (personAttributes.getAttribute(p.getId().toString(), "subpopulation") == null) {
+							personAttributes.putAttribute(p.getId().toString(), "subpopulation", commuterTag);
+						}
 					}
 				} else if (checkForRouteIntersection(p.getSelectedPlan())) {
 					filteredPopulation.addPerson(p);
 					filteredAgents.put(p.getId(), p);
-					personAttributes.putAttribute(p.toString(), "subpopulation", commuterTag);
+					if (personAttributes.getAttribute(p.getId().toString(), "subpopulation") == null) {
+						personAttributes.putAttribute(p.getId().toString(), "subpopulation", commuterTag);
+					}
 				}
 				else {
-					personAttributes.removeAllAttributes(p.toString());
+					personAttributes.removeAllAttributes(p.getId().toString());
 				}
 			}
 		}
@@ -414,8 +459,8 @@ public class ZHCutter {
 		for (Person person : filteredAgents.values()) {
 			if (person.getSelectedPlan() != null) {
 				for (PlanElement pe : person.getSelectedPlan().getPlanElements()) {
-					if (pe instanceof ActivityImpl) {
-						ActivityImpl act = (ActivityImpl) pe;
+					if (pe instanceof Activity) {
+						Activity act = (Activity) pe;
 						if (act.getFacilityId() != null && !filteredFacilities.getFacilities().containsKey(act.getFacilityId())) {
 							filteredFacilities.addActivityFacility(scenario.getActivityFacilities().getFacilities().get(act.getFacilityId()));
 						}

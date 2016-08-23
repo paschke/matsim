@@ -110,6 +110,7 @@
 		<module>johannes</module>
 		<module>juliakern</module>
 		<module>kai</module>
+		<module>kairuns</module>
 		<module>kturner</module>
 		<module>lcrociani</module>
 		<module>lkroeger</module>
@@ -155,6 +156,10 @@
 		<repository>
 			<id>matsim</id>
 			<url>http://matsim.org/m2repo</url>
+		</repository>
+		<repository>
+			<id>bintray</id>
+			<url>http://dl.bintray.com/matsim/matsim</url>
 		</repository>
 	</repositories>
 	

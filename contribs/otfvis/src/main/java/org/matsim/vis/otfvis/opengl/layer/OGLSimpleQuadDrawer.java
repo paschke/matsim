@@ -21,10 +21,10 @@ import com.jogamp.opengl.util.texture.TextureCoords;
  */
 public class OGLSimpleQuadDrawer extends OTFGLAbstractDrawableReceiver {
 
-	protected final Point2D.Float[] quad = new Point2D.Float[4];
-	protected float coloridx = 0;
-	protected char[] id;
-	protected int nrLanes;
+	 private final Point2D.Float[] quad = new Point2D.Float[4];
+	 private float coloridx = 0;
+	 private char[] id;
+	 private int nrLanes;
 	private SnapshotLinkWidthCalculator linkWidthCalculator = new SnapshotLinkWidthCalculator();
 
 	@Override
@@ -32,8 +32,7 @@ public class OGLSimpleQuadDrawer extends OTFGLAbstractDrawableReceiver {
 		linkWidthCalculator.setLaneWidth(OTFClientControl.getInstance().getOTFVisConfig().getEffectiveLaneWidth());
 		linkWidthCalculator.setLinkWidthForVis(OTFClientControl.getInstance().getOTFVisConfig().getLinkWidth());
 		float width = (float) linkWidthCalculator.calculateLinkWidth(this.nrLanes);
-		final Point2D.Float ortho = calcOrtho(this.quad[0].x, this.quad[0].y, this.quad[1].x, this.quad[1].y, 
-				width);
+		final Point2D.Float ortho = calcOrtho(this.quad[0].x, this.quad[0].y, this.quad[1].x, this.quad[1].y, width);
 		// (yy this is where the width of the links for drawing is set)
 
 		this.quad[2] = new Point2D.Float(this.quad[0].x + ortho.x, this.quad[0].y + ortho.y);
@@ -70,10 +69,6 @@ public class OGLSimpleQuadDrawer extends OTFGLAbstractDrawableReceiver {
 		return new Point2D.Float((float)dx,(float)dy);
 	}
 
-	public void setQuad(float startX, float startY, float endX, float endY) {
-		setQuad(startX, startY,endX, endY, 1);
-	}
-
 	public void setQuad(float startX, float startY, float endX, float endY, int nrLanes) {
 		this.quad[0] = new Point2D.Float(startX, startY);
 		this.quad[1] = new Point2D.Float(endX, endY);
@@ -90,7 +85,6 @@ public class OGLSimpleQuadDrawer extends OTFGLAbstractDrawableReceiver {
 	
 	@Override
 	public void addToSceneGraph(SceneGraph graph) {
-		graph.addStaticItem(this);
 	}
 	
 }

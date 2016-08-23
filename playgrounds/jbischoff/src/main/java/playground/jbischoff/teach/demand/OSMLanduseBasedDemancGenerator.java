@@ -12,9 +12,9 @@ import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.MatsimRandom;
-import org.matsim.core.population.PopulationWriter;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
@@ -46,12 +46,12 @@ public class OSMLanduseBasedDemancGenerator {
 	 * SCALEFACTOR of 1.5 * SCALEFACTOR 1.5 = 100%-Szenario SCALEFACTOR 0.15 =
 	 * 10%-Szenario SCALEFACTOR 0.015 = 1%-Szenario
 	 */
-	private static double SCALEFACTOR = 1.5;
+	private static double SCALEFACTOR = 0.15;
 
 	/*
 	 * adds some additional activities
 	 */
-	private static final boolean ENRICHPLANS = false;
+	private static final boolean ENRICHPLANS = true;
 
 	// ------ FIELDS NOT TO BE MODIFIED
 	// ------------------------------------------------------------------------------------//

@@ -19,15 +19,17 @@
 
 package playground.ikaddoura.incidents;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.events.IterationStartsEvent;
 import org.matsim.core.controler.listener.IterationStartsListener;
 import org.matsim.core.network.NetworkChangeEvent;
 import org.matsim.core.network.NetworkChangeEventsParser;
-import org.matsim.core.network.NetworkImpl;
+import org.matsim.core.network.NetworkUtils;
 
 /**
 * @author ikaddoura
@@ -36,27 +38,32 @@ import org.matsim.core.network.NetworkImpl;
 public class IncidentControlerListener implements IterationStartsListener {
 	private static final Logger log = Logger.getLogger(IncidentControlerListener.class);
 
-	private String networkChangeEventsDirectory = null;
+	private List<String> networkChangeEventsFiles = null;
+	private int dayCounter = 0;
 	private Controler controler;	
 		
-	public IncidentControlerListener(Controler controler, String networkChangeEventsDirectory) {
-		this.networkChangeEventsDirectory = networkChangeEventsDirectory;
+	public IncidentControlerListener(Controler controler, List<String> networkChangeEventsFiles) {
+		this.networkChangeEventsFiles = networkChangeEventsFiles;
 		this.controler = controler;
 	}
 
 	@Override
 	public void notifyIterationStarts(IterationStartsEvent event) {
 		
-		String nce = networkChangeEventsDirectory + "nce_" + event.getIteration() + ".xml.gz";
+		if (dayCounter == networkChangeEventsFiles.size()) {
+			dayCounter = 0;
+		}
+		String nce = networkChangeEventsFiles.get(dayCounter);
 
 		log.info("Setting network change events for the next iteration: " + nce);
 						
-		List<NetworkChangeEvent> networkChangeEvents = new NetworkChangeEventsParser(controler.getScenario().getNetwork()).parseEvents(nce);;
+		List<NetworkChangeEvent> events = new ArrayList<>() ;
+		new NetworkChangeEventsParser(controler.getScenario().getNetwork(), events).readFile(nce);;
 				
-		NetworkImpl network = (NetworkImpl) controler.getScenario().getNetwork();
-		network.getNetworkChangeEvents().clear();
-		network.setNetworkChangeEvents(networkChangeEvents);
-		event.getServices().getConfig().network().setChangeEventsInputFile(networkChangeEventsDirectory + "nce_" + event.getIteration() + "xml.gz");
+		Network network = controler.getScenario().getNetwork();
+		NetworkUtils.getNetworkChangeEvents(network).clear();
+		NetworkUtils.setNetworkChangeEvents(network,events);
+		event.getServices().getConfig().network().setChangeEventsInputFile(nce);
 	}
 
 }

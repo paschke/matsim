@@ -55,13 +55,13 @@ public final class ControlerConfigGroup extends ReflectiveConfigGroup {
 	private static final String WRITE_EVENTS_INTERVAL = "writeEventsInterval";
 	private static final String WRITE_PLANS_INTERVAL = "writePlansInterval";
 	private static final String OVERWRITE_FILE = "overwriteFiles";
-	public static final String CREATE_GRAPHS = "createGraphs";
-	final String DUMP_DATA_AT_END = "dumpDataAtEnd";
+	private static final String CREATE_GRAPHS = "createGraphs";
+	private static final String DUMP_DATA_AT_END = "dumpDataAtEnd";
 
 	/*package*/ static final String MOBSIM = "mobsim";
 	public enum MobsimType {qsim, JDEQSim}
 
-    public static final String WRITE_SNAPSHOTS_INTERVAL = "writeSnapshotsInterval";
+	private static final String WRITE_SNAPSHOTS_INTERVAL = "writeSnapshotsInterval";
 
 
 	private String outputDirectory = "./output";
@@ -337,6 +337,22 @@ public final class ControlerConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(DUMP_DATA_AT_END)
 	public void setDumpDataAtEnd(boolean dumpDataAtEnd) {
 		this.dumpDataAtEnd = dumpDataAtEnd;
+	}
+	// ---
+	int writePlansUntilIteration = 1 ;
+	public int getWritePlansUntilIteration() {
+		return this.writePlansUntilIteration ;
+	}
+	public void setWritePlansUntilIteration(int val) {
+		this.writePlansUntilIteration = val ;
+	}
+	// ---
+	int writeEventsUntilIteration = 0 ; // old default of this was 0, not 1 as for plans. kai, aug'16
+	public int getWriteEventsUntilIteration() {
+		return this.writeEventsUntilIteration ;
+	}
+	public void setWriteEventsUntilIteration(int val) {
+		this.writeEventsUntilIteration = val ;
 	}
 
 }

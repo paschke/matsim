@@ -43,5 +43,15 @@
   		<artifactId>lcrociani</artifactId>
   		<version>0.9.0-SNAPSHOT</version>
   	</dependency>
+  	<dependency>
+  		<groupId>playground</groupId>
+  		<artifactId>ikaddoura</artifactId>
+  		<version>0.9.0-SNAPSHOT</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>playground</groupId>
+  		<artifactId>dziemke</artifactId>
+  		<version>0.9.0-SNAPSHOT</version>
+  	</dependency>
   </dependencies>
 </project>

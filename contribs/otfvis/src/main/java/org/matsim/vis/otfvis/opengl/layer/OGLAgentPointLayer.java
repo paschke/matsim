@@ -26,8 +26,9 @@ import org.apache.log4j.Logger;
 import org.matsim.core.gbl.MatsimResource;
 import org.matsim.vis.otfvis.OTFClientControl;
 import org.matsim.vis.otfvis.caching.SceneLayer;
+import org.matsim.vis.otfvis.opengl.drawer.FastColorizer;
 import org.matsim.vis.otfvis.opengl.drawer.OTFGLAbstractDrawable;
-import org.matsim.vis.otfvis.opengl.drawer.OTFOGLDrawer;
+import org.matsim.vis.otfvis.opengl.gl.GLUtils;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo.AgentState;
 
@@ -53,7 +54,7 @@ public class OGLAgentPointLayer extends OTFGLAbstractDrawable implements SceneLa
 
 	private final static int BUFFERSIZE = 10000;
 
-	private static OTFOGLDrawer.FastColorizer redToGreenColorizer = new OTFOGLDrawer.FastColorizer(
+	private static FastColorizer redToGreenColorizer = new FastColorizer(
 					new double[] { 0.0, 30., 50.}, new Color[] {Color.RED, Color.YELLOW, Color.GREEN});
 
 
@@ -81,7 +82,7 @@ public class OGLAgentPointLayer extends OTFGLAbstractDrawable implements SceneLa
 
 	@Override
 	protected void onInit(GL2 gl) {
-		texture = OTFOGLDrawer.createTexture(gl, MatsimResource.getAsInputStream("icon18.png"));
+		texture = GLUtils.createTexture(gl, MatsimResource.getAsInputStream("icon18.png"));
 	}
 
 	private static int infocnt = 0 ;
@@ -90,7 +91,7 @@ public class OGLAgentPointLayer extends OTFGLAbstractDrawable implements SceneLa
 	public void onDraw(GL2 gl) {
 		gl.glEnable(GL2.GL_POINT_SPRITE);
 
-		setAgentSize(gl);
+		gl.glPointSize(OTFClientControl.getInstance().getOTFVisConfig().getAgentSize() / 10.f);
 
 		gl.glEnableClientState (GL2.GL_COLOR_ARRAY);
 		gl.glEnableClientState (GL2.GL_VERTEX_ARRAY);
@@ -118,11 +119,6 @@ public class OGLAgentPointLayer extends OTFGLAbstractDrawable implements SceneLa
 		}
 
 		gl.glDisable(GL2.GL_POINT_SPRITE);
-	}
-
-	private static void setAgentSize(GL2 gl) {
-		float agentSize = OTFClientControl.getInstance().getOTFVisConfig().getAgentSize() / 10.f;
-		gl.glPointSize(agentSize);
 	}
 
 	private void drawArray(GL2 gl) {

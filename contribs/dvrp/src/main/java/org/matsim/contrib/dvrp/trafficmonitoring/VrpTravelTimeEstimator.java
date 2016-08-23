@@ -21,43 +21,68 @@ package org.matsim.contrib.dvrp.trafficmonitoring;
 
 import java.util.Map;
 
-import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.*;
 import org.matsim.api.core.v01.network.*;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.config.groups.TravelTimeCalculatorConfigGroup;
 import org.matsim.core.mobsim.framework.events.MobsimBeforeCleanupEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeCleanupListener;
 import org.matsim.core.router.util.TravelTime;
-import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
+import org.matsim.core.trafficmonitoring.TimeBinUtils;
 import org.matsim.vehicles.Vehicle;
 
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 
-//TODO TTC is more flexible (simple averaging vs linear interpolation)
 public class VrpTravelTimeEstimator
     implements TravelTime, MobsimBeforeCleanupListener
 {
-    private final TravelTimeCalculator ttCalc;//observed travel times
+    public static class Params
+    {
+        private final TravelTime initialTT;
+        private final double alpha;
+
+
+        public Params(TravelTime initialTT, double alpha)
+        {
+            this.initialTT = initialTT;
+            this.alpha = alpha;
+        }
+    }
+
+
+    private final TravelTime observedTT;
     private final Network network;
+
     private final int interval;
     private final int intervalCount;
     private final Map<Id<Link>, double[]> linkTTs;
+    private final double alpha;
 
 
     @Inject
-    public VrpTravelTimeEstimator(TravelTimeCalculator calculator, Network network)
+    public VrpTravelTimeEstimator(Params params, @Named(TransportMode.car) TravelTime observedTT,
+            Network network, TravelTimeCalculatorConfigGroup ttCalcConfig)
     {
-        this.ttCalc = calculator;
+        this.observedTT = observedTT;
         this.network = network;
+        alpha = params.alpha;
 
-        this.interval = ttCalc.getTimeSlice();
-        this.intervalCount = ttCalc.getNumSlots();
+        interval = ttCalcConfig.getTraveltimeBinSize();
+        intervalCount = TimeBinUtils.getTimeBinCount(ttCalcConfig.getMaxTime(), interval);
 
         linkTTs = Maps.newHashMapWithExpectedSize(network.getLinks().size());
+        init(params.initialTT);
+    }
+
+
+    private void init(TravelTime initialTT)
+    {
         for (Link link : network.getLinks().values()) {
             double[] tt = new double[intervalCount];
-            updateTTs(link, tt);
+            updateTTs(link, tt, initialTT, 1.);
             linkTTs.put(link.getId(), tt);
         }
     }
@@ -66,8 +91,8 @@ public class VrpTravelTimeEstimator
     @Override
     public double getLinkTravelTime(Link link, double time, Person person, Vehicle vehicle)
     {
-        //the last time bin in TTC is used for a freely large time  
-        int idx = Math.min((int) (time / interval), intervalCount - 1);
+        //TODO TTC is more flexible (simple averaging vs linear interpolation, etc.)
+        int idx = TimeBinUtils.getTimeBinIndex(time, interval, intervalCount);
         return linkTTs.get(link.getId())[idx];
     }
 
@@ -76,15 +101,17 @@ public class VrpTravelTimeEstimator
     public void notifyMobsimBeforeCleanup(@SuppressWarnings("rawtypes") MobsimBeforeCleanupEvent e)
     {
         for (Link link : network.getLinks().values()) {
-            updateTTs(link, linkTTs.get(link.getId()));
+            updateTTs(link, linkTTs.get(link.getId()), observedTT, alpha);
         }
     }
 
 
-    private void updateTTs(Link link, double[] tt)
+    private void updateTTs(Link link, double[] tt, TravelTime travelTime, double alpha)
     {
         for (int i = 0; i < intervalCount; i++) {
-            tt[i] = ttCalc.getLinkTravelTime(link.getId(), i * interval);
+            double oldEstimatedTT = tt[i];
+            double experiencedTT = travelTime.getLinkTravelTime(link, i * interval, null, null);
+            tt[i] = alpha * experiencedTT + (1 - alpha) * oldEstimatedTT;
         }
     }
 }

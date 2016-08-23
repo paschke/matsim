@@ -1,10 +1,9 @@
 package org.matsim.contrib.taxi.benchmark;
 
-import java.io.PrintWriter;
-
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.matsim.contrib.taxi.data.TaxiData;
 import org.matsim.contrib.taxi.util.stats.*;
+import org.matsim.contrib.util.*;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.*;
 import org.matsim.core.controler.listener.*;
@@ -15,24 +14,23 @@ import com.google.inject.Inject;
 
 public class TaxiBenchmarkStats
     implements AfterMobsimListener, ShutdownListener
-
 {
-    static final String HEADER = "n\tm\t"//
-            + "PassWait\t"//
-            + "PassWait_p95\t"//
-            + "PassWait_max\t"//
-            + "PassDrive\t"//
-            + "EmptyRatio\t";
+    public static final String[] HEADER = { "n", "m", //
+            "PassWait", //
+            "PassWait_p95", //
+            "PassWait_max", //
+            "EmptyDriveRatio", //
+            "StayRatio" };
 
-    private final TaxiData taxiData;
+    protected final TaxiData taxiData;
     private final OutputDirectoryHierarchy controlerIO;
 
     private final SummaryStatistics passengerWaitTime = new SummaryStatistics();
     private final SummaryStatistics pc95PassengerWaitTime = new SummaryStatistics();
     private final SummaryStatistics maxPassengerWaitTime = new SummaryStatistics();
 
-    private final SummaryStatistics driveOccupiedTime = new SummaryStatistics();
-    private final SummaryStatistics driveEmptyRatio = new SummaryStatistics();
+    private final SummaryStatistics emptyDriveRatio = new SummaryStatistics();
+    private final SummaryStatistics stayRatio = new SummaryStatistics();
 
 
     @Inject
@@ -47,37 +45,43 @@ public class TaxiBenchmarkStats
     public void notifyAfterMobsim(AfterMobsimEvent event)
     {
         TaxiStats singleRunStats = new TaxiStatsCalculator(taxiData.getVehicles().values())
-                .getStats();
+                .getDailyStats();
 
-        passengerWaitTime.addValue(singleRunStats.passengerWaitTimes.getMean());
-        pc95PassengerWaitTime.addValue(singleRunStats.passengerWaitTimes.getPercentile(95));
-        maxPassengerWaitTime.addValue(singleRunStats.passengerWaitTimes.getMax());
+        passengerWaitTime.addValue(singleRunStats.passengerWaitTime.getMean());
+        pc95PassengerWaitTime.addValue(singleRunStats.passengerWaitTime.getPercentile(95));
+        maxPassengerWaitTime.addValue(singleRunStats.passengerWaitTime.getMax());
 
-        driveOccupiedTime.addValue(singleRunStats.getDriveOccupiedTimes().getMean());
-        driveEmptyRatio.addValue(singleRunStats.getDriveEmptyRatio());
+        emptyDriveRatio.addValue(singleRunStats.getFleetEmptyDriveRatio());
+        stayRatio.addValue(singleRunStats.getFleetStayRatio());
     }
 
 
     @Override
     public void notifyShutdown(ShutdownEvent event)
     {
-        PrintWriter pw = new PrintWriter(
-                IOUtils.getBufferedWriter(controlerIO.getOutputFilename("benchmark_stats.txt")));
-        pw.println(HEADER);
-        pw.printf(
-                "%d\t%d\t"//
-                        + "%.0f\t%.0f\t%.0f\t"//
-                        + "%.0f\t%.2f\t", //
-                taxiData.getRequests().size(), //
-                taxiData.getVehicles().size(), //
-                //
-                passengerWaitTime.getMean(), //
-                pc95PassengerWaitTime.getMean(), //
-                maxPassengerWaitTime.getMean(), //
-                //
-                driveOccupiedTime.getMean(), //
-                driveEmptyRatio.getMean() * 100); //in [%]
+        writeFile("benchmark_stats.txt", HEADER);
+    }
 
-        pw.close();
+
+    protected void writeFile(String file, String[] header)
+    {
+        try (CompactCSVWriter writer = new CompactCSVWriter(
+                IOUtils.getBufferedWriter(controlerIO.getOutputFilename(file)))) {
+            writer.writeNext(header);
+            writer.writeNext(createAndInitLineBuilder());
+        }
+    }
+
+
+    protected CSVLineBuilder createAndInitLineBuilder()
+    {
+        return new CSVLineBuilder()//
+                .addf("%d", taxiData.getRequests().size())//
+                .addf("%d", taxiData.getVehicles().size())//
+                .addf("%.1f", passengerWaitTime.getMean())//
+                .addf("%.0f", pc95PassengerWaitTime.getMean())//
+                .addf("%.0f", maxPassengerWaitTime.getMean())//
+                .addf("%.3f", emptyDriveRatio.getMean())//
+                .addf("%.3f", stayRatio.getMean());
     }
 }

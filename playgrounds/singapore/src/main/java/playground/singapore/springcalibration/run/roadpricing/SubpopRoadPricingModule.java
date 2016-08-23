@@ -84,7 +84,7 @@ public class SubpopRoadPricingModule extends AbstractModule {
             //			new TravelDisutilityIncludingTollFactoryProvider(scenario, roadPricingScheme, parameters, config));
             	
             	addTravelDisutilityFactoryBinding(TransportMode.car).toProvider(TravelDisutilityIncludingTollFactoryProvider.class);
-            	
+            	addTravelDisutilityFactoryBinding("freight").toProvider(TravelDisutilityIncludingTollFactoryProvider.class);
             	// we do not need taxi here as the customer does pay a fare not a toll!
             }
         }));
@@ -140,7 +140,7 @@ public class SubpopRoadPricingModule extends AbstractModule {
                             + "construct a zero toll file and insert that. ") ;
                 }
                 RoadPricingSchemeImpl rpsImpl = new RoadPricingSchemeImpl() ;
-                new RoadPricingReaderXMLv1(rpsImpl).parse(tollLinksFile);
+                new RoadPricingReaderXMLv1(rpsImpl).readFile(tollLinksFile);
                 return rpsImpl;
             }
         }
@@ -162,16 +162,12 @@ public class SubpopRoadPricingModule extends AbstractModule {
         @Override
         public TravelDisutilityFactory get() {
         	
-            RoadPricingConfigGroup rpConfig = ConfigUtils.addOrGetModule(config, 
-            		RoadPricingConfigGroup.GROUP_NAME, 
-            		RoadPricingConfigGroup.class);
-            
             final TravelDisutilityFactory originalTravelDisutilityFactory = new SubpopTravelDisutilityFactory(parameters, TransportMode.car);
             log.info("getting TravelDisutilityFactory");
             
             SubpopRoadPricingTravelDisutilityFactory travelDisutilityFactory = new SubpopRoadPricingTravelDisutilityFactory(
                     originalTravelDisutilityFactory, scheme, parameters);
-            travelDisutilityFactory.setSigma(rpConfig.getRoutingRandomness());
+            travelDisutilityFactory.setSigma(config.plansCalcRoute().getRoutingRandomness());
             return travelDisutilityFactory;
         }
     }

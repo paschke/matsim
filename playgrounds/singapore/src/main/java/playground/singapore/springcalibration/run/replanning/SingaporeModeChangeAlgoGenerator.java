@@ -22,12 +22,12 @@ package playground.singapore.springcalibration.run.replanning;
 
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Population;
-import org.matsim.core.config.groups.ChangeLegModeConfigGroup;
+import org.matsim.core.config.groups.ChangeModeConfigGroup;
 import org.matsim.core.config.groups.GlobalConfigGroup;
 import org.matsim.core.config.groups.SubtourModeChoiceConfigGroup;
 import org.matsim.core.gbl.MatsimRandom;
+import org.matsim.core.population.algorithms.PlanAlgorithm;
 import org.matsim.core.replanning.modules.AbstractMultithreadedModule;
-import org.matsim.population.algorithms.PlanAlgorithm;
 
 import playground.singapore.springcalibration.run.TaxiUtils;
 
@@ -43,7 +43,7 @@ public class SingaporeModeChangeAlgoGenerator extends AbstractMultithreadedModul
 	private SubtourModeChoiceConfigGroup subtourModeChoiceConfigGroup;
 
 	public SingaporeModeChangeAlgoGenerator(final GlobalConfigGroup globalConfigGroup, 
-			ChangeLegModeConfigGroup changeLegModeConfigGroup, 
+			ChangeModeConfigGroup changeLegModeConfigGroup, 
 			SubtourModeChoiceConfigGroup subtourModeChoiceConfigGroup,
 			Population population, 
 			TaxiUtils taxiUtils) {
@@ -57,7 +57,7 @@ public class SingaporeModeChangeAlgoGenerator extends AbstractMultithreadedModul
 	
 	@Override
 	public PlanAlgorithm getPlanAlgoInstance() {
-		SingaporeTripOrSubtourModeChange algo = new SingaporeTripOrSubtourModeChange(
+		SingaporeLegModeChange algo = new SingaporeLegModeChange(
 				this.availableModes, MatsimRandom.getLocalInstance(), population, this.taxiUtils, subtourModeChoiceConfigGroup);
 		
 		algo.setIgnoreCarAvailability(this.ignoreCarAvailability);

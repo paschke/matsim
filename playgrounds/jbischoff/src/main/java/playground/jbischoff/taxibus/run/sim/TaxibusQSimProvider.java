@@ -21,6 +21,7 @@ package playground.jbischoff.taxibus.run.sim;
 
 import java.util.Collection;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.contrib.dvrp.data.VrpData;
 import org.matsim.contrib.dvrp.router.TimeAsTravelDisutility;
@@ -31,15 +32,22 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.mobsim.qsim.*;
 import org.matsim.core.router.util.*;
 
+import com.beust.jcommander.internal.Nullable;
 import com.google.inject.*;
 import com.google.inject.name.Named;
 
+
 import playground.jbischoff.taxibus.algorithm.TaxibusActionCreator;
-import playground.jbischoff.taxibus.algorithm.optimizer.*;
-import playground.jbischoff.taxibus.algorithm.optimizer.fifo.*;
+import playground.jbischoff.taxibus.algorithm.optimizer.TaxibusOptimizer;
+import playground.jbischoff.taxibus.algorithm.optimizer.TaxibusOptimizerContext;
+import playground.jbischoff.taxibus.algorithm.optimizer.fifo.FifoOptimizer;
+import playground.jbischoff.taxibus.algorithm.optimizer.fifo.MultipleFifoOptimizer;
 import playground.jbischoff.taxibus.algorithm.optimizer.fifo.Lines.LineDispatcher;
+import playground.jbischoff.taxibus.algorithm.optimizer.sharedTaxi.SharedTaxiOptimizer;
 import playground.jbischoff.taxibus.algorithm.passenger.*;
 import playground.jbischoff.taxibus.algorithm.scheduler.*;
+import playground.jbischoff.taxibus.algorithm.tubs.StatebasedOptimizer;
+import playground.jbischoff.taxibus.algorithm.tubs.datastructure.StateSpace;
 import playground.jbischoff.taxibus.algorithm.utils.TaxibusUtils;
 import playground.jbischoff.taxibus.run.configuration.TaxibusConfigGroup;
 
@@ -59,13 +67,13 @@ public class TaxibusQSimProvider
     private final TaxibusConfigGroup tbcg;
     private final LineDispatcher dispatcher;
     private final TaxibusPassengerOrderManager orderManager;
-
+    private final StateSpace stateSpace;
 
     @Inject
     TaxibusQSimProvider(Scenario scenario, EventsManager events,
             Collection<AbstractQSimPlugin> plugins, VrpData vrpData,
-            @Named(VrpTravelTimeModules.DVRP) TravelTime travelTime, TaxibusConfigGroup tbcg,
-            LineDispatcher dispatcher, TaxibusPassengerOrderManager orderManager)
+            @Named(VrpTravelTimeModules.DVRP_ESTIMATED) TravelTime travelTime, TaxibusConfigGroup tbcg,
+            @Nullable LineDispatcher dispatcher, @Nullable TaxibusPassengerOrderManager orderManager, @Nullable StateSpace stateSpace)
     {
         this.scenario = scenario;
         this.events = events;
@@ -75,6 +83,7 @@ public class TaxibusQSimProvider
         this.tbcg = tbcg;
         this.dispatcher = dispatcher;
         this.orderManager = orderManager;
+        this.stateSpace = stateSpace;
     }
 
 
@@ -89,11 +98,13 @@ public class TaxibusQSimProvider
         TaxibusPassengerEngine passengerEngine = new TaxibusPassengerEngine(
                 TaxibusUtils.TAXIBUS_MODE, events, new TaxibusRequestCreator(), optimizer, vrpData,
                 scenario.getNetwork());
-        orderManager.setPassengerEngine(passengerEngine);
         qSim.addMobsimEngine(passengerEngine);
         qSim.addDepartureHandler(passengerEngine);
+        if (orderManager!=null){
+        orderManager.setPassengerEngine(passengerEngine);
         qSim.addQueueSimulationListeners(orderManager);
-
+        }
+        
         LegCreator legCreator = VrpLegs.createLegWithOfflineTrackerCreator(qSim.getSimTimer());
         TaxibusActionCreator actionCreator = new TaxibusActionCreator(passengerEngine, legCreator,
                 tbcg.getPickupDuration());
@@ -121,7 +132,10 @@ public class TaxibusQSimProvider
 
             case "multipleLine":
                 return new MultipleFifoOptimizer(optimizerContext, dispatcher, false);
-
+            case "sharedTaxi":
+            	return new SharedTaxiOptimizer(optimizerContext, false, tbcg.getDetourFactor());
+            case "stateBased":
+            	return new StatebasedOptimizer(optimizerContext, false, this.stateSpace , tbcg);
             default:
                 throw new RuntimeException(
                         "No config parameter set for algorithm, please check and assign in config");

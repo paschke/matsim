@@ -19,37 +19,42 @@
 
 package org.matsim.contrib.taxi.util.stats;
 
-import java.io.PrintWriter;
 import java.util.*;
 
+import org.matsim.contrib.util.CompactCSVWriter;
+import org.matsim.contrib.util.chart.ChartSaveUtils;
 import org.matsim.core.controler.MatsimServices;
 import org.matsim.core.mobsim.framework.events.*;
 import org.matsim.core.mobsim.framework.listeners.*;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.core.utils.misc.Time;
 
 
-public class TimeProfileCollector<T>
+public class TimeProfileCollector
     implements MobsimBeforeSimStepListener, MobsimBeforeCleanupListener
 {
-    public interface ProfileCalculator<S>
+    public interface ProfileCalculator
     {
-        S calcCurrentPoint();
+        String[] getHeader();
+
+
+        String[] calcValues();
     }
 
 
-    private final ProfileCalculator<T> calculator;
-    private final List<T> timeProfile = new ArrayList<>();
+    private final ProfileCalculator calculator;
+    private final List<String[]> timeProfile = new ArrayList<>();
     private final int interval;
-    private final String header;
+    private final String outputFile;
     private final MatsimServices matsimServices;
 
 
-    public TimeProfileCollector(ProfileCalculator<T> calculator, int interval, String header,
+    public TimeProfileCollector(ProfileCalculator calculator, int interval, String outputFile,
             MatsimServices matsimServices)
     {
         this.calculator = calculator;
         this.interval = interval;
-        this.header = header;
+        this.outputFile = outputFile;
         this.matsimServices = matsimServices;
     }
 
@@ -58,7 +63,7 @@ public class TimeProfileCollector<T>
     public void notifyMobsimBeforeSimStep(@SuppressWarnings("rawtypes") MobsimBeforeSimStepEvent e)
     {
         if (e.getSimulationTime() % interval == 0) {
-            timeProfile.add(calculator.calcCurrentPoint());
+            timeProfile.add(calculator.calcValues());
         }
     }
 
@@ -66,15 +71,21 @@ public class TimeProfileCollector<T>
     @Override
     public void notifyMobsimBeforeCleanup(MobsimBeforeCleanupEvent e)
     {
-        PrintWriter pw = new PrintWriter(IOUtils.getBufferedWriter(matsimServices.getControlerIO()
-                .getIterationFilename(matsimServices.getIterationNumber(), "taxi_time_profiles.txt")));
+        String file = matsimServices.getControlerIO()
+                .getIterationFilename(matsimServices.getIterationNumber(), outputFile);
+        String timeFormat = interval % 60 == 0 ? Time.TIMEFORMAT_HHMM : Time.TIMEFORMAT_HHMMSS;
+        String[] header = calculator.getHeader();
 
-        pw.println("time\t" + header);
-
-        for (int i = 0; i < timeProfile.size(); i++) {
-            pw.println(i * interval + "\t" + timeProfile.get(i));
+        try (CompactCSVWriter writer = new CompactCSVWriter(IOUtils.getBufferedWriter(file + ".txt"))) {
+            writer.writeNext("time", header);
+            for (int i = 0; i < timeProfile.size(); i++) {
+                writer.writeNext(Time.writeTime(i * interval, timeFormat), timeProfile.get(i));
+            }
         }
 
-        pw.close();
+        String imageFile = matsimServices.getControlerIO()
+                .getIterationFilename(matsimServices.getIterationNumber(), outputFile);
+        ChartSaveUtils.saveAsPNG(TimeProfileCharts.chartProfile(header, timeProfile, interval),
+                imageFile, 1500, 1000);
     }
 }

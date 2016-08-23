@@ -15,8 +15,7 @@ import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PopulationReaderMatsimV5;
+import org.matsim.core.population.io.PopulationReader;
 import org.matsim.core.scenario.ScenarioUtils;
 
 /**
@@ -25,10 +24,9 @@ import org.matsim.core.scenario.ScenarioUtils;
  */
 public class SelectedPlansAnalyzer {
 	// Parameters
-	private static final  String runId = "run_168a";
-	private static final  int numberOfIterations = 300;
-	//static int plansFileInterval = 50;
-	private static final  int plansFileInterval = 300;
+	private static final  String runId = "run_194b"; // <----------
+	private static final  int numberOfIterations = 150; // <----------
+	private static final  int plansFileInterval = 150; // <----------
 	private static final  boolean useInterimPlans = true;
 	private static final  boolean useOutputPlans = false;
 	
@@ -51,7 +49,7 @@ public class SelectedPlansAnalyzer {
 				
 				Config config = ConfigUtils.createConfig();
 				Scenario scenario = ScenarioUtils.createScenario(config);
-				PopulationReaderMatsimV5 reader = new PopulationReaderMatsimV5(scenario);
+				PopulationReader reader = new PopulationReader(scenario);
 				reader.readFile(plansFile);
 				Population population = scenario.getPopulation();
 	
@@ -65,7 +63,7 @@ public class SelectedPlansAnalyzer {
 			
 			Config config = ConfigUtils.createConfig();
 			Scenario scenario = ScenarioUtils.createScenario(config);
-			PopulationReaderMatsimV5 reader = new PopulationReaderMatsimV5(scenario);
+			PopulationReader reader = new PopulationReader(scenario);
 			reader.readFile(plansFileOutput);
 			Population population = scenario.getPopulation();
 	
@@ -98,7 +96,7 @@ public class SelectedPlansAnalyzer {
 				
 				for (int i = 0; i< numberOfPlanElements; i++) {
 					if (selectedPlan.getPlanElements().get(i) instanceof Leg) {
-						LegImpl leg = (LegImpl) selectedPlan.getPlanElements().get(i);
+						Leg leg = (Leg) selectedPlan.getPlanElements().get(i);
 						
 						mode = leg.getMode();
 						
@@ -142,9 +140,14 @@ public class SelectedPlansAnalyzer {
 			FileWriter fileWriter = new FileWriter(output);
 			bufferedWriter = new BufferedWriter(fileWriter);
 			
-			for (int key : stayHomePlansMap.keySet()) {
-    			bufferedWriter.write(key + "\t" + stayHomePlansMap.get(key) + "\t" + otherPlansMap.get(key) + "\t" 
-    					+ carPlansMap.get(key) + "\t" + ptPlansMap.get(key) + "\t" + walkPlansMap.get(key));
+			// Header
+			bufferedWriter.write("It." + "\t" + "stayHomePlans" + "\t" + "otherPlans" + "\t" 
+					+ "carPlans" + "\t" + "ptPlans" + "\t" + "walkPlans");
+			bufferedWriter.newLine();
+			
+			for (int iteration : stayHomePlansMap.keySet()) {
+    			bufferedWriter.write(iteration + "\t" + stayHomePlansMap.get(iteration) + "\t" + otherPlansMap.get(iteration) + "\t" 
+    					+ carPlansMap.get(iteration) + "\t" + ptPlansMap.get(iteration) + "\t" + walkPlansMap.get(iteration));
     			bufferedWriter.newLine();
     		}    		
 	    } catch (FileNotFoundException ex) {

@@ -3,7 +3,7 @@
  *                                                                         *
  * *********************************************************************** *
  *                                                                         *
- * copyright       : (C) 2015 by the members listed in the COPYING,        *
+ * copyright       : (C) 2016 by the members listed in the COPYING,        *
  *                   LICENSE and WARRANTY file.                            *
  * email           : info at matsim dot org                                *
  *                                                                         *
@@ -19,104 +19,99 @@
 
 package org.matsim.contrib.taxi.util.stats;
 
-import org.matsim.contrib.dvrp.data.*;
-import org.matsim.contrib.dvrp.schedule.Schedule;
-import org.matsim.contrib.dvrp.schedule.Schedule.ScheduleStatus;
-import org.matsim.contrib.taxi.data.*;
-import org.matsim.contrib.taxi.data.TaxiRequest.TaxiRequestStatus;
-import org.matsim.contrib.taxi.optimizer.TaxiOptimizerContext;
-import org.matsim.contrib.taxi.schedule.*;
-import org.matsim.contrib.taxi.schedule.TaxiTask.TaxiTaskType;
-import org.matsim.contrib.taxi.scheduler.TaxiSchedulerUtils;
-import org.matsim.contrib.taxi.util.stats.TimeProfileCollector.ProfileCalculator;
-import org.matsim.contrib.util.EnumCounter;
+import java.util.*;
 
-import com.google.common.collect.Iterables;
+import org.matsim.contrib.taxi.util.stats.TimeProfileCollector.ProfileCalculator;
 
 
 public class TimeProfiles
 {
-    public static ProfileCalculator<String> combineProfileCalculators(
-            final ProfileCalculator<?>... calculators)
+    public static ProfileCalculator combineProfileCalculators(
+            final ProfileCalculator... calculators)
     {
-        return new ProfileCalculator<String>() {
-            @Override
-            public String calcCurrentPoint()
-            {
-                String s = "";
-                for (ProfileCalculator<?> pc : calculators) {
-                    s += pc.calcCurrentPoint() + "\t";
-                }
-                return s;
-            }
-        };
-    }
-
-
-    public static ProfileCalculator<Integer> createIdleVehicleCounter(
-            final TaxiOptimizerContext optimContext)
-    {
-        return new ProfileCalculator<Integer>() {
-            @Override
-            public Integer calcCurrentPoint()
-            {
-                return Iterables.size(Iterables.filter(optimContext.taxiData.getVehicles().values(),
-                        TaxiSchedulerUtils.createIsIdle(optimContext.scheduler)));
-            }
-        };
-    }
-
-
-    public static final String TAXI_TASK_TYPES_HEADER = combineValues(TaxiTaskType.values());
-
-
-    public static ProfileCalculator<String> createCurrentTaxiTaskOfTypeCounter(
-            final VrpData taxiData)
-    {
-        return new ProfileCalculator<String>() {
-            @Override
-            public String calcCurrentPoint()
-            {
-                EnumCounter<TaxiTaskType> counter = new EnumCounter<>(TaxiTaskType.class);
-
-                for (Vehicle veh : taxiData.getVehicles().values()) {
-                    if (veh.getSchedule().getStatus() == ScheduleStatus.STARTED) {
-                        Schedule<TaxiTask> schedule = TaxiSchedules
-                                .asTaxiSchedule(veh.getSchedule());
-                        counter.increment(schedule.getCurrentTask().getTaxiTaskType());
-                    }
-                }
-
-                String s = "";
-                for (TaxiTaskType e : TaxiTaskType.values()) {
-                    s += counter.getCount(e) + "\t";
-                }
-                return s;
-            }
-        };
-    }
-
-
-    public static String combineValues(Object[] values)
-    {
-        String s = "";
-        for (Object v : values) {
-            s += v.toString() + "\t";
+        List<String> columns = new ArrayList<>();
+        for (ProfileCalculator pc : calculators) {
+            columns.addAll(Arrays.asList(pc.getHeader()));
         }
-        return s;
+        final String[] header = columns.toArray(new String[columns.size()]);
+
+        return new ProfileCalculator() {
+            @Override
+            public String[] getHeader()
+            {
+                return header;
+            }
+
+
+            @Override
+            public String[] calcValues()
+            {
+                List<String> vals = new ArrayList<>();
+                for (ProfileCalculator pc : calculators) {
+                    vals.addAll(Arrays.asList(pc.calcValues()));
+                }
+                return vals.toArray(new String[vals.size()]);
+            }
+        };
     }
 
 
-    public static ProfileCalculator<Integer> createRequestsWithStatusCounter(
-            final TaxiData taxiData, final TaxiRequestStatus requestStatus)
+    public static String[] combineValues(Object... values)
     {
-        return new ProfileCalculator<Integer>() {
-            @Override
-            public Integer calcCurrentPoint()
-            {
-                return TaxiRequests.countRequestsWithStatus(taxiData.getTaxiRequests().values(),
-                        requestStatus);
-            }
-        };
+        String[] strings = new String[values.length];
+        for (int i = 0; i < values.length; i++) {
+            strings[i] = values[i] + "";
+        }
+        return strings;
+    }
+
+
+    public static abstract class SingleValueProfileCalculator
+        implements ProfileCalculator
+    {
+        private final String[] headerArray;
+
+
+        public SingleValueProfileCalculator(String header)
+        {
+            this.headerArray = new String[] { header };
+        }
+
+
+        @Override
+        public String[] getHeader()
+        {
+            return headerArray;
+        }
+
+
+        @Override
+        public String[] calcValues()
+        {
+            return new String[] { calcValue() };
+        }
+
+
+        public abstract String calcValue();
+    }
+
+
+    public static abstract class MultiValueProfileCalculator
+        implements ProfileCalculator
+    {
+        private final String[] headerArray;
+
+
+        public MultiValueProfileCalculator(String... header)
+        {
+            this.headerArray = header;
+        }
+
+
+        @Override
+        public String[] getHeader()
+        {
+            return headerArray;
+        }
     }
 }

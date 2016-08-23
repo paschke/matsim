@@ -22,6 +22,7 @@
 package scenarios.illustrative.braess.run;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Calendar;
 
 import org.apache.log4j.Logger;
@@ -29,6 +30,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.contrib.signals.SignalSystemsConfigGroup;
 import org.matsim.contrib.signals.data.SignalsData;
 import org.matsim.contrib.signals.data.SignalsScenarioLoader;
@@ -46,20 +48,22 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
 import org.matsim.core.events.handler.EventHandler;
-import org.matsim.core.network.NetworkWriter;
-import org.matsim.core.population.PopulationWriter;
+import org.matsim.core.network.io.NetworkWriter;
 import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule.DefaultSelector;
 import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule.DefaultStrategy;
-import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility;
-import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutility.Builder;
+import org.matsim.core.router.costcalculators.RandomizingTimeDistanceTravelDisutilityFactory;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.lanes.data.v20.LaneDefinitionsWriter20;
 
-import matsimConnector.congestionpricing.MSACongestionHandler;
-import matsimConnector.congestionpricing.MSAMarginalCongestionPricingContolerListener;
-import matsimConnector.congestionpricing.MSATollDisutilityCalculatorFactory;
-import matsimConnector.congestionpricing.MSATollHandler;
+//import matsimConnector.congestionpricing.MSACongestionHandler;
+//import matsimConnector.congestionpricing.MSAMarginalCongestionPricingContolerListener;
+//import matsimConnector.congestionpricing.MSATollDisutilityCalculatorFactory;
+//import matsimConnector.congestionpricing.MSATollHandler;
 import playground.dgrether.signalsystems.sylvia.controler.SylviaSignalsModule;
+import playground.ikaddoura.analysis.pngSequence2Video.MATSimVideoUtils;
+import playground.ikaddoura.decongestion.Decongestion;
+import playground.ikaddoura.decongestion.DecongestionConfigGroup;
+import playground.ikaddoura.decongestion.data.DecongestionInfo;
 import playground.vsp.congestion.controler.MarginalCongestionPricingContolerListener;
 import playground.vsp.congestion.handlers.CongestionHandlerImplV10;
 import playground.vsp.congestion.handlers.CongestionHandlerImplV3;
@@ -79,6 +83,7 @@ import scenarios.illustrative.braess.createInput.TtCreateBraessPopulation;
 import scenarios.illustrative.braess.createInput.TtCreateBraessPopulation.InitRoutes;
 import scenarios.illustrative.braess.createInput.TtCreateBraessSignals;
 import scenarios.illustrative.braess.createInput.TtCreateBraessSignals.SignalControlType;
+import scenarios.illustrative.braess.signals.ResponsiveLocalDelayMinimizingSignal;
 
 /**
  * Class to run a simulation of the braess scenario with or without signals. 
@@ -102,15 +107,18 @@ public final class RunBraessSimulation {
 	// initial score for all initial plans
 	private static final Double INIT_PLAN_SCORE = null;
 
-	/// defines which kind of signals should be used
-	private static final SignalControlType SIGNAL_TYPE = SignalControlType.NONE;
+	// defines which kind of signals should be used
+	private static final SignalControlType SIGNAL_TYPE = SignalControlType.SIGNAL4_X_SECOND_Z;
+	// if SignalControlType SIGNAL4_X_Seconds_Z or SIGNAL4_RESPONSIVE is used, SECONDS_Z_GREEN gives the green time for Z
+	private static final int SECONDS_Z_GREEN = 1;
+	
 	// defines which kind of lanes should be used
 	private static final LaneType LANE_TYPE = LaneType.NONE;
 	
 	// defines which kind of pricing should be used
-	private static final PricingType PRICING_TYPE = PricingType.GREGOR;
+	private static final PricingType PRICING_TYPE = PricingType.NONE;
 	public enum PricingType{
-		NONE, V3, V4, V7, V8, V9, V10, FLOWBASED, GREGOR
+		NONE, V3, V4, V7, V8, V9, V10, FLOWBASED, GREGOR, INTERVALBASED
 	}
 
 	// choose a sigma for the randomized router
@@ -119,7 +127,7 @@ public final class RunBraessSimulation {
 		
 	private static final boolean WRITE_INITIAL_FILES = true;
 	
-	private static final String OUTPUT_BASE_DIR = "../../../runs-svn/braess/congestionPricing/";
+	private static final String OUTPUT_BASE_DIR = "../../../runs-svn/braess/badBelzig2016/";
 	
 	public static void main(String[] args) {
 		Config config = defineConfig();
@@ -127,107 +135,121 @@ public final class RunBraessSimulation {
 		Controler controler = prepareController(scenario);
 	
 		controler.run();
+		
+		try {
+			MATSimVideoUtils.createLegHistogramVideo(config.controler().getOutputDirectory());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (PRICING_TYPE.equals(PricingType.INTERVALBASED)) {
+			try {
+				MATSimVideoUtils.createVideo(config.controler().getOutputDirectory(), 1, "toll_perLinkAndTimeBin");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	private static Config defineConfig() {
-			Config config = ConfigUtils.createConfig();
-	
-			// set number of iterations
-			config.controler().setLastIteration( 100 );
-	
-			// able or enable signals and lanes
-			config.qsim().setUseLanes( LANE_TYPE.equals(LaneType.NONE)? false : true );
-			SignalSystemsConfigGroup signalConfigGroup = ConfigUtils
-					.addOrGetModule(config, SignalSystemsConfigGroup.GROUPNAME,
-							SignalSystemsConfigGroup.class);
-			signalConfigGroup.setUseSignalSystems( SIGNAL_TYPE.equals(SignalControlType.NONE)? false : true );
-	
-			// set brain exp beta
-			config.planCalcScore().setBrainExpBeta( 1 );
-	
-			// choose between link to link and node to node routing
-			// (only has effect if lanes are used)
-			boolean link2linkRouting = false;
-			config.controler().setLinkToLinkRoutingEnabled(link2linkRouting);
-			
-			config.travelTimeCalculator().setCalculateLinkToLinkTravelTimes(link2linkRouting);
-			config.travelTimeCalculator().setCalculateLinkTravelTimes(true);
-			
-			// set travelTimeBinSize (only has effect if reRoute is used)
-			config.travelTimeCalculator().setTraveltimeBinSize( 900 );
-			
-			config.travelTimeCalculator().setTravelTimeCalculatorType(
-					TravelTimeCalculatorType.TravelTimeCalculatorHashMap.toString());
-			// hash map and array produce same results. only difference: memory and time.
-			// for small time bins and sparse values hash map is better. theresa, may'15
-			
-			// define strategies:
-			{
-				StrategySettings strat = new StrategySettings() ;
-				strat.setStrategyName( DefaultStrategy.ReRoute.toString() );
-				strat.setWeight( 0.1 ) ;
-				strat.setDisableAfter( config.controler().getLastIteration() - 50 );
-				config.strategy().addStrategySettings(strat);
-			}
-			{
-				StrategySettings strat = new StrategySettings() ;
-				strat.setStrategyName( DefaultSelector.SelectRandom.toString() );
-				strat.setWeight( 0.0 ) ;
-				strat.setDisableAfter( config.controler().getLastIteration() - 50 );
-				config.strategy().addStrategySettings(strat);
-			}
-			{
-				StrategySettings strat = new StrategySettings() ;
-				strat.setStrategyName( DefaultSelector.ChangeExpBeta.toString() );
-				strat.setWeight( 0.9 ) ;
-				strat.setDisableAfter( config.controler().getLastIteration() );
-				config.strategy().addStrategySettings(strat);
-			}
-			{
-				StrategySettings strat = new StrategySettings() ;
-				strat.setStrategyName( DefaultSelector.BestScore.toString() );
-				strat.setWeight( 0.0 ) ;
-				strat.setDisableAfter( config.controler().getLastIteration() - 50 );
-				config.strategy().addStrategySettings(strat);
-			}
-			{
-				StrategySettings strat = new StrategySettings() ;
-				strat.setStrategyName( DefaultSelector.KeepLastSelected.toString() );
-				strat.setWeight( 0.0 ) ;
-				strat.setDisableAfter( config.controler().getLastIteration() );
-				config.strategy().addStrategySettings(strat);
-			}
-	
-			config.strategy().setMaxAgentPlanMemorySize( 3 );			
-			
-			config.qsim().setStuckTime(3600 * 10.);
-			
-			config.qsim().setStartTime(3600 * SIMULATION_START_TIME);
-			// set end time to shorten simulation run time. (set it to 2 hours after the last agent departs)
-			config.qsim().setEndTime(3600 * (SIMULATION_START_TIME + SIMULATION_PERIOD + 2));
-			
-			// adapt monetary distance cost rate (should be negative)
-			config.planCalcScore().getModes().get(TransportMode.car).setMonetaryDistanceRate( -0.0 );
-			
-			config.planCalcScore().setMarginalUtilityOfMoney( 1.0 ); // default is 1.0
-	
-			config.controler().setOverwriteFileSetting( OverwriteFileSetting.deleteDirectoryIfExists );		
-			// note: the output directory is defined in createRunNameAndOutputDir(...) after all adaptations are done
-			
-			config.vspExperimental().setWritingOutputEvents(true);
-			config.planCalcScore().setWriteExperiencedPlans(true);
-	
-			config.controler().setWriteEventsInterval( config.controler().getLastIteration() );
-			config.controler().setWritePlansInterval( config.controler().getLastIteration() );
-			
-			ActivityParams dummyAct = new ActivityParams("dummy");
-			dummyAct.setTypicalDuration(12 * 3600);
-			config.planCalcScore().addActivityParams(dummyAct);
-			
-			config.controler().setCreateGraphs( true );
-			
-			return config;
+		Config config = ConfigUtils.createConfig();
+
+		// set number of iterations
+		config.controler().setLastIteration(100);
+
+		// able or enable signals and lanes
+		config.qsim().setUseLanes(LANE_TYPE.equals(LaneType.NONE) ? false : true);
+		SignalSystemsConfigGroup signalConfigGroup = ConfigUtils.addOrGetModule(config, SignalSystemsConfigGroup.GROUPNAME, SignalSystemsConfigGroup.class);
+		signalConfigGroup.setUseSignalSystems(SIGNAL_TYPE.equals(SignalControlType.NONE) ? false : true);
+
+		// set brain exp beta
+		config.planCalcScore().setBrainExpBeta(20);
+
+		// choose between link to link and node to node routing
+		// (only has effect if lanes are used)
+		boolean link2linkRouting = false;
+		config.controler().setLinkToLinkRoutingEnabled(link2linkRouting);
+
+		config.travelTimeCalculator().setCalculateLinkToLinkTravelTimes(link2linkRouting);
+		config.travelTimeCalculator().setCalculateLinkTravelTimes(true);
+
+		// set travelTimeBinSize (only has effect if reRoute is used)
+		config.travelTimeCalculator().setTraveltimeBinSize(10);
+//		config.travelTimeCalculator().setMaxTime((int) (3600 * (SIMULATION_START_TIME + SIMULATION_PERIOD + 2)));
+		config.travelTimeCalculator().setMaxTime(3600 * 24);
+
+		config.travelTimeCalculator().setTravelTimeCalculatorType(TravelTimeCalculatorType.TravelTimeCalculatorHashMap.toString());
+		// hash map and array produce same results. only difference: memory and time.
+		// for small time bins and sparse values hash map is better. theresa, may'15
+
+		// define strategies:
+		{
+			StrategySettings strat = new StrategySettings();
+			strat.setStrategyName(DefaultStrategy.ReRoute.toString());
+			strat.setWeight(0.1);
+			strat.setDisableAfter(config.controler().getLastIteration() - 50);
+			config.strategy().addStrategySettings(strat);
 		}
+		{
+			StrategySettings strat = new StrategySettings();
+			strat.setStrategyName(DefaultSelector.SelectRandom.toString());
+			strat.setWeight(0.0);
+			strat.setDisableAfter(config.controler().getLastIteration() - 50);
+			config.strategy().addStrategySettings(strat);
+		}
+		{
+			StrategySettings strat = new StrategySettings();
+			strat.setStrategyName(DefaultSelector.ChangeExpBeta.toString());
+			strat.setWeight(0.9);
+			strat.setDisableAfter(config.controler().getLastIteration());
+			config.strategy().addStrategySettings(strat);
+		}
+		{
+			StrategySettings strat = new StrategySettings();
+			strat.setStrategyName(DefaultSelector.BestScore.toString());
+			strat.setWeight(0.0);
+			strat.setDisableAfter(config.controler().getLastIteration() - 50);
+			config.strategy().addStrategySettings(strat);
+		}
+		{
+			StrategySettings strat = new StrategySettings();
+			strat.setStrategyName(DefaultSelector.KeepLastSelected.toString());
+			strat.setWeight(0.0);
+			strat.setDisableAfter(config.controler().getLastIteration());
+			config.strategy().addStrategySettings(strat);
+		}
+
+		config.strategy().setMaxAgentPlanMemorySize(5);
+
+		config.qsim().setStuckTime(3600 * 10.);
+
+		config.qsim().setStartTime(3600 * SIMULATION_START_TIME);
+		// set end time to shorten simulation run time: 2 hours after the last agent departs
+//		config.qsim().setEndTime(3600 * (SIMULATION_START_TIME + SIMULATION_PERIOD + 2));
+		config.qsim().setEndTime(3600 * 24);
+		
+		// adapt monetary distance cost rate (should be negative)
+		config.planCalcScore().getModes().get(TransportMode.car).setMonetaryDistanceRate(-0.0);
+
+		config.planCalcScore().setMarginalUtilityOfMoney(1.0); // default is 1.0
+
+		// "overwriteExistingFiles" necessary if initial files should be written out
+		config.controler().setOverwriteFileSetting(OverwriteFileSetting.overwriteExistingFiles);
+		// note: the output directory is defined in createRunNameAndOutputDir(...) after all adaptations are done
+
+		config.vspExperimental().setWritingOutputEvents(true);
+		config.planCalcScore().setWriteExperiencedPlans(true);
+
+		config.controler().setWriteEventsInterval(config.controler().getLastIteration());
+		config.controler().setWritePlansInterval(config.controler().getLastIteration());
+
+		ActivityParams dummyAct = new ActivityParams("dummy");
+		dummyAct.setTypicalDuration(12 * 3600);
+		config.planCalcScore().addActivityParams(dummyAct);
+
+		config.controler().setCreateGraphs(true);
+
+		return config;
+	}
 
 	private static Scenario prepareScenario(Config config) {
 		Scenario scenario = ScenarioUtils.loadScenario(config);
@@ -260,12 +282,23 @@ public final class RunBraessSimulation {
 		sylviaSignalsModule.setAlwaysSameMobsimSeed(alwaysSameMobsimSeed);
 		controler.addOverridingModule(sylviaSignalsModule);
 		
+		// add responsive signal controler if enabled
+		if (SIGNAL_TYPE.equals(SignalControlType.SIGNAL4_RESPONSIVE)){
+			controler.addOverridingModule(new AbstractModule() {
+				@Override
+				public void install() {
+					bind(ResponsiveLocalDelayMinimizingSignal.class).asEagerSingleton();
+					addControlerListenerBinding().to(ResponsiveLocalDelayMinimizingSignal.class);
+				}
+			});
+		}
+		
 		// add the module for link to link routing if enabled
 		if (config.controler().isLinkToLinkRoutingEnabled()){
 			controler.addOverridingModule(new InvertedNetworkRoutingModuleModule());
 		}
 
-		if (!PRICING_TYPE.equals(PricingType.NONE) && !PRICING_TYPE.equals(PricingType.FLOWBASED) && !PRICING_TYPE.equals(PricingType.GREGOR)){
+		if (!PRICING_TYPE.equals(PricingType.NONE) && !PRICING_TYPE.equals(PricingType.FLOWBASED) && !PRICING_TYPE.equals(PricingType.GREGOR) && !PRICING_TYPE.equals(PricingType.INTERVALBASED)){
 			// add tolling
 			TollHandler tollHandler = new TollHandler(scenario);
 			
@@ -277,7 +310,7 @@ public final class RunBraessSimulation {
 					if (strategies[i].getWeight() > 0.0){ // ReRoute is used
 						final CongestionTollTimeDistanceTravelDisutilityFactory factory =
 								new CongestionTollTimeDistanceTravelDisutilityFactory(
-										new Builder( TransportMode.car, config.planCalcScore() ),
+										new RandomizingTimeDistanceTravelDisutilityFactory( TransportMode.car, config.planCalcScore() ),
 								tollHandler, config.planCalcScore()
 							) ;
 						factory.setSigma(SIGMA);
@@ -325,27 +358,44 @@ public final class RunBraessSimulation {
 					new MarginalCongestionPricingContolerListener(scenario, tollHandler, congestionHandler));
 		
 		} else if (PRICING_TYPE.equals(PricingType.GREGOR)){
-			final MSATollHandler tollHandler = new MSATollHandler(scenario);
-			final MSATollDisutilityCalculatorFactory tollDisutilityCalculatorFactory = new MSATollDisutilityCalculatorFactory(tollHandler, config.planCalcScore());
-
-			controler.addOverridingModule(new AbstractModule(){
-				@Override
-				public void install() {
-					this.bindCarTravelDisutilityFactory().toInstance( tollDisutilityCalculatorFactory );
-				}
-			}); 
-				
-			controler.addControlerListener(new MSAMarginalCongestionPricingContolerListener(scenario, tollHandler, new MSACongestionHandler(controler.getEvents(), scenario)));
+			
+			throw new RuntimeException("The following lines of code lead to non-compiling code... IK"); // TODO
+			
+//			final MSATollHandler tollHandler = new MSATollHandler(scenario);
+//			final MSATollDisutilityCalculatorFactory tollDisutilityCalculatorFactory = new MSATollDisutilityCalculatorFactory(tollHandler, config.planCalcScore());
+//
+//			controler.addOverridingModule(new AbstractModule(){
+//				@Override
+//				public void install() {
+//					this.bindCarTravelDisutilityFactory().toInstance( tollDisutilityCalculatorFactory );
+//				}
+//			}); 
+//				
+//			controler.addControlerListener(new MSAMarginalCongestionPricingContolerListener(scenario, tollHandler, new MSACongestionHandler(controler.getEvents(), scenario)));
+	
 		} else if (PRICING_TYPE.equals(PricingType.FLOWBASED)) {
 			
 			throw new UnsupportedOperationException("Not yet implemented!");
 //			Initializer initializer = new Initializer();
-//			controler.addControlerListener(initializer);		
+//			controler.addControlerListener(initializer);
+			
+		} else if (PRICING_TYPE.equals(PricingType.INTERVALBASED)) {
+			
+			final DecongestionConfigGroup decongestionSettings = new DecongestionConfigGroup();
+			decongestionSettings.setWRITE_OUTPUT_ITERATION(1);
+			decongestionSettings.setTOLL_ADJUSTMENT(0.1);
+			decongestionSettings.setUPDATE_PRICE_INTERVAL(1);
+			decongestionSettings.setTOLL_BLEND_FACTOR(1.0);
+			decongestionSettings.setFRACTION_OF_ITERATIONS_TO_END_PRICE_ADJUSTMENT(1.0);
+			final DecongestionInfo info = new DecongestionInfo(scenario, decongestionSettings);
+			Decongestion decongestion = new Decongestion(info);
+			controler = decongestion.getControler();
+			
 		} else { // no pricing
 			
 			// adapt sigma for randomized routing
-			final RandomizingTimeDistanceTravelDisutility.Builder builder = 
-					new RandomizingTimeDistanceTravelDisutility.Builder( TransportMode.car, config.planCalcScore() );
+			final RandomizingTimeDistanceTravelDisutilityFactory builder =
+					new RandomizingTimeDistanceTravelDisutilityFactory( TransportMode.car, config.planCalcScore() );
 			builder.setSigma(SIGMA);
 			controler.addOverridingModule(new AbstractModule() {
 				@Override
@@ -373,12 +423,18 @@ public final class RunBraessSimulation {
 	private static void createNetwork(Scenario scenario) {	
 		
 		TtCreateBraessNetworkAndLanes netCreator = new TtCreateBraessNetworkAndLanes(scenario);
-		netCreator.setUseBTUProperties( false );
+//		netCreator.setUseBTUProperties( false );
 		netCreator.setSimulateInflowCap( false );
 		netCreator.setMiddleLinkExists( true );
+		
+		netCreator.setCapFirstLast(4000);
+		netCreator.setCapZ(1800);
+		netCreator.setCapFast(1800);
+		netCreator.setCapSlow(1800);
+		
 		netCreator.setLaneType(LANE_TYPE);
 		netCreator.setNumberOfPersonsPerHour(NUMBER_OF_PERSONS);
-		netCreator.setCapTolerance( 0. );
+		
 		netCreator.createNetworkAndLanes();
 	}
 
@@ -398,6 +454,7 @@ public final class RunBraessSimulation {
 		TtCreateBraessSignals signalsCreator = new TtCreateBraessSignals(scenario);
 		signalsCreator.setLaneType(LANE_TYPE);
 		signalsCreator.setSignalType(SIGNAL_TYPE);
+		signalsCreator.setSecondsZGreen(SECONDS_Z_GREEN);
 		signalsCreator.createSignals();
 	}
 
@@ -421,11 +478,11 @@ public final class RunBraessSimulation {
 		if (SIMULATION_PERIOD != 1){
 			runName += "_" + SIMULATION_PERIOD + "h";
 		}
-		runName += "_start" + (int)SIMULATION_START_TIME; 
+//		runName += "_start" + (int)SIMULATION_START_TIME; 
 		
 		switch(INIT_ROUTES_TYPE){
 		case ALL:
-			runName += "_ALL-sel1+3";
+			runName += "_ALL"; //"_ALL-sel1+3";
 			break;
 		case ONLY_OUTER:
 			runName += "_OUTER";
@@ -441,7 +498,7 @@ public final class RunBraessSimulation {
 
 		runName += "_" + config.controler().getLastIteration() + "it";
 
-		// create info about the different possible travel times
+		// create info about the different possible travel times, capacities and link length
 		Link middleLink = scenario.getNetwork().getLinks()
 				.get(Id.createLinkId("3_4"));
 		Link slowLink = scenario.getNetwork().getLinks()
@@ -453,19 +510,18 @@ public final class RunBraessSimulation {
 		if (middleLink == null){
 			runName += "_woZ";
 		} else {
-			int fastTT = (int)Math.ceil(middleLink.getLength()
+			int middleTT = (int)Math.ceil(middleLink.getLength()
 					/ middleLink.getFreespeed());
+			int fastTT = (int)Math.ceil(fastLink.getLength()
+					/ fastLink.getFreespeed());
 			int slowTT = (int)Math.ceil(slowLink.getLength()
 					/ slowLink.getFreespeed());
-			runName += "_" + fastTT + "-vs-" + slowTT;
-		}
-		
-		// create info about capacity and link length
-		runName += "_cap" + (int)slowLink.getCapacity();
-		if (slowLink.getLength() != 200)
-			runName += "_l" + (int)slowLink.getLength() + "m";
-		if (slowLink.getLength() != fastLink.getLength()){
-			runName += "_l" + (int)fastLink.getLength() + "m";
+			int capZ = (int)middleLink.getCapacity();
+			int capFast = (int)fastLink.getCapacity();
+			int capSlow = (int)slowLink.getCapacity();
+			runName += "_tt-" + fastTT + "-" + middleTT + "-" + slowTT;
+			runName += "_cap-" + capFast + "-" + capZ + "-" + capSlow;
+			runName += "_l-" + (int)fastLink.getLength() + "-" + (int)middleLink.getLength() + "-" + (int)slowLink.getLength();
 		}
 		
 		if (scenario.getNetwork().getNodes().containsKey(Id.createNodeId(23))){
@@ -527,11 +583,11 @@ public final class RunBraessSimulation {
 			case ONE_SECOND_SO:
 				runName += "_1sSO";
 				break;
-			case SIGNAL4_ONE_SECOND_SO:
-				runName += "_S4_1sSO";
+			case SIGNAL4_X_SECOND_Z:
+				runName += "_S4_" + SECONDS_Z_GREEN + "sZ";
 				break;
-			case SIGNAL4_ONE_SECOND_Z:
-				runName += "_S4_1sZ";
+			case SIGNAL4_RESPONSIVE:
+				runName += "_S4resp_init" + SECONDS_Z_GREEN + "sZ";
 				break;
 			case SIGNAL4_SYLVIA_V2Z:
 				runName += "_S4_Sylvia_V2Z";
@@ -546,11 +602,18 @@ public final class RunBraessSimulation {
 		}
 		
 		if (!PRICING_TYPE.equals(PricingType.NONE)){
-			runName += "_" + PRICING_TYPE.toString();
+			if (PRICING_TYPE.equals(PricingType.INTERVALBASED)){
+				runName += "_INTERVAL_tbs" + config.travelTimeCalculator().getTraveltimeBinSize();
+			} else {
+				runName += "_" + PRICING_TYPE.toString();
+			}
 		}
 		
 		if (config.strategy().getMaxAgentPlanMemorySize() != 0)
 			runName += "_max" + config.strategy().getMaxAgentPlanMemorySize() + "plans";
+		
+		runName += "_stuckT" + (int)config.qsim().getStuckTime();
+		runName += "_simEndT" + (int)(config.qsim().getEndTime()/24) + "h";
 
 		String outputDir = OUTPUT_BASE_DIR + runName + "/"; 
 		// create directory

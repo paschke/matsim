@@ -193,7 +193,7 @@ public class GautengControler_subpopulations {
 		final RoadPricingConfigGroup roadPricingConfig = ConfigUtils.addOrGetModule( 
 				config, RoadPricingConfigGroup.GROUP_NAME, RoadPricingConfigGroup.class
 				);
-		roadPricingConfig.setRoutingRandomness(3.); // <-- This is the diversity generating toll router!
+		config.plansCalcRoute().setRoutingRandomness(3.); // <-- This is the diversity generating toll router!
 
 		config.plans().setRemovingUnneccessaryPlanAttributes(true);
 		config.vspExperimental().setVspDefaultsCheckingLevel( VspDefaultsCheckingLevel.abort ) ;
@@ -393,7 +393,7 @@ public class GautengControler_subpopulations {
 		String countsFilename = null;
 		if(args.length > 10 && args[10] != null && args[10].length() > 0) {
 			countsFilename = args[10];
-			config.counts().setCountsFileName(countsFilename);
+			config.counts().setInputFile(countsFilename);
 		}
 	}
 	

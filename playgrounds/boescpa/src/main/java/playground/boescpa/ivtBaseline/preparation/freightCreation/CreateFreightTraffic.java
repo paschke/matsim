@@ -24,13 +24,11 @@ package playground.boescpa.ivtBaseline.preparation.freightCreation;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
-import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.population.LegImpl;
-import org.matsim.core.population.PlanImpl;
-import org.matsim.core.population.PopulationWriter;
+import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.CH1903LV03toCH1903LV03Plus;
@@ -62,6 +60,7 @@ public class CreateFreightTraffic {
 
 	private final Random random;
 	private final double percentage;
+	private final double upScaling;
 	private int totalPopulationSize = 0;
 	private int roundDowns = 0;
 	private int roundUps = 0;
@@ -69,10 +68,17 @@ public class CreateFreightTraffic {
 	private final Map<Integer, List<ActivityFacility>> zones = new HashMap<>();
 	private final Population freightPopulation;
 	private final ActivityFacilities freightFacilities;
+	private int personIndex = 0;
 
-	private CreateFreightTraffic(String coordFile, String facilitiesFile, double percentagePopulation, int randomSeed) {
+	private CreateFreightTraffic(String coordFile, String facilitiesFile, double scalingFactor, int randomSeed) {
 		readZones(coordFile, facilitiesFile);
-		this.percentage = percentagePopulation;
+		if (scalingFactor <= 1.0) {
+			this.percentage = scalingFactor;
+			this.upScaling = 1.0;
+		} else {
+			this.percentage = 1.0;
+			this.upScaling = scalingFactor;
+		}
 		this.random = new Random(randomSeed);
 		this.freightPopulation = PopulationUtils.getEmptyPopulation();
 		this.freightFacilities = FacilitiesUtils.createActivityFacilities();
@@ -85,18 +91,18 @@ public class CreateFreightTraffic {
 		final String trucksFile = args[3];
 		final String heavyDutyVehiclesFile = args[4];
 		final String cumulativeProbabilityFreightDeparturesFile = args[5];
-		final double percentagePopulation = Double.parseDouble(args[6]); // for example for a 1% population enter "0.01"
+		final double scalingFactor = Double.parseDouble(args[6]); // for example for a 1% population enter "0.01"
 		final int randomSeed = Integer.parseInt(args[7]);
 		final String outputFacilities = args[8];
 		final String outputPopulation = args[9];
 
 		log.info("Freight creation...");
-		CreateFreightTraffic creator = new CreateFreightTraffic(coordFile, facilitiesFile, percentagePopulation, randomSeed);
+		CreateFreightTraffic creator = new CreateFreightTraffic(coordFile, facilitiesFile, scalingFactor, randomSeed);
 		creator.readDepartures(cumulativeProbabilityFreightDeparturesFile);
 
-		creator.createFreightTraffic("UTV_", utilityVehiclesFile);
-		creator.createFreightTraffic("TRU_", trucksFile);
-		creator.createFreightTraffic("HDV_", heavyDutyVehiclesFile);
+		creator.createFreightTraffic("UtilityVehicle", utilityVehiclesFile);
+		creator.createFreightTraffic("Truck", trucksFile);
+		creator.createFreightTraffic("HeavyDutyVehicle", heavyDutyVehiclesFile);
 
 		creator.writeFreightFacilities(outputFacilities);
 		creator.writeFreightPopulation(outputPopulation);
@@ -124,9 +130,8 @@ public class CreateFreightTraffic {
 		log.info("Round downs: " + roundDowns);
 	}
 
-	private void createFreightTraffic(String prefix, String vehiclesFile) {
+	private void createFreightTraffic(String type, String vehiclesFile) {
 		Counter counter = new Counter(" OD-relationship # ");
-		int personIndex = 0;
 		BufferedReader reader = IOUtils.getBufferedReader(vehiclesFile);
 		try {
 			String nextLine = reader.readLine();
@@ -138,7 +143,7 @@ public class CreateFreightTraffic {
 					if (random.nextDouble() <= percentage) {
 						ActivityFacility startFacility = getFacility(Integer.parseInt(line[0]));
 						ActivityFacility endFacility = getFacility(Integer.parseInt(line[2]));
-						createSingleTripAgent(prefix + ++personIndex, startFacility, endFacility);
+						createSingleTripAgent(type, ++personIndex, startFacility, endFacility);
 					}
 				}
 				nextLine = reader.readLine();
@@ -150,29 +155,30 @@ public class CreateFreightTraffic {
 		counter.printCounter();
 	}
 
-	private void createSingleTripAgent(String index, ActivityFacility startFacility, ActivityFacility endFacility) {
+	private void createSingleTripAgent(String type, int index, ActivityFacility startFacility, ActivityFacility endFacility) {
 		// create and add new agent
-		Person p = org.matsim.core.population.PopulationUtils.createPerson(Id.create(FREIGHT_TAG + "_" + index, Person.class));
+		Person p = org.matsim.core.population.PopulationUtils.getFactory().createPerson(Id.create(FREIGHT_TAG + "_" + index, Person.class));
 		freightPopulation.addPerson(p);
 		freightPopulation.getPersonAttributes().putAttribute(p.getId().toString(), "subpopulation", FREIGHT_TAG);
+		freightPopulation.getPersonAttributes().putAttribute(p.getId().toString(), "freight_type", type);
 		// create and add new plan
 		p.addPlan(createSingleTripPlan(startFacility, endFacility));
 	}
 
 	private Plan createSingleTripPlan(ActivityFacility startFacility, ActivityFacility endFacility) {
-		Plan plan = new PlanImpl();
+		Plan plan = org.matsim.core.population.PopulationUtils.createPlan();
 		int departureTime = getDepartureTime();
 
-		ActivityImpl actStart = new ActivityImpl(FREIGHT_TAG, startFacility.getCoord(), startFacility.getLinkId());
+		Activity actStart = org.matsim.core.population.PopulationUtils.createActivityFromCoordAndLinkId(FREIGHT_TAG, startFacility.getCoord(), startFacility.getLinkId());
 		actStart.setFacilityId(startFacility.getId());
 		actStart.setStartTime(0.0);
 		actStart.setMaximumDuration(departureTime);
 		actStart.setEndTime(departureTime);
 		plan.addActivity(actStart);
 
-		plan.addLeg(new LegImpl("car"));
+		plan.addLeg(org.matsim.core.population.PopulationUtils.createLeg("car"));
 
-		ActivityImpl actEnd = new ActivityImpl(FREIGHT_TAG, endFacility.getCoord(), endFacility.getLinkId());
+		Activity actEnd = org.matsim.core.population.PopulationUtils.createActivityFromCoordAndLinkId(FREIGHT_TAG, endFacility.getCoord(), endFacility.getLinkId());
 		actEnd.setFacilityId(endFacility.getId());
 		actEnd.setStartTime(departureTime);
 		//actEnd.setMaximumDuration(24.0 * 3600.0 - departureTime);
@@ -194,10 +200,12 @@ public class CreateFreightTraffic {
 	}
 
 	private int getNumberOfTrips(String floatingNumberOfTripsForThisODRelationship) {
+		// first scale number of trips
+		double floatingNumberOfTrips = this.upScaling * Double.parseDouble(floatingNumberOfTripsForThisODRelationship);
 		// first all full trips for this OD-relationship
-		int numberOfTrips = (int)Math.floor(Double.parseDouble(floatingNumberOfTripsForThisODRelationship));
+		int numberOfTrips = (int)Math.floor(floatingNumberOfTrips);
 		// then - if chance allows - another trip
-		double residualTrips = Double.parseDouble(floatingNumberOfTripsForThisODRelationship) - numberOfTrips;
+		double residualTrips = floatingNumberOfTrips - numberOfTrips;
 		if (random.nextDouble() <= residualTrips) {
 			numberOfTrips++;
 			roundUps++;

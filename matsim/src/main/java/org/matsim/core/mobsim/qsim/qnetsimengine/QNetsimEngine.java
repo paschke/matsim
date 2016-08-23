@@ -48,6 +48,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.config.groups.QSimConfigGroup.LinkDynamics;
 import org.matsim.core.config.groups.QSimConfigGroup.SnapshotStyle;
+import org.matsim.core.config.groups.QSimConfigGroup.StarttimeInterpretation;
 import org.matsim.core.config.groups.QSimConfigGroup.VehicleBehavior;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.mobsim.framework.MobsimAgent;
@@ -61,7 +62,7 @@ import org.matsim.core.mobsim.qsim.interfaces.MobsimVehicle;
 import org.matsim.core.mobsim.qsim.interfaces.NetsimNetwork;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.vehicles.Vehicle;
-import org.matsim.vis.snapshotwriters.AgentSnapshotInfoFactory;
+import org.matsim.vis.snapshotwriters.SnapshotLinkWidthCalculator;
 
 /**
  * Coordinates the movement of vehicles on the links and the nodes.
@@ -166,9 +167,9 @@ public class QNetsimEngine implements MobsimEngine {
 		dpHandler = new VehicularDepartureHandler(this, vehicleBehavior, qSimConfigGroup);
 		
 		if(qSimConfigGroup.getLinkDynamics().equals(LinkDynamics.SeepageQ)) {
-			log.info("Seepage is allowed. Seep mode is " + qSimConfigGroup.getSeepMode() + ".");
+			log.info("Seepage is allowed. Seep mode(s) is(are) " + qSimConfigGroup.getSeepModes() + ".");
 			if(qSimConfigGroup.isSeepModeStorageFree()) {
-				log.warn("Seep mode " + qSimConfigGroup.getSeepMode() + " does not take storage space thus only considered for flow capacities.");
+				log.warn("Seep mode(s) " + qSimConfigGroup.getSeepModes() + " does not take storage space thus only considered for flow capacities.");
 			}
 		}
 		
@@ -179,7 +180,7 @@ public class QNetsimEngine implements MobsimEngine {
 			EventsManager events = sim.getEventsManager() ;
 			QSimConfigGroup qsimConfig = sim.getScenario().getConfig().qsim() ;
 			Network net = scenario.getNetwork() ;
-			final DefaultQNetworkFactory netsimNetworkFactory2 = new DefaultQNetworkFactory( qsimConfig, events, net, scenario );
+			final DefaultQNetworkFactory netsimNetworkFactory2 = new DefaultQNetworkFactory( events, scenario );
 			MobsimTimer mobsimTimer = sim.getSimTimer() ;
 			AgentCounter agentCounter = sim.getAgentCounter() ;
 			netsimNetworkFactory2.initializeFactory(agentCounter, mobsimTimer, ii );
@@ -207,20 +208,21 @@ public class QNetsimEngine implements MobsimEngine {
 		qlink.addParkedVehicle(veh);
 	}
 
-	static AbstractAgentSnapshotInfoBuilder createAgentSnapshotInfoBuilder(Scenario scenario, AgentSnapshotInfoFactory agentSnapshotInfoFactory) {
+	static AbstractAgentSnapshotInfoBuilder createAgentSnapshotInfoBuilder(Scenario scenario, SnapshotLinkWidthCalculator linkWidthCalculator) {
 		final SnapshotStyle snapshotStyle = scenario.getConfig().qsim().getSnapshotStyle();
 		switch(snapshotStyle) {
 		case queue:
-			return new QueueAgentSnapshotInfoBuilder(scenario, agentSnapshotInfoFactory);
+			return new QueueAgentSnapshotInfoBuilder(scenario, linkWidthCalculator);
 		case withHoles:
+		case withHolesAndShowHoles:
 			// the difference is not in the spacing, thus cannot be differentiated by using different classes.  kai, sep'14
 			// ??? kai, nov'15
-			return new WithHolesAgentSnapshotInfoBuilder(scenario, agentSnapshotInfoFactory);
+			return new QueueAgentSnapshotInfoBuilder(scenario, linkWidthCalculator);
 		case equiDist:
-			return new EquiDistAgentSnapshotInfoBuilder(scenario, agentSnapshotInfoFactory);
+			return new EquiDistAgentSnapshotInfoBuilder(scenario, linkWidthCalculator);
 		default:
 			log.warn("The snapshotStyle \"" + snapshotStyle + "\" is not supported. Using equiDist");
-			return new EquiDistAgentSnapshotInfoBuilder(scenario, agentSnapshotInfoFactory);
+			return new EquiDistAgentSnapshotInfoBuilder(scenario, linkWidthCalculator);
 		}
 	}
 
@@ -491,7 +493,8 @@ public class QNetsimEngine implements MobsimEngine {
 				 * If the QLink contains agents that end their activity in the first time
 				 * step, the link should be activated.
 				 */
-				if (linksToActivateInitially.remove(qLink)) {
+				if (linksToActivateInitially.remove(qLink) 
+						|| qsim.getScenario().getConfig().qsim().getSimStarttimeInterpretation()==StarttimeInterpretation.onlyUseStarttime) {
 					this.engines.get(i).registerLinkAsActive(qLink);
 				}
 
