@@ -27,7 +27,7 @@ import playground.paschke.qsim.RelocationInfo;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBeforeSimStepListener {
+public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimStepListener {
 	private static final Logger log = Logger.getLogger("dummy");
 
 	private Scenario scenario;
@@ -37,7 +37,7 @@ public class MobismBeforeSimStepRelocationAgentsDispatcher implements MobsimBefo
 	private CarSharingDemandTracker demandTracker;
 
 	@Inject
-	public MobismBeforeSimStepRelocationAgentsDispatcher(final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider) {
+	public MobismBeforeSimStepRelocationListener(final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider) {
 		this.carSharingVehicles = carSharingVehicles;
 		this.demandTracker = demandTracker;
 	}

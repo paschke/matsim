@@ -22,7 +22,7 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
-import playground.paschke.events.MobismBeforeSimStepRelocationAgentsDispatcher;
+import playground.paschke.events.MobismBeforeSimStepRelocationListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.RelocationAgentsReader;
 import playground.paschke.qsim.RelocationTimesReader;
@@ -101,7 +101,7 @@ public class RelocationControler {
 			public void install() {
 				bindMobsim().toProvider( RelocationQsimFactory.class );
 
-				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationAgentsDispatcher.class);
+				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationListener.class);
 				//setting up the scoring function factory, inside different scoring functions are set-up
 				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
 			}
