@@ -70,11 +70,8 @@ import org.matsim.core.mobsim.framework.MobsimAgent;
 import org.matsim.core.mobsim.framework.MobsimDriverAgent;
 import org.matsim.core.mobsim.qsim.ActivityEngine;
 import org.matsim.core.mobsim.qsim.QSim;
-import org.matsim.core.mobsim.qsim.interfaces.MobsimEngine;
 import org.matsim.core.mobsim.qsim.interfaces.MobsimVehicle;
-import org.matsim.core.mobsim.qsim.qnetsimengine.AssignmentEmulatingQLaneNetworkFactory;
 import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngine;
-import org.matsim.core.mobsim.qsim.qnetsimengine.QNetworkFactory;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
@@ -111,7 +108,8 @@ public class CreateAutomatedFDTest {
 
 	@Parameters(name = "{index}: LinkDynamics == {0}; Traffic dynamics == {1}; InflowConstraint == {2};")
 	public static Collection<Object[]> createFds() {
-		Object [][] combos2run = new Object [18][3]; // #ld x #td x #ic x #params
+		int combos = LinkDynamics.values().length * TrafficDynamics.values().length * InflowConstraint.values().length;
+		Object [][] combos2run = new Object [combos][3]; // #ld x #td x #ic x #params
 		int index = 0;
 		for (LinkDynamics ld : LinkDynamics.values()) {
 			for (TrafficDynamics td : TrafficDynamics.values()) {
@@ -247,12 +245,12 @@ public class CreateAutomatedFDTest {
 			qSim.addMobsimEngine(activityEngine);
 			qSim.addActivityHandler(activityEngine);
 			QNetsimEngine netsimEngine;
-			if ( config.qsim().getTrafficDynamics()==TrafficDynamics.assignmentEmulating ) {
-				QNetworkFactory networkFactory = new AssignmentEmulatingQLaneNetworkFactory(scenario,events) ;
-				netsimEngine = new QNetsimEngine( qSim, networkFactory ) ;
-			} else {
+//			if ( config.qsim().getTrafficDynamics()==TrafficDynamics.assignmentEmulating ) {
+//				QNetworkFactory networkFactory = new AssignmentEmulatingQLaneNetworkFactory(scenario,events) ;
+//				netsimEngine = new QNetsimEngine( qSim, networkFactory ) ;
+//			} else {
 				 netsimEngine = new QNetsimEngine(qSim);
-			}
+//			}
 			qSim.addMobsimEngine(netsimEngine);
 			qSim.addDepartureHandler(netsimEngine.getDepartureHandler());
 

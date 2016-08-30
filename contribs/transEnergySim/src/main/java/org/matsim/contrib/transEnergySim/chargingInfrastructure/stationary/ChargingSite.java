@@ -38,11 +38,12 @@ public interface ChargingSite extends Identifiable<ChargingSite> {
 	
 	double getParkingCost(double time, double duration);
 	
-	double getChargingCost(double time, double duration, ChargingPlugType plugType);
+	double getChargingCost(double time, double duration, ChargingPlugType plugType, VehicleWithBattery vehicle);
 	
 	ChargingSitePolicy getChargingSitePolicy();
 
-	abstract Collection<ChargingPlugType> getAllAvailableChargingPlugTypes();
+	abstract Collection<ChargingPlugType> getAllAccessibleChargingPlugTypes();
+	abstract Collection<ChargingPlugType> getAllChargingPlugTypes();
 
 	abstract double estimateChargingSessionDuration(ChargingPlug plug);
 
@@ -65,4 +66,5 @@ public interface ChargingSite extends Identifiable<ChargingSite> {
 	void registerPlugUnavailable(ChargingPlug plug);
 
 	abstract void registerVehicleDeparture(VehicleAgent agent);
+
 }
