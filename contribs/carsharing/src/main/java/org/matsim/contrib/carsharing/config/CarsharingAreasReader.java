@@ -5,20 +5,20 @@ import java.util.Stack;
 
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Scenario;
-import org.matsim.contrib.carsharing.qsim.CarsharingAreas;
 import org.matsim.core.utils.gis.PolygonFeatureFactory;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.core.utils.misc.Counter;
 import org.opengis.feature.simple.SimpleFeature;
 import org.xml.sax.Attributes;
 
+import com.vividsolutions.jts.geom.MultiPolygon;
+
 public class CarsharingAreasReader extends MatsimXmlParser {
 	private PolygonFeatureFactory polygonFeatureFactory;
 
-	private final Scenario scenario;
+	private SimpleFeature carsharingAreas = null;
 
-	private CarsharingAreas carsharingAreas;
+	private ArrayList<String> ids = new ArrayList<String>();
 
 	private Counter counter;
 
@@ -26,29 +26,17 @@ public class CarsharingAreasReader extends MatsimXmlParser {
 
 	private ArrayList<Coord> coords;
 
-	private String groupName;
-
-	public CarsharingAreasReader(Scenario scenario) {
+	public CarsharingAreasReader() {
 		this.polygonFeatureFactory = new PolygonFeatureFactory.Builder()
 				.setName("carsharing_area")
 				.setCrs(DefaultGeographicCRS.WGS84)
 				.addAttribute("id", String.class)
 				.create();
-
-		this.scenario = scenario;
-	}
-
-	public void parse(String areasInputFile, String groupName) {
-		this.groupName = groupName;
-
-		this.parse(areasInputFile);
 	}
 
 	@Override
 	public void startTag(String name, Attributes atts, Stack<String> context) {
 		if (name.equals("areas")) {
-			this.carsharingAreas = new CarsharingAreas();
-
 			counter = new Counter("reading freefloating area # ");
 		}
 
@@ -79,12 +67,35 @@ public class CarsharingAreasReader extends MatsimXmlParser {
 			carsharingArea.setAttribute("id", this.idString);
 
 			// create union of local and instance variable carsharingArea
-			this.carsharingAreas.add(carsharingArea);
+			this.add(carsharingArea);
 		}
 
 		if (name.equals("areas")) {
 			counter.printCounter();
-			scenario.addScenarioElement(CarsharingAreas.ELEMENT_NAME + this.groupName, this.carsharingAreas);
+		}
+	}
+
+	public SimpleFeature getCarsharingAreas() {
+		return this.carsharingAreas;
+	}
+
+	public void add(SimpleFeature carsharingArea) {
+		if (carsharingArea.getName().getLocalPart() == "carsharing_area") {
+			String id = (String) carsharingArea.getAttribute("id");
+
+			if (this.ids.contains(id) == false) {
+				this.ids.add(id);
+
+				if (this.carsharingAreas == null) {
+					this.carsharingAreas = carsharingArea;
+				} else {
+					// merge geometries!
+					MultiPolygon oldArea = (MultiPolygon) this.carsharingAreas.getAttribute("the_geom");
+					MultiPolygon newArea = (MultiPolygon) carsharingArea.getAttribute("the_geom");
+					MultiPolygon unitedArea = (MultiPolygon) oldArea.union(newArea);
+					this.carsharingAreas.setAttribute("the_geom", unitedArea);
+				}
+			}
 		}
 	}
 }

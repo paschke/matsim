@@ -2,15 +2,15 @@ package playground.paschke.events;
 
 import org.matsim.api.core.v01.events.Event;
 
-import playground.paschke.qsim.RelocationZones;
+import playground.paschke.qsim.CarsharingVehicleRelocation;
 
 public class DispatchRelocationsEvent extends Event {
 
 	public static final String EVENT_TYPE = "Dispatch free-floating vehicle relocations";
 
-	public RelocationZones relocationZones;
+	public CarsharingVehicleRelocation relocationZones;
 
-	public DispatchRelocationsEvent(double time, RelocationZones relocationZones) {
+	public DispatchRelocationsEvent(double time, CarsharingVehicleRelocation relocationZones) {
 		super(time);
 
 		this.relocationZones = relocationZones;
@@ -21,7 +21,7 @@ public class DispatchRelocationsEvent extends Event {
 		return EVENT_TYPE;
 	}
 
-	public RelocationZones getRelocationZones() {
+	public CarsharingVehicleRelocation getRelocationZones() {
 		return this.relocationZones;
 	}
 }

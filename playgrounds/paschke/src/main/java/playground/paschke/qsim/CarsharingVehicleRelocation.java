@@ -1,5 +1,6 @@
 package playground.paschke.qsim;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -13,7 +14,9 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.contrib.carsharing.config.CarsharingVehicleRelocationConfigGroup;
 import org.matsim.core.utils.gis.PointFeatureFactory;
 import org.matsim.core.utils.misc.Time;
 import org.opengis.feature.simple.SimpleFeature;
@@ -21,7 +24,9 @@ import org.opengis.feature.simple.SimpleFeature;
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 
-public class RelocationZones {
+public class CarsharingVehicleRelocation {
+	private Scenario scenario;
+
 	private PointFeatureFactory pointFeatureFactory;
 
 	private static final Logger log = Logger.getLogger("dummy");
@@ -30,11 +35,16 @@ public class RelocationZones {
 
 	private ArrayList<RelocationZone> relocationZones;
 
+	private List<Double> relocationTimes;
+
+	private HashMap<String, Map<String, Double>> relocationAgentBases;
+
 	private ArrayList<RelocationInfo> relocations;
 
 	private Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>> status = new HashMap<Double, Map<Id<RelocationZone>, Map<String, Integer>>>();
 
-	public RelocationZones() {
+	public CarsharingVehicleRelocation(Scenario sc) {
+		this.scenario = sc;
 		this.pointFeatureFactory = new PointFeatureFactory.Builder()
 				.setName("point")
 				.setCrs(DefaultGeographicCRS.WGS84)
@@ -44,13 +54,43 @@ public class RelocationZones {
 		this.relocations = new ArrayList<RelocationInfo>();
 	}
 
-	public void add(RelocationZone relocationZone) {
-		// TODO: add checks to avoid overlapping zones
-		this.relocationZones.add(relocationZone);
+	public void readRelocationZones() throws IOException {
+		final CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
+				this.scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
+
+		RelocationZonesReader reader = new RelocationZonesReader();
+		reader.readFile(confGroup.getRelocationZones());
+		this.relocationZones = reader.getRelocationZones();
+	}
+
+	public final void readRelocationTimes() throws IOException {
+		final CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
+				this.scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
+
+		RelocationTimesReader reader = new RelocationTimesReader();
+		reader.readFile(confGroup.getRelocationTimes());
+		this.relocationTimes = reader.getRelocationTimes();
+	}
+
+	public final void readRelocationAgents() throws IOException {
+		final CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
+				this.scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
+
+		RelocationAgentsReader reader = new RelocationAgentsReader();
+		reader.readFile(confGroup.getRelocationAgents());
+		this.relocationAgentBases = reader.getRelocationAgentBases();
 	}
 
 	public List<RelocationZone> getRelocationZones() {
 		return this.relocationZones;
+	}
+
+	public List<Double> getRelocationTimes() {
+		return this.relocationTimes;
+	}
+
+	public HashMap<String, Map<String, Double>> getRelocationAgentBases() {
+		return this.relocationAgentBases;
 	}
 
 	public List<RelocationInfo> getRelocations() {

@@ -17,6 +17,7 @@ import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.network.NetworkImpl;
 import org.matsim.core.router.TripRouter;
 
+import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 public class RelocationAgentSource implements AgentSource {
@@ -27,6 +28,8 @@ public class RelocationAgentSource implements AgentSource {
 	private QSim qSim;
 	private Provider<TripRouter> routerProvider;
 	private CarSharingVehicles carSharingVehicles;
+
+	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation;
 
 	public RelocationAgentSource(RelocationAgentFactory relocationAgentFactory, QSim qSim, Provider<TripRouter> routerProvider, CarSharingVehicles carSharingVehicles) {
 		this.relocationAgentFactory = relocationAgentFactory;
@@ -42,7 +45,7 @@ public class RelocationAgentSource implements AgentSource {
 		Scenario scenario = this.qSim.getScenario();
 		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
 		@SuppressWarnings("unchecked")
-		Map<String, Map<String, Double>> relocationAgentBasesList = (Map<String, Map<String, Double>>) scenario.getScenarioElement("CarSharingRelocationAgents");
+		Map<String, Map<String, Double>> relocationAgentBasesList = this.carsharingVehicleRelocation.getRelocationAgentBases();
 
 		Iterator<Entry<String, Map<String, Double>>> baseIterator = relocationAgentBasesList.entrySet().iterator();
 		while (baseIterator.hasNext()) {
@@ -58,11 +61,11 @@ public class RelocationAgentSource implements AgentSource {
 				Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + baseId + "_"  + counter);
 				RelocationAgent agent = this.relocationAgentFactory.createRelocationAgent(id, link.getId());
 				agent.setGuidance(new Guidance(this.routerProvider.get()));
-				agent.setMobsimTimer(qSim.getSimTimer());
+				agent.setMobsimTimer(this.qSim.getSimTimer());
 				agent.setCarSharingVehicles(this.carSharingVehicles);
 
 				relocationAgents.put(id, agent);
-				qSim.insertAgentIntoMobsim(agent);
+				this.qSim.insertAgentIntoMobsim(agent);
 
 				counter++;
 			}

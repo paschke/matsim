@@ -15,7 +15,6 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
 import org.matsim.contrib.carsharing.config.OneWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.config.TwoWayCarsharingConfigGroup;
-import org.matsim.contrib.carsharing.config.CarsharingAreasReader;
 import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
 import org.matsim.contrib.carsharing.stations.OneWayCarsharingStation;
 import org.matsim.contrib.carsharing.stations.TwoWayCarsharingStation;
@@ -36,9 +35,8 @@ public class CarSharingVehicles {
 	private OneWayCarsharingVehicleLocation owvehiclesLocation;
 	private TwoWayCarsharingVehicleLocation twvehiclesLocation;
 	
-	public CarSharingVehicles(Scenario scenario) throws IOException {
+	public CarSharingVehicles(Scenario scenario) {
 		this.scenario = scenario;
-		//readVehicleLocations();
 	}
 	
 	public FreeFloatingVehiclesLocation getFreeFLoatingVehicles() {
@@ -75,9 +73,13 @@ public class CarSharingVehicles {
 			String areasInputFile = configGroupff.getAreas();
 
 			if ((this.carsharingAreasff == null) && (areasInputFile != null)) {
-				new CarsharingAreasReader(scenario).parse(areasInputFile, FreeFloatingConfigGroup.GROUP_NAME);
+				this.carsharingAreasff = new CarsharingAreas(scenario);
 
-				this.carsharingAreasff = (CarsharingAreas) scenario.getScenarioElement(CarsharingAreas.ELEMENT_NAME + FreeFloatingConfigGroup.GROUP_NAME);
+				try {
+					this.carsharingAreasff.readCarsharingAreas();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 
 			reader = IOUtils.getBufferedReader(configGroupff.getvehiclelocations());

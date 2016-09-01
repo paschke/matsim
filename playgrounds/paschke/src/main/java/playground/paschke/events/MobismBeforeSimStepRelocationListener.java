@@ -18,29 +18,23 @@ import org.matsim.core.mobsim.framework.MobsimAgent.State;
 import org.matsim.core.mobsim.framework.events.MobsimBeforeSimStepEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeSimStepListener;
 import org.matsim.core.mobsim.qsim.QSim;
-import org.matsim.core.router.TripRouter;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.RelocationAgent;
 import playground.paschke.qsim.CarSharingDemandTracker.RentalInfoFF;
-import playground.paschke.qsim.RelocationZones;
+import playground.paschke.qsim.CarsharingVehicleRelocation;
 import playground.paschke.qsim.RelocationInfo;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 
 public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimStepListener {
 	private static final Logger log = Logger.getLogger("dummy");
 
 	private Scenario scenario;
 
-	private CarSharingVehicles carSharingVehicles;
+	@Inject private CarSharingVehicles carSharingVehicles;
 
-	private CarSharingDemandTracker demandTracker;
+	@Inject private CarSharingDemandTracker demandTracker;
 
-	@Inject
-	public MobismBeforeSimStepRelocationListener(final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker, final Provider<TripRouter> routerProvider) {
-		this.carSharingVehicles = carSharingVehicles;
-		this.demandTracker = demandTracker;
-	}
+	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation;
 
 	@SuppressWarnings("rawtypes")
 	@Override
@@ -55,9 +49,7 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 		double then;
 
 		// relocation times will only be called if there are activities (usually starting with 32400.0), which makes sense
-		@SuppressWarnings("unchecked")
-		List<Double> relocationTimes = (List<Double>) this.scenario.getScenarioElement("CarSharingRelocationTimes");
-		final RelocationZones relocationZones = (RelocationZones) this.scenario.getScenarioElement(RelocationZones.ELEMENT_NAME);
+		List<Double> relocationTimes = this.carsharingVehicleRelocation.getRelocationTimes();
 
 		if (relocationTimes.contains(now)) {
 			int index = relocationTimes.indexOf(now);
@@ -69,27 +61,27 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 
 			log.info("is it that time again? " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
 
-			relocationZones.resetRelocationZones();
+			this.carsharingVehicleRelocation.resetRelocationZones();
 
 			// estimate demand in cells from logged CarSharingRequests
 			for (RentalInfoFF info : this.demandTracker.getRentalsInInterval(now, then)) {
 				Link accessLink = scenario.getNetwork().getLinks().get(info.accessLinkId);
-				relocationZones.addExpectedRequests(accessLink, 1);
+				this.carsharingVehicleRelocation.addExpectedRequests(accessLink, 1);
 
 				Link endLink = scenario.getNetwork().getLinks().get(info.endLinkId);
-				relocationZones.addExpectedReturns(endLink, 1);
+				this.carsharingVehicleRelocation.addExpectedReturns(endLink, 1);
 			}
 
 			// count number of vehicles in car sharing relocation zones
 			for (FreeFloatingStation ffs : this.carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
 				Link ffsLink = scenario.getNetwork().getLinks().get(ffs.getLinkId());
-				relocationZones.addVehicles(ffsLink, ffs.getIDs());
+				this.carsharingVehicleRelocation.addVehicles(ffsLink, ffs.getIDs());
 			}
 
 			// compare available vehicles to demand for each zone, store result
-			relocationZones.storeStatus(now);
+			this.carsharingVehicleRelocation.storeStatus(now);
 
-			for (RelocationInfo info : relocationZones.calculateRelocations(now, then)) {
+			for (RelocationInfo info : this.carsharingVehicleRelocation.calculateRelocations(now, then)) {
 				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
 
 				if (confGroup.useRelocation()) {
@@ -109,9 +101,7 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 	}
 
 	private RelocationAgent getRelocationAgent(QSim qSim) {
-		Scenario scenario = qSim.getScenario();
-		@SuppressWarnings("unchecked")
-		Map<String, Map<String, Double>> relocationAgentBasesList = (Map<String, Map<String, Double>>) scenario.getScenarioElement("CarSharingRelocationAgents");
+		Map<String, Map<String, Double>> relocationAgentBasesList = this.carsharingVehicleRelocation.getRelocationAgentBases();
 
 		Iterator<Entry<String, Map<String, Double>>> baseIterator = relocationAgentBasesList.entrySet().iterator();
 		while (baseIterator.hasNext()) {

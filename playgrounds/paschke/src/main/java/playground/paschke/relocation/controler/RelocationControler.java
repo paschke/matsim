@@ -1,6 +1,5 @@
 package playground.paschke.relocation.controler;
 
-import java.io.IOException;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -24,9 +23,7 @@ import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
 import playground.paschke.events.MobismBeforeSimStepRelocationListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
-import playground.paschke.qsim.RelocationAgentsReader;
-import playground.paschke.qsim.RelocationTimesReader;
-import playground.paschke.qsim.RelocationZonesReader;
+import playground.paschke.qsim.CarsharingVehicleRelocation;
 import playground.paschke.qsim.RelocationQsimFactory;
 import playground.paschke.qsim.RelocationListener;
 
@@ -53,44 +50,33 @@ public class RelocationControler {
 
 		final Scenario sc = ScenarioUtils.loadScenario(config);
 
-		// load relocation zones
-		final CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
-			config.getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
-		new RelocationZonesReader(sc).parse(confGroup.getRelocationZones());
-
-		// load relocation times
-		new RelocationTimesReader(sc).parse(confGroup.getRelocationTimes());
-
-		// load relocation agents
-		new RelocationAgentsReader(sc).parse(confGroup.getRelocationAgents());
-
 		final Controler controler = new Controler(sc);
 
-		CarSharingVehicles carSharingVehicles = null;
-
-		try {
-			carSharingVehicles = new CarSharingVehicles(sc);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
+		CarSharingVehicles carSharingVehicles = new CarSharingVehicles(sc);
+		CarsharingVehicleRelocation carsharingVehicleRelocation = new CarsharingVehicleRelocation(sc);
 		CarSharingDemandTracker demandTracker = new CarSharingDemandTracker(controler);
 
-		installCarSharing(controler, carSharingVehicles, demandTracker);
+		installCarSharing(controler, carSharingVehicles, carsharingVehicleRelocation, demandTracker);
 		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.run();
 	}
 
-	public static void installCarSharing(final Controler controler, final CarSharingVehicles carSharingVehicles, final CarSharingDemandTracker demandTracker) {
+	public static void installCarSharing(
+			final Controler controler,
+			final CarSharingVehicles carSharingVehicles,
+			final CarsharingVehicleRelocation carsharingVehicleRelocation,
+			final CarSharingDemandTracker demandTracker
+		) {
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
 				this.addPlanStrategyBinding("RandomTripToCarsharingStrategy").to( RandomTripToCarsharingStrategy.class ) ;
 				this.addPlanStrategyBinding("CarsharingSubtourModeChoiceStrategy").to( CarsharingSubtourModeChoiceStrategy.class ) ;
 				/*
-				 * This tells Guice that whenever it sees a dependency on a CarSharingVehicles instance,
-				 * it should satisfy the dependency using this static CarSharingVehicles.
+				 * This tells Guice that whenever it sees a dependency on a RelocationZonesReader instance,
+				 * it should satisfy the dependency using this static RelocationZonesReader.
 				 */
+				bind(CarsharingVehicleRelocation.class).toInstance(carsharingVehicleRelocation);
 				bind(CarSharingVehicles.class).toInstance(carSharingVehicles);
 				bind(CarSharingDemandTracker.class).toInstance(demandTracker);
 			}

@@ -5,7 +5,7 @@ public class ConvertKml {
 		KmlReader KmlReader = new KmlReader();
 		XmlWriter XmlWriter = new XmlWriter();
 
-		KmlReader.parse(args[0]);
+		KmlReader.readFile(args[0]);
 		XmlWriter.write(args[1], KmlReader.getRelocationZones());
 	}
 }

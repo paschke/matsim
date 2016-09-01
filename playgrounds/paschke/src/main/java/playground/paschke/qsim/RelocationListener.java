@@ -29,13 +29,13 @@ public class RelocationListener implements IterationStartsListener, IterationEnd
 
 	@Override
 	public void notifyIterationStarts(IterationStartsEvent event) {
-		RelocationZones relocationZones = (RelocationZones) this.controler.getScenario().getScenarioElement(RelocationZones.ELEMENT_NAME);
+		CarsharingVehicleRelocation relocationZones = (CarsharingVehicleRelocation) this.controler.getScenario().getScenarioElement(CarsharingVehicleRelocation.ELEMENT_NAME);
 		relocationZones.reset();
 	}
 
 	@Override
 	public void notifyIterationEnds(IterationEndsEvent event) {
-		RelocationZones relocationZones = (RelocationZones) this.controler.getScenario().getScenarioElement(RelocationZones.ELEMENT_NAME);
+		CarsharingVehicleRelocation relocationZones = (CarsharingVehicleRelocation) this.controler.getScenario().getScenarioElement(CarsharingVehicleRelocation.ELEMENT_NAME);
 
 		if (event.getIteration() % this.frequency == 0) {
 			// write relocation zone KML files
