@@ -7,15 +7,18 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
+import org.matsim.contrib.carsharing.manager.supply.CompanyContainer;
+import org.matsim.contrib.carsharing.vehicles.CSVehicle;
 import org.matsim.core.mobsim.framework.MobsimDriverAgent;
 import org.matsim.core.mobsim.framework.MobsimTimer;
 import org.matsim.core.mobsim.qsim.agents.PersonDriverAgentImpl;
 import org.matsim.core.mobsim.qsim.interfaces.MobsimVehicle;
-import org.matsim.core.population.ActivityImpl;
-import org.matsim.core.population.LegImpl;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.facilities.Facility;
 import org.matsim.vehicles.Vehicle;
@@ -34,10 +37,13 @@ public class RelocationAgent implements MobsimDriverAgent {
 	private static final Logger log = Logger.getLogger(PersonDriverAgentImpl.class);
 
 	private Id<Person> id;
+	private String companyId;
 	private Guidance guidance;
 	private MobsimTimer mobsimTimer;
 	private Scenario scenario;
-	private CarSharingVehicles carSharingVehicles;
+
+	@Inject private CarsharingSupplyContainer carsharingSupply;
+	// RelocationAgent needs CompanyContainer and Company
 
 	private Id<Link> homeLinkId;
 	private Id<Link> currentLinkId;
@@ -50,17 +56,17 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	private ArrayList<PlanElement> planElements = new ArrayList<PlanElement>();
 
-	@Inject
-	public RelocationAgent(Id<Person> id, Id<Link> homeLinkId, Scenario scenario) {
+	public RelocationAgent(Id<Person> id, String companyId, Id<Link> homeLinkId, Scenario scenario) {
 		this.id = id;
+		this.companyId = companyId;
 		this.currentLinkId = this.homeLinkId = homeLinkId;
 		this.scenario = scenario;
 
 		this.state = State.ACTIVITY;
 	}
 
-	public void setCarSharingVehicles(CarSharingVehicles carSharingVehicles) {
-		this.carSharingVehicles = carSharingVehicles;
+	public void setCarsharingSupplyContainer(CarsharingSupplyContainer carsharingSupply) {
+		this.carsharingSupply = carsharingSupply;
 	}
 
 	public void setGuidance(Guidance guidance) {
@@ -82,7 +88,10 @@ public class RelocationAgent implements MobsimDriverAgent {
      */
 	public void dispatchRelocation(RelocationInfo info) {
 		this.relocations.add(info);
-		this.carSharingVehicles.getFreeFLoatingVehicles().removeVehicle(this.scenario.getNetwork().getLinks().get(info.getStartLinkId()), info.getVehicleId());
+
+		CompanyContainer companyContainer = this.carsharingSupply.getCompany(this.companyId);		
+		CSVehicle vehicle = this.carsharingSupply.getVehicleqWithId(info.getVehicleId());
+		companyContainer.reserveVehicle(vehicle);
 
 		log.info("relocationAgent " + this.id + " removed vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
 	}
@@ -113,7 +122,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 	}
 
 	protected void startLeg(String transportMode) {
-		LegImpl leg = new LegImpl(transportMode);
+		Leg leg = PopulationUtils.createLeg(transportMode);
 		leg.setDepartureTime(this.getTimeOfDay());
 		leg.setRoute(new LinkNetworkRouteImpl(this.getCurrentLinkId(), this.getDestinationLinkId()));
 		this.planElements.add(leg);
@@ -121,8 +130,8 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	protected void endLeg() {
 		try {
-			LegImpl leg = (LegImpl) this.getCurrentPlanElement();
-			leg.setArrivalTime(this.getTimeOfDay());
+			Leg leg = (Leg) this.getCurrentPlanElement();
+			leg.setTravelTime(this.getTimeOfDay() - leg.getDepartureTime());
 		} catch (Exception e) {
 			// do nothing
 		}
@@ -130,7 +139,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	protected void addLinkId(Id<Link> linkId) {
 		try {
-			LegImpl leg = (LegImpl) this.getCurrentPlanElement();
+			Leg leg = (Leg) this.getCurrentPlanElement();
 			LinkNetworkRouteImpl route = (LinkNetworkRouteImpl) leg.getRoute();
 
 			List<Id<Link>> linkIds = new ArrayList<Id<Link>>(route.getLinkIds());
@@ -144,14 +153,14 @@ public class RelocationAgent implements MobsimDriverAgent {
 	}
 
 	protected void startActivity() {
-		ActivityImpl activity = new ActivityImpl("work", this.getCurrentLinkId());
+		Activity activity = PopulationUtils. createActivityFromLinkId("work", this.getCurrentLinkId());
 		activity.setStartTime(this.getTimeOfDay());
 		this.planElements.add(activity);
 	}
 
 	protected void endActivity() {
 		try {
-			ActivityImpl activity = (ActivityImpl) this.getCurrentPlanElement();
+			Activity activity = (Activity) this.getCurrentPlanElement();
 			activity.setEndTime(this.getTimeOfDay());
 		} catch (Exception e) {
 			// do nothing
@@ -315,7 +324,9 @@ public class RelocationAgent implements MobsimDriverAgent {
 	}
 
 	private void deliverCarSharingVehicle() {
-		this.carSharingVehicles.getFreeFLoatingVehicles().addVehicle(this.scenario.getNetwork().getLinks().get(this.getCurrentLinkId()), this.relocations.get(0).getVehicleId());
+		CompanyContainer companyContainer = this.carsharingSupply.getCompany(this.companyId);		
+		CSVehicle vehicle = this.carsharingSupply.getVehicleqWithId(this.relocations.get(0).getVehicleId());
+		companyContainer.parkVehicle(vehicle, this.scenario.getNetwork().getLinks().get(this.getCurrentLinkId()));
 	}
 
 	@Override

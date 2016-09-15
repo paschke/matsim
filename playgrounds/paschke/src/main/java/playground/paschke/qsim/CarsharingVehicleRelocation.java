@@ -11,6 +11,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
+
 import org.apache.log4j.Logger;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Id;
@@ -33,15 +35,17 @@ public class CarsharingVehicleRelocation {
 
 	public static final String ELEMENT_NAME = "carSharingRelocationZones";
 
-	private ArrayList<RelocationZone> relocationZones;
+	private Map<String, List<RelocationZone>> relocationZones;
 
-	private List<Double> relocationTimes;
+	private Map<String, List<Double>> relocationTimes;
 
-	private HashMap<String, Map<String, Double>> relocationAgentBases;
+	private Map<String, Map<String, Map<String, Double>>> relocationAgentBases;
 
 	private ArrayList<RelocationInfo> relocations;
 
-	private Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>> status = new HashMap<Double, Map<Id<RelocationZone>, Map<String, Integer>>>();
+	private Map<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> status = new HashMap<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>>();
+
+	private boolean useRelocation = false;
 
 	public CarsharingVehicleRelocation(Scenario sc) {
 		this.scenario = sc;
@@ -50,8 +54,12 @@ public class CarsharingVehicleRelocation {
 				.setCrs(DefaultGeographicCRS.WGS84)
 				.create();
 
-		this.relocationZones = new ArrayList<RelocationZone>();
 		this.relocations = new ArrayList<RelocationInfo>();
+
+		final CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
+				this.scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
+
+		this.useRelocation = confGroup.useRelocation();
 	}
 
 	public void readRelocationZones() throws IOException {
@@ -81,74 +89,126 @@ public class CarsharingVehicleRelocation {
 		this.relocationAgentBases = reader.getRelocationAgentBases();
 	}
 
-	public List<RelocationZone> getRelocationZones() {
+	public Map<String, List<RelocationZone>> getRelocationZones() {
 		return this.relocationZones;
 	}
 
-	public List<Double> getRelocationTimes() {
+	public List<RelocationZone> getRelocationZones(String companyId) {
+		if (this.getRelocationZones().keySet().contains(companyId)) {
+			return this.getRelocationZones().get(companyId);
+		}
+
+		return null;
+	}
+
+	public Map<String, List<Double>> getRelocationTimes() {
 		return this.relocationTimes;
 	}
 
-	public HashMap<String, Map<String, Double>> getRelocationAgentBases() {
+	public List<Double> getRelocationTimes(String companyId) {
+		if (this.getRelocationTimes().keySet().contains(companyId)) {
+			return this.getRelocationTimes().get(companyId);
+		}
+
+		return null;
+	}
+
+	public Map<String, Map<String, Map<String, Double>>> getRelocationAgentBases() {
 		return this.relocationAgentBases;
+	}
+
+	public Map<String, Map<String, Double>> getRelocationAgentBases(String companyId) {
+		if (this.getRelocationAgentBases().keySet().contains(companyId)) {
+			return this.getRelocationAgentBases().get(companyId);
+		}
+
+		return null;
 	}
 
 	public List<RelocationInfo> getRelocations() {
 		return this.relocations;
 	}
 
-	public void addExpectedRequests(Link link, int numberOfRequests) {
+	public boolean useRelocation() {
+		return this.useRelocation;
+	}
+
+	public void addExpectedRequests(String companyId, Link link) {
+		this.addExpectedRequests(companyId, link, 1);
+	}
+
+	public void addExpectedRequests(String companyId, Link link, int numberOfRequests) {
 		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
 		Point point = (Point) pointFeature.getAttribute("the_geom");
 
-		for (RelocationZone relocationZone : this.getRelocationZones()) {
-			MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
+		if (this.getRelocationZones().keySet().contains(companyId)) {
+			for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
+				MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
 
-			if (polygon.contains(point)) {
-				relocationZone.addExpectedRequests(link, numberOfRequests);
+				if (polygon.contains(point)) {
+					relocationZone.addExpectedRequests(link, numberOfRequests);
 
-				break;
+					break;
+				}
 			}
 		}
 	}
 
-	public void addExpectedReturns(Link link, int numberOfReturns) {
+	public void addExpectedReturns(String companyId, Link link) {
+		this.addExpectedReturns(companyId, link, 1);
+	}
+
+	public void addExpectedReturns(String companyId, Link link, int numberOfReturns) {
 		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
 		Point point = (Point) pointFeature.getAttribute("the_geom");
 
-		for (RelocationZone relocationZone : this.getRelocationZones()) {
-			MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
+		if (this.getRelocationZones().keySet().contains(companyId)) {
+			for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
+				MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
 
-			if (polygon.contains(point)) {
-				relocationZone.addExpectedReturns(link, numberOfReturns);
+				if (polygon.contains(point)) {
+					relocationZone.addExpectedReturns(link, numberOfReturns);
 
-				break;
+					break;
+				}
 			}
 		}
 	}
 
-	public void addVehicles(Link link, ArrayList<String> IDs) {
+	public void addVehicles(String companyId, Link link, ArrayList<String> IDs) {
 		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
 		Point point = (Point) pointFeature.getAttribute("the_geom");
 
-		for (RelocationZone relocationZone : this.getRelocationZones()) {
-			MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
+		if (this.getRelocationZones().keySet().contains(companyId)) {
+			for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
+				MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
 
-			if (polygon.contains(point)) {
-				relocationZone.addVehicles(link, IDs);
+				if (polygon.contains(point)) {
+					relocationZone.addVehicles(link, IDs);
 
-				break;
+					break;
+				}
 			}
 		}
 	}
 
-	public Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>> getStatus() {
+	public Map<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> getStatus() {
 		return this.status;
 	}
 
 	public void resetRelocationZones() {
-		for (RelocationZone r : this.getRelocationZones()) {
-			r.reset();
+		for (Entry<String, List<RelocationZone>> entry : this.getRelocationZones().entrySet()) {
+			for (RelocationZone r : entry.getValue()) {
+				r.reset();
+			}
+		}
+	}
+
+	public void resetRelocationZones(String companyId) {
+		if (this.getRelocationZones().keySet().contains(companyId)) {
+			for (RelocationZone r: this.getRelocationZones().get(companyId)) {
+				r.reset();
+			}
 		}
 	}
 
@@ -157,10 +217,10 @@ public class CarsharingVehicleRelocation {
 		this.relocations = new ArrayList<RelocationInfo>();
 	}
 
-	public ArrayList<RelocationInfo> calculateRelocations(double now, double then) {
+	public ArrayList<RelocationInfo> calculateRelocations(String companyId, String carsharingType, double now, double then) {
 		ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
 
-		Collections.sort(this.getRelocationZones(), new Comparator<RelocationZone>() {
+		Collections.sort(this.getRelocationZones().get(companyId), new Comparator<RelocationZone>() {
 
 			@Override
 			public int compare(RelocationZone o1, RelocationZone o2) {
@@ -175,7 +235,7 @@ public class CarsharingVehicleRelocation {
 		});
 
 		int evenIndex = 0;
-		Iterator<RelocationZone> iterator = this.getRelocationZones().iterator();
+		Iterator<RelocationZone> iterator = this.getRelocationZones().get(companyId).iterator();
 		while (iterator.hasNext()) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
 
@@ -186,10 +246,10 @@ public class CarsharingVehicleRelocation {
 			}
 		}
 
-		List<RelocationZone> surplusZones = this.getRelocationZones().subList(evenIndex, (this.getRelocationZones().size() - 1));
+		List<RelocationZone> surplusZones = this.getRelocationZones().get(companyId).subList(evenIndex, (this.getRelocationZones().size() - 1));
 		Collections.reverse(surplusZones);
 
-		iterator = this.getRelocationZones().iterator();
+		iterator = this.getRelocationZones().get(companyId).iterator();
 		while (iterator.hasNext()) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
 
@@ -222,7 +282,7 @@ public class CarsharingVehicleRelocation {
 					}
 
 					if ((fromLink != null) && (vehicleId != null)) {
-						relocations.add(new RelocationInfo(Time.writeTime(now) + " - " + Time.writeTime(then), surplusZoneId, nextZone.getId().toString(), vehicleId, fromLink.getId(), toLink.getId()));
+						relocations.add(new RelocationInfo(Time.writeTime(now) + " - " + Time.writeTime(then), companyId, vehicleId, carsharingType, fromLink.getId(), toLink.getId(), surplusZoneId, nextZone.getId().toString()));
 					}
 				}
 			} else {
@@ -235,10 +295,10 @@ public class CarsharingVehicleRelocation {
 		return relocations;
 	}
 
-	public void storeStatus(double now) {
+	public void storeStatus(String companyId, double now) {
 		Map<Id<RelocationZone>, Map<String, Integer>> relocationZonesStatus = new HashMap<Id<RelocationZone>, Map<String, Integer>>();
 
-		for (RelocationZone relocationZone : this.getRelocationZones()) {
+		for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
 			Map<String, Integer> zoneStatus = new HashMap<String, Integer>();
 			zoneStatus.put("vehicles", relocationZone.getNumberOfVehicles());
 			zoneStatus.put("requests", relocationZone.getNumberOfExpectedRequests());
@@ -246,11 +306,15 @@ public class CarsharingVehicleRelocation {
 			relocationZonesStatus.put(relocationZone.getId(), zoneStatus);
 		}
 
-		this.status.put(now, relocationZonesStatus);
+		if (this.status.get(companyId) == null) {
+			this.status.put(companyId, new HashMap<Double, Map<Id<RelocationZone>, Map<String, Integer>>>());
+		}
+
+		this.status.get(companyId).put(now, relocationZonesStatus);
 	}
 
-	protected Collection<RelocationZone> getAdjacentZones(RelocationZone currentZone) {
-		Collection<RelocationZone> relocationZones = new ArrayList<RelocationZone>(this.getRelocationZones());
+	protected Collection<RelocationZone> getAdjacentZones(String companyId, RelocationZone currentZone) {
+		Collection<RelocationZone> relocationZones = new ArrayList<RelocationZone>(this.getRelocationZones().get(companyId));
 		Collection<RelocationZone> adjacentZones = new ArrayList<RelocationZone>();
 		relocationZones.remove(currentZone);
 		MultiPolygon currentPolygon = (MultiPolygon) currentZone.getPolygon().getAttribute("the_geom");

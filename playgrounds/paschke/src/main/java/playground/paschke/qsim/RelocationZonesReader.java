@@ -1,6 +1,9 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
 import org.geotools.referencing.crs.DefaultGeographicCRS;
@@ -15,7 +18,9 @@ import org.xml.sax.Attributes;
 public class RelocationZonesReader extends MatsimXmlParser {
 	private PolygonFeatureFactory polygonFeatureFactory;
 
-	private ArrayList<RelocationZone> relocationZones;
+	private Map<String, List<RelocationZone>> relocationZones;
+
+	private String companyId;
 
 	private Counter counter;
 
@@ -34,9 +39,14 @@ public class RelocationZonesReader extends MatsimXmlParser {
 	@Override
 	public void startTag(final String name, final Attributes atts, final Stack<String> context) {
 		if (name.equals("relocationZones")) {
-			this.relocationZones = new ArrayList<RelocationZone>();
+			this.relocationZones = new HashMap<String, List<RelocationZone>>();
 
 			counter = new Counter("reading car sharing relocation zone # ");
+		}
+
+		if (name.equals("company")) {
+			this.companyId = atts.getValue("name");
+			this.relocationZones.put(this.companyId, new ArrayList<RelocationZone>());
 		}
 
 		if (name.equals("relocationZone")) {
@@ -64,7 +74,7 @@ public class RelocationZonesReader extends MatsimXmlParser {
 			Coord[] coordsArray = this.coords.toArray(new Coord[this.coords.size()]);
 			SimpleFeature relocationZonePolygon = this.polygonFeatureFactory.createPolygon(coordsArray);
 			RelocationZone relocationZone = new RelocationZone(Id.create(this.idString, RelocationZone.class), relocationZonePolygon);
-			this.relocationZones.add(relocationZone);
+			this.relocationZones.get(this.companyId).add(relocationZone);
 		}
 
 		if (name.equals("relocationZones")) {
@@ -72,7 +82,7 @@ public class RelocationZonesReader extends MatsimXmlParser {
 		}
 	}
 
-	public ArrayList<RelocationZone> getRelocationZones() {
+	public Map<String, List<RelocationZone>> getRelocationZones() {
 		return this.relocationZones;
 	}
 }

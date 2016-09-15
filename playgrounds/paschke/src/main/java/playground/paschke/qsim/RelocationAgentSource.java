@@ -10,11 +10,11 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
 import org.matsim.core.mobsim.framework.AgentSource;
 import org.matsim.core.mobsim.qsim.QSim;
-import org.matsim.core.network.NetworkImpl;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.router.TripRouter;
 
 import com.google.inject.Inject;
@@ -25,17 +25,19 @@ public class RelocationAgentSource implements AgentSource {
 	private static final Logger log = Logger.getLogger("dummy");
 
 	private RelocationAgentFactory relocationAgentFactory;
+
 	private QSim qSim;
+
+	private CarsharingVehicleRelocation carsharingVehicleRelocation;
+
 	private Provider<TripRouter> routerProvider;
-	private CarSharingVehicles carSharingVehicles;
 
-	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation;
-
-	public RelocationAgentSource(RelocationAgentFactory relocationAgentFactory, QSim qSim, Provider<TripRouter> routerProvider, CarSharingVehicles carSharingVehicles) {
-		this.relocationAgentFactory = relocationAgentFactory;
+	@Inject
+	public RelocationAgentSource(Scenario scenario, QSim qSim, CarsharingVehicleRelocation carsharingVehicleRelocation, Provider<TripRouter> routerProvider) {
+		this.relocationAgentFactory = new RelocationAgentFactory(scenario);
 		this.qSim = qSim;
+		this.carsharingVehicleRelocation = carsharingVehicleRelocation;
 		this.routerProvider = routerProvider;
-		this.carSharingVehicles = carSharingVehicles; 
 	}
 
 	@Override
@@ -43,31 +45,35 @@ public class RelocationAgentSource implements AgentSource {
 		Map<Id<Person>, RelocationAgent> relocationAgents = new HashMap<Id<Person>, RelocationAgent>();
 
 		Scenario scenario = this.qSim.getScenario();
-		NetworkImpl network = (NetworkImpl) scenario.getNetwork();
-		@SuppressWarnings("unchecked")
-		Map<String, Map<String, Double>> relocationAgentBasesList = this.carsharingVehicleRelocation.getRelocationAgentBases();
+		Network network = scenario.getNetwork();
+		Map<String, Map<String, Map<String, Double>>> relocationAgentBasesList = this.carsharingVehicleRelocation.getRelocationAgentBases();
 
-		Iterator<Entry<String, Map<String, Double>>> baseIterator = relocationAgentBasesList.entrySet().iterator();
-		while (baseIterator.hasNext()) {
-			Entry<String, Map<String, Double>> entry = baseIterator.next();
-			String baseId = entry.getKey();
-			HashMap<String, Double> agentBaseData = (HashMap<String, Double>) entry.getValue();
+		Iterator<Entry<String, Map<String, Map<String, Double>>>> companiesIterator = relocationAgentBasesList.entrySet().iterator();
+		while (companiesIterator.hasNext()) {
+			Entry<String, Map<String, Map<String, Double>>> companyEntry = companiesIterator.next();
+			String companyId = companyEntry.getKey();
+			Iterator<Entry<String, Map<String, Double>>> baseIterator = companyEntry.getValue().entrySet().iterator();
 
-			Coord coord = new Coord(agentBaseData.get("x"), agentBaseData.get("y"));
-			Link link = network.getNearestLinkExactly(coord );
+			while (baseIterator.hasNext()) {
+				Entry<String, Map<String, Double>> baseEntry = baseIterator.next();
+				String baseId = baseEntry.getKey();
+				HashMap<String, Double> agentBaseData = (HashMap<String, Double>) baseEntry.getValue();
 
-			int counter = 0;
-			while (counter < agentBaseData.get("number")) {
-				Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + baseId + "_"  + counter);
-				RelocationAgent agent = this.relocationAgentFactory.createRelocationAgent(id, link.getId());
-				agent.setGuidance(new Guidance(this.routerProvider.get()));
-				agent.setMobsimTimer(this.qSim.getSimTimer());
-				agent.setCarSharingVehicles(this.carSharingVehicles);
+				Coord coord = new Coord(agentBaseData.get("x"), agentBaseData.get("y"));
+				Link link = (Link) NetworkUtils.getNearestLinkExactly(network, coord);
 
-				relocationAgents.put(id, agent);
-				this.qSim.insertAgentIntoMobsim(agent);
+				int counter = 0;
+				while (counter < agentBaseData.get("number")) {
+					Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + companyId + "_" + baseId + "_"  + counter);
+					RelocationAgent agent = this.relocationAgentFactory.createRelocationAgent(id, companyId, link.getId());
+					agent.setGuidance(new Guidance(this.routerProvider.get()));
+					agent.setMobsimTimer(this.qSim.getSimTimer());
 
-				counter++;
+					relocationAgents.put(id, agent);
+					this.qSim.insertAgentIntoMobsim(agent);
+
+					counter++;
+				}
 			}
 		}
 

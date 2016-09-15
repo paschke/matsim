@@ -5,62 +5,67 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Id;
-import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.IterationEndsEvent;
 import org.matsim.core.controler.events.IterationStartsEvent;
 import org.matsim.core.controler.listener.IterationEndsListener;
 import org.matsim.core.controler.listener.IterationStartsListener;
 import org.matsim.core.utils.io.IOUtils;
 
+import com.google.inject.Inject;
 import com.vividsolutions.jts.geom.MultiPolygon;
 
 public class RelocationListener implements IterationStartsListener, IterationEndsListener {
-	Controler controler;
 	int frequency = 0;
-	
-	public RelocationListener(Controler controler, int frequency) {
-		this.controler = controler;
+
+	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation;
+
+	@Inject private OutputDirectoryHierarchy outputDirectoryHierarchy;
+
+	public RelocationListener(int frequency) {
 		this.frequency = frequency;
 	}
 
 	@Override
 	public void notifyIterationStarts(IterationStartsEvent event) {
-		CarsharingVehicleRelocation relocationZones = (CarsharingVehicleRelocation) this.controler.getScenario().getScenarioElement(CarsharingVehicleRelocation.ELEMENT_NAME);
-		relocationZones.reset();
+		this.carsharingVehicleRelocation.resetRelocationZones();
 	}
 
 	@Override
 	public void notifyIterationEnds(IterationEndsEvent event) {
-		CarsharingVehicleRelocation relocationZones = (CarsharingVehicleRelocation) this.controler.getScenario().getScenarioElement(CarsharingVehicleRelocation.ELEMENT_NAME);
-
 		if (event.getIteration() % this.frequency == 0) {
 			// write relocation zone KML files
 			RelocationZoneKmlWriter writer = new RelocationZoneKmlWriter();
-			Map<Id<RelocationZone>, MultiPolygon> polygons = new HashMap<Id<RelocationZone>, MultiPolygon>();
 
-			for (RelocationZone relocationZone : relocationZones.getRelocationZones()) {
-				polygons.put(relocationZone.getId(), (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom"));
-			}
+			for (Entry<String, List<RelocationZone>> relocationZoneEntry : this.carsharingVehicleRelocation.getRelocationZones().entrySet()) {
+				String companyId = relocationZoneEntry.getKey();
+				List<RelocationZone> relocationZones = relocationZoneEntry.getValue();
+				Map<Id<RelocationZone>, MultiPolygon> polygons = new HashMap<Id<RelocationZone>, MultiPolygon>();
 
-			writer.setPolygons(polygons);
-			Iterator<Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> statusIterator = relocationZones.getStatus().entrySet().iterator();
+				for (RelocationZone relocationZone : relocationZones) {
+					polygons.put(relocationZone.getId(), (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom"));
+				}
+				writer.setPolygons(polygons);
 
-			while (statusIterator.hasNext()) {
-				Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>> entry = statusIterator.next();
-				Double time = entry.getKey();
-				String filename = this.controler.getControlerIO().getIterationFilename(event.getIteration(), time + ".relocation_zones.xml");
+				Iterator<Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> statusIterator = this.carsharingVehicleRelocation.getStatus().get(companyId).entrySet().iterator();
+				while (statusIterator.hasNext()) {
+					Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>> statusEntry = statusIterator.next();
+					Double time = statusEntry.getKey();
+					String filename = this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), time + ".relocation_zones.xml");
 
-				writer.write(time, filename, entry.getValue());
+					writer.write(time, filename, statusEntry.getValue());
+				}
 			}
 
 			// log relocations
-			ArrayList<RelocationInfo> relocations = (ArrayList<RelocationInfo>) relocationZones.getRelocations();
-		
-			final BufferedWriter outRelocations = IOUtils.getBufferedWriter(this.controler.getControlerIO().getIterationFilename(event.getIteration(), "relocations"));
+			ArrayList<RelocationInfo> relocations = (ArrayList<RelocationInfo>) this.carsharingVehicleRelocation.getRelocations();
+
+			final BufferedWriter outRelocations = IOUtils.getBufferedWriter(this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), "relocations"));
 			try {
 				outRelocations.write("timeSlot	startZone	endZone	startTime	endTime	startLink	endLink	vehicleID	agentID");
 				outRelocations.newLine();
@@ -73,7 +78,6 @@ public class RelocationListener implements IterationStartsListener, IterationEnd
 				outRelocations.flush();
 				outRelocations.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

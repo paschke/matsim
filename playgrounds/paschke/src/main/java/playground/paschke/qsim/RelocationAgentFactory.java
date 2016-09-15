@@ -12,8 +12,8 @@ public class RelocationAgentFactory {
 		this.scenario = scenario;
 	}
 
-	public RelocationAgent createRelocationAgent(Id<Person> id, Id<Link> relocationAgentBaseLinkId) {
-		RelocationAgent agent = new RelocationAgent(id, relocationAgentBaseLinkId, this.scenario);
+	public RelocationAgent createRelocationAgent(Id<Person> id, String companyId, Id<Link> relocationAgentBaseLinkId) {
+		RelocationAgent agent = new RelocationAgent(id, companyId, relocationAgentBaseLinkId, this.scenario);
 
 		return agent;
 	}

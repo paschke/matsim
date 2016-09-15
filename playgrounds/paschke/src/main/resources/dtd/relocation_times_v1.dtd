@@ -3,7 +3,10 @@
 <!-- ============================================================ -->
 
 
-<!ELEMENT relocationTimes (relocationTime)*>
+<!ELEMENT relocationTimes (company)*>
+
+<!ELEMENT company (relocationTime)*>
+<!ATTLIST company   name    CDATA #REQUIRED>
 
 <!ELEMENT relocationTime EMPTY>
 <!ATTLIST relocationTime    start_time  CDATA #REQUIRED>

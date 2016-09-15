@@ -1,5 +1,6 @@
 package playground.paschke.events;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -11,16 +12,16 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.contrib.carsharing.config.CarsharingVehicleRelocationConfigGroup;
-import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
-import org.matsim.contrib.carsharing.stations.FreeFloatingStation;
+import org.matsim.contrib.carsharing.manager.demand.RentalInfo;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
+import org.matsim.contrib.carsharing.manager.supply.FreeFloatingVehiclesContainer;
+import org.matsim.contrib.carsharing.vehicles.CSVehicle;
 import org.matsim.core.mobsim.framework.MobsimAgent.State;
 import org.matsim.core.mobsim.framework.events.MobsimBeforeSimStepEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeSimStepListener;
 import org.matsim.core.mobsim.qsim.QSim;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.RelocationAgent;
-import playground.paschke.qsim.CarSharingDemandTracker.RentalInfoFF;
 import playground.paschke.qsim.CarsharingVehicleRelocation;
 import playground.paschke.qsim.RelocationInfo;
 import com.google.inject.Inject;
@@ -28,9 +29,7 @@ import com.google.inject.Inject;
 public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimStepListener {
 	private static final Logger log = Logger.getLogger("dummy");
 
-	private Scenario scenario;
-
-	@Inject private CarSharingVehicles carSharingVehicles;
+	@Inject private CarsharingSupplyContainer carsharingSupply;
 
 	@Inject private CarSharingDemandTracker demandTracker;
 
@@ -40,59 +39,64 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 	@Override
 	public void notifyMobsimBeforeSimStep(MobsimBeforeSimStepEvent event) {
 		QSim qSim = (QSim) event.getQueueSimulation();
-		this.scenario = qSim.getScenario();
-
-		CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
-				scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
+		Scenario scenario = qSim.getScenario();
 
 		double now = Math.floor(qSim.getSimTimer().getTimeOfDay());
 		double then;
 
 		// relocation times will only be called if there are activities (usually starting with 32400.0), which makes sense
-		List<Double> relocationTimes = this.carsharingVehicleRelocation.getRelocationTimes();
+		for (Entry<String, List<Double>> entry : this.carsharingVehicleRelocation.getRelocationTimes().entrySet()) {
+			String companyId = entry.getKey();
+			List<Double> relocationTimes = entry.getValue();
 
-		if (relocationTimes.contains(now)) {
-			int index = relocationTimes.indexOf(now);
-			try {
-				then = relocationTimes.get(index + 1);
-			} catch (IndexOutOfBoundsException e) {
-				then = 86400.0;
-			}
+			if (relocationTimes.contains(now)) {
+				int index = relocationTimes.indexOf(now);
+				try {
+					then = relocationTimes.get(index + 1);
+				} catch (IndexOutOfBoundsException e) {
+					then = 86400.0;
+				}
 
-			log.info("is it that time again? " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
+				log.info("time to relocate " + companyId + " vehicles: " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
 
-			this.carsharingVehicleRelocation.resetRelocationZones();
+				this.carsharingVehicleRelocation.resetRelocationZones(companyId);
 
-			// estimate demand in cells from logged CarSharingRequests
-			for (RentalInfoFF info : this.demandTracker.getRentalsInInterval(now, then)) {
-				Link accessLink = scenario.getNetwork().getLinks().get(info.accessLinkId);
-				this.carsharingVehicleRelocation.addExpectedRequests(accessLink, 1);
+				// estimate demand in cells from logged CarSharingRequests
+				for (RentalInfo rentalInfo : this.demandTracker.getRentalsInInterval("FF", companyId, now, then)) {
+					Link originLink = scenario.getNetwork().getLinks().get(rentalInfo.getOriginLinkId());
+					this.carsharingVehicleRelocation.addExpectedRequests(companyId, originLink, 1);
 
-				Link endLink = scenario.getNetwork().getLinks().get(info.endLinkId);
-				this.carsharingVehicleRelocation.addExpectedReturns(endLink, 1);
-			}
+					Link endLink = scenario.getNetwork().getLinks().get(rentalInfo.getEndLinkId());
+					this.carsharingVehicleRelocation.addExpectedReturns(companyId, endLink, 1);
+				}
 
-			// count number of vehicles in car sharing relocation zones
-			for (FreeFloatingStation ffs : this.carSharingVehicles.getFreeFLoatingVehicles().getQuadTree().values()) {
-				Link ffsLink = scenario.getNetwork().getLinks().get(ffs.getLinkId());
-				this.carsharingVehicleRelocation.addVehicles(ffsLink, ffs.getIDs());
-			}
+				// count number of vehicles in car sharing relocation zones
+				// TODO: does this apply to several carsharing modes??
+				FreeFloatingVehiclesContainer vehiclesContainer = (FreeFloatingVehiclesContainer) this.carsharingSupply.getCompany(companyId).getVehicleContainer("FF");
+				Iterator<Entry<CSVehicle, Link>> ffVehiclesIterator = vehiclesContainer.getFfvehiclesMap().entrySet().iterator();
+				while (ffVehiclesIterator.hasNext()) {
+					Entry<CSVehicle, Link> vehicleEntry = ffVehiclesIterator.next();
+					ArrayList<String> IDs = new ArrayList<String>();
+					IDs.add(vehicleEntry.getKey().getVehicleId());
+					this.carsharingVehicleRelocation.addVehicles(companyId, vehicleEntry.getValue(), IDs);
+				}
 
-			// compare available vehicles to demand for each zone, store result
-			this.carsharingVehicleRelocation.storeStatus(now);
+				// compare available vehicles to demand for each zone, store result
+				this.carsharingVehicleRelocation.storeStatus(companyId, now);
 
-			for (RelocationInfo info : this.carsharingVehicleRelocation.calculateRelocations(now, then)) {
-				log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
+				for (RelocationInfo info : this.carsharingVehicleRelocation.calculateRelocations(companyId, "FF", now, then)) {
+					log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
 
-				if (confGroup.useRelocation()) {
-					this.dispatchRelocation(qSim, info);
+					if (this.carsharingVehicleRelocation.useRelocation()) {
+						this.dispatchRelocation(qSim, info);
+					}
 				}
 			}
 		}
 	}
 
 	private void dispatchRelocation(QSim qSim, RelocationInfo info) {
-		RelocationAgent agent = this.getRelocationAgent(qSim);
+		RelocationAgent agent = this.getRelocationAgent(qSim, info.getCompanyId());
 
 		if (agent != null) {
 			info.setAgentId(agent.getId());
@@ -100,8 +104,8 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 		}
 	}
 
-	private RelocationAgent getRelocationAgent(QSim qSim) {
-		Map<String, Map<String, Double>> relocationAgentBasesList = this.carsharingVehicleRelocation.getRelocationAgentBases();
+	private RelocationAgent getRelocationAgent(QSim qSim, String companyId) {
+		Map<String, Map<String, Double>> relocationAgentBasesList = this.carsharingVehicleRelocation.getRelocationAgentBases(companyId);
 
 		Iterator<Entry<String, Map<String, Double>>> baseIterator = relocationAgentBasesList.entrySet().iterator();
 		while (baseIterator.hasNext()) {

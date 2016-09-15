@@ -1,16 +1,28 @@
 package playground.paschke.relocation.controler;
 
+import java.util.Set;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.contrib.carsharing.config.CarsharingConfigGroup;
-import org.matsim.contrib.carsharing.config.CarsharingVehicleRelocationConfigGroup;
-import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
-import org.matsim.contrib.carsharing.config.OneWayCarsharingConfigGroup;
-import org.matsim.contrib.carsharing.config.TwoWayCarsharingConfigGroup;
 import org.matsim.contrib.carsharing.control.listeners.CarsharingListener;
-import org.matsim.contrib.carsharing.qsim.CarSharingVehicles;
+import org.matsim.contrib.carsharing.events.handlers.PersonArrivalDepartureHandler;
+import org.matsim.contrib.carsharing.manager.CarsharingManagerNew;
+import org.matsim.contrib.carsharing.manager.demand.CurrentTotalDemand;
+import org.matsim.contrib.carsharing.manager.demand.DemandHandler;
+import org.matsim.contrib.carsharing.manager.demand.membership.MembershipContainer;
+import org.matsim.contrib.carsharing.manager.demand.membership.MembershipReader;
+import org.matsim.contrib.carsharing.manager.routers.RouteCarsharingTripImpl;
+import org.matsim.contrib.carsharing.manager.routers.RouterProvider;
+import org.matsim.contrib.carsharing.manager.routers.RouterProviderImpl;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
+import org.matsim.contrib.carsharing.manager.supply.costs.CostsCalculatorContainer;
+import org.matsim.contrib.carsharing.models.ChooseTheCompany;
+import org.matsim.contrib.carsharing.models.ChooseTheCompanyExample;
+import org.matsim.contrib.carsharing.models.KeepingTheCarModel;
+import org.matsim.contrib.carsharing.models.KeepingTheCarModelExample;
 import org.matsim.contrib.carsharing.replanning.CarsharingSubtourModeChoiceStrategy;
 import org.matsim.contrib.carsharing.replanning.RandomTripToCarsharingStrategy;
 import org.matsim.contrib.carsharing.runExample.CarsharingUtils;
@@ -21,7 +33,11 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
+
+import com.google.common.collect.ImmutableSet;
+
 import playground.paschke.events.MobismBeforeSimStepRelocationListener;
+import playground.paschke.events.SetupListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarsharingVehicleRelocation;
 import playground.paschke.qsim.RelocationQsimFactory;
@@ -33,51 +49,58 @@ public class RelocationControler {
 		Logger.getLogger( "org.matsim.core.controler.Injector" ).setLevel(Level.OFF);
 
 		final Config config = ConfigUtils.loadConfig(args[0]);
-		OneWayCarsharingConfigGroup configGroupOW = new OneWayCarsharingConfigGroup();
-		config.addModule(configGroupOW);
 
-		FreeFloatingConfigGroup configGroupFF = new FreeFloatingConfigGroup();
-		config.addModule(configGroupFF);
-
-		TwoWayCarsharingConfigGroup configGroupTW = new TwoWayCarsharingConfigGroup();
-		config.addModule(configGroupTW);
-
-		CarsharingConfigGroup configGroupAll = new CarsharingConfigGroup();
-		config.addModule(configGroupAll);
-
-		CarsharingVehicleRelocationConfigGroup configGroupCVR = new CarsharingVehicleRelocationConfigGroup();
-		config.addModule(configGroupCVR);
+		CarsharingUtils.addConfigModules(config);
 
 		final Scenario sc = ScenarioUtils.loadScenario(config);
 
 		final Controler controler = new Controler(sc);
 
-		CarSharingVehicles carSharingVehicles = new CarSharingVehicles(sc);
-		CarsharingVehicleRelocation carsharingVehicleRelocation = new CarsharingVehicleRelocation(sc);
-		CarSharingDemandTracker demandTracker = new CarSharingDemandTracker(controler);
-
-		installCarSharing(controler, carSharingVehicles, carsharingVehicleRelocation, demandTracker);
+		installCarSharing(controler);
 		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.overwriteExistingFiles);
 		controler.run();
 	}
 
-	public static void installCarSharing(
-			final Controler controler,
-			final CarSharingVehicles carSharingVehicles,
-			final CarsharingVehicleRelocation carsharingVehicleRelocation,
-			final CarSharingDemandTracker demandTracker
-		) {
+	public static void installCarSharing(final Controler controler) {
+		Set<String> carsharingModesShort = ImmutableSet.of("TW", "OW", "FF");
+
+		Set<String> carsharingCompanies = ImmutableSet.of("Mobility", "Catchacar");
+
+		MembershipReader membershipReader = new MembershipReader();
+		final CarsharingConfigGroup configGroup = (CarsharingConfigGroup)
+				controler.getScenario().getConfig().getModule( CarsharingConfigGroup.GROUP_NAME );
+		membershipReader.readFile(configGroup.getmembership());
+
+		final MembershipContainer memberships = membershipReader.getMembershipContainer();
+
+		final CostsCalculatorContainer costsCalculatorContainer = CarsharingUtils.createCompanyCostsStructure(carsharingCompanies);
+
+		//CarSharingVehicles carSharingVehicles = new CarSharingVehicles(controler.getScenario());
+		CarsharingVehicleRelocation carsharingVehicleRelocation = new CarsharingVehicleRelocation(controler.getScenario());
+
+		final SetupListener setupListener = new SetupListener();
+		final CarSharingDemandTracker demandTracker = new CarSharingDemandTracker();
+		final DemandHandler demandHandler = new DemandHandler(carsharingModesShort);
+		final CarsharingListener carsharingListener = new CarsharingListener(demandHandler);
+		// this probably replaces CarSharingVehicles?
+		final CarsharingSupplyContainer carsharingSupplyContainer = new CarsharingSupplyContainer(controler.getScenario());
+		carsharingSupplyContainer.populateSupply();
+		final KeepingTheCarModel keepingCarModel = new KeepingTheCarModelExample();
+		final ChooseTheCompany chooseCompany = new ChooseTheCompanyExample();
+		final RouterProvider routerProvider = new RouterProviderImpl();
+		final CurrentTotalDemand currentTotalDemand = new CurrentTotalDemand(controler.getScenario().getNetwork());
+
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
-				this.addPlanStrategyBinding("RandomTripToCarsharingStrategy").to( RandomTripToCarsharingStrategy.class ) ;
-				this.addPlanStrategyBinding("CarsharingSubtourModeChoiceStrategy").to( CarsharingSubtourModeChoiceStrategy.class ) ;
-				/*
-				 * This tells Guice that whenever it sees a dependency on a RelocationZonesReader instance,
-				 * it should satisfy the dependency using this static RelocationZonesReader.
-				 */
+				bind(KeepingTheCarModel.class).toInstance(keepingCarModel);
+				bind(ChooseTheCompany.class).toInstance(chooseCompany);
+				bind(RouterProvider.class).toInstance(routerProvider);
+				bind(CurrentTotalDemand.class).toInstance(currentTotalDemand);
+				bind(RouteCarsharingTripImpl.class).asEagerSingleton();
+				bind(CostsCalculatorContainer.class).toInstance(costsCalculatorContainer);
+				bind(MembershipContainer.class).toInstance(memberships);
 				bind(CarsharingVehicleRelocation.class).toInstance(carsharingVehicleRelocation);
-				bind(CarSharingVehicles.class).toInstance(carSharingVehicles);
 				bind(CarSharingDemandTracker.class).toInstance(demandTracker);
 			}
 		});
@@ -85,21 +108,35 @@ public class RelocationControler {
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
-				bindMobsim().toProvider( RelocationQsimFactory.class );
-
-				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationListener.class);
-				//setting up the scoring function factory, inside different scoring functions are set-up
-				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
+				this.addPlanStrategyBinding("RandomTripToCarsharingStrategy").to( RandomTripToCarsharingStrategy.class ) ;
+				this.addPlanStrategyBinding("CarsharingSubtourModeChoiceStrategy").to( CarsharingSubtourModeChoiceStrategy.class ) ;
 			}
 		});
 
-		controler.addOverridingModule(CarsharingUtils.createModule());
+		controler.addOverridingModule(new AbstractModule() {
+			@Override
+			public void install() {
+				bindMobsim().toProvider( RelocationQsimFactory.class );
+				//bindMobsim().toProvider(CarsharingQsimFactoryNew.class);
+				// this is now the only MobsimListenerBinding. Should it be handled differently?
+				this.addMobsimListenerBinding().to(MobismBeforeSimStepRelocationListener.class);
+		        addControlerListenerBinding().toInstance(carsharingListener);
+		        addControlerListenerBinding().to(CarsharingManagerNew.class);		        
+				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
+		        bind(CarsharingSupplyContainer.class).toInstance(carsharingSupplyContainer);
+		        bind(CarsharingManagerNew.class).asEagerSingleton();
+		        bind(DemandHandler.class).toInstance(demandHandler);
+		        addEventHandlerBinding().to(PersonArrivalDepartureHandler.class);
+		        addEventHandlerBinding().toInstance(demandHandler);
+			}
+		});
+
+		controler.addOverridingModule(CarsharingUtils.createModule());			
 
 		final CarsharingConfigGroup csConfig = (CarsharingConfigGroup) controler.getConfig().getModule(CarsharingConfigGroup.GROUP_NAME);
 
-		controler.addControlerListener(new CarsharingListener(controler, csConfig.getStatsWriterFrequency()));
-
+		controler.addControlerListener(setupListener);
 		controler.addControlerListener(demandTracker);
-		controler.addControlerListener(new RelocationListener(controler, csConfig.getStatsWriterFrequency()));
+		controler.addControlerListener(new RelocationListener(csConfig.getStatsWriterFrequency()));
 	}
 }

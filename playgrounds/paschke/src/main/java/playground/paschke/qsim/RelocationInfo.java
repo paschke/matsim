@@ -7,7 +7,9 @@ import org.matsim.core.utils.misc.Time;
 
 public class RelocationInfo {
 	private String timeSlot;
+	private String companyId;
 	private String vehicleId;
+	private String carsharingType;
 	private Id<Link> startLinkId;
 	private Id<Link> endLinkId;
 	private String startZoneId;
@@ -16,17 +18,27 @@ public class RelocationInfo {
 	private double endTime;
 	private Id<Person> agentId;
 
-	public RelocationInfo(String timeSlot, String startZoneId, String endZoneId, String vehicleId, Id<Link> startLinkId, Id<Link> endLinkId) {
+	public RelocationInfo(String timeSlot, String companyId, String vehicleId, String carsharingType, Id<Link> startLinkId, Id<Link> endLinkId, String startZoneId, String endZoneId) {
 		this.timeSlot		= timeSlot;
-		this.startZoneId	= startZoneId;
-		this.endZoneId		= endZoneId;
+		this.companyId		= companyId;
 		this.vehicleId 		= vehicleId;
+		this.carsharingType	= carsharingType;
 		this.startLinkId 	= startLinkId;
 		this.endLinkId 		= endLinkId;
+		this.startZoneId	= startZoneId;
+		this.endZoneId		= endZoneId;
+	}
+
+	public String getCompanyId() {
+		return this.companyId;
 	}
 
 	public String getVehicleId() {
 		return this.vehicleId;
+	}
+
+	public String getCarsharingType() {
+		return this.carsharingType;
 	}
 
 	public Id<Link> getStartLinkId() {
@@ -81,7 +93,9 @@ public class RelocationInfo {
 				Time.writeTime(this.getEndTime()) + "	" +
 				(this.getStartLinkId() == null ? "null" : this.getStartLinkId().toString()) + "	" +
 				(this.getEndLinkId() == null ? "null" : this.getEndLinkId().toString()) + "	" +
+				this.getCompanyId() + "	" +
 				this.getVehicleId() + "	" +
+				this.getCarsharingType() + "	" +
 				(this.getAgentId() == null ? "null" : this.getAgentId().toString());
 	}
 }
