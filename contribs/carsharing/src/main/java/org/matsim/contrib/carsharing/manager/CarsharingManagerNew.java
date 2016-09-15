@@ -13,12 +13,13 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.contrib.carsharing.events.StartRentalEvent;
 import org.matsim.contrib.carsharing.manager.demand.CurrentTotalDemand;
 import org.matsim.contrib.carsharing.manager.routers.RouterProvider;
-import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.contrib.carsharing.manager.supply.CompanyContainer;
 import org.matsim.contrib.carsharing.manager.supply.OneWayContainer;
 import org.matsim.contrib.carsharing.manager.supply.TwoWayContainer;
 import org.matsim.contrib.carsharing.manager.supply.VehiclesContainer;
 import org.matsim.contrib.carsharing.models.ChooseTheCompany;
+import org.matsim.contrib.carsharing.models.ChooseVehicleType;
 import org.matsim.contrib.carsharing.models.KeepingTheCarModel;
 import org.matsim.contrib.carsharing.stations.CarsharingStation;
 import org.matsim.contrib.carsharing.vehicles.CSVehicle;
@@ -40,7 +41,8 @@ public class CarsharingManagerNew implements CarsharingManagerInterface, Iterati
 	@Inject private CurrentTotalDemand currentDemand;
 	@Inject private KeepingTheCarModel keepTheCarModel;
 	@Inject private ChooseTheCompany chooseCompany;
-	@Inject private CarsharingSupplyContainer carsharingSupplyContainer;
+	@Inject private ChooseVehicleType chooseVehicleType;
+	@Inject private CarsharingSupplyInterface carsharingSupplyContainer;
 	@Inject private EventsManager eventsManager;
 	@Inject private RouterProvider routerProvider;
 	
@@ -57,7 +59,7 @@ public class CarsharingManagerNew implements CarsharingManagerInterface, Iterati
 
 		boolean willHaveATripFromLocation = willUseTheVehicleLaterFromLocation(destinationLink.getId(), plan, legToBeRouted);
 		
-		boolean keepTheCar = keepTheCarModel.keepTheCarDuringNextACtivity(0.0, plan.getPerson(), carsharingType);	
+		boolean keepTheCar = keepTheCarModel.keepTheCarDuringNextActivity(0.0, plan.getPerson(), carsharingType);	
 		//TODO: create a method for getting the search distance
 		double searchDistance = 5000.0;
 		if (vehicle != null) {
@@ -95,9 +97,11 @@ public class CarsharingManagerNew implements CarsharingManagerInterface, Iterati
 		else {
 			
 			//=== agent does not hold the vehicle, therefore must find a one from the supply side===
+			//=== here he chooses the company, type of vehicle and in the end vehicle ===
+			//=== possibly this could be moved to one method which decides based on the supply which vehicle to take
 			
 			String companyId = chooseCompany.pickACompany(plan, legToBeRouted);
-			String typeOfVehicle = "car";
+			String typeOfVehicle = chooseVehicleType.getPreferredVehicleType(plan, legToBeRouted);
 			vehicle = this.carsharingSupplyContainer.findClosestAvailableVehicle(startLink,
 					carsharingType, typeOfVehicle, companyId, searchDistance);
 			if (vehicle == null)
@@ -154,27 +158,16 @@ public class CarsharingManagerNew implements CarsharingManagerInterface, Iterati
 			}
 		}
 		return willUseVehicle;
-	}
-	public void returnCarsharingVehicle(Id<Person> personId, Id<Link> linkId, double time, String vehicleId) {
-		CSVehicle vehicle = this.carsharingSupplyContainer.getVehicleqWithId(vehicleId);
-
-		Network network = scenario.getNetwork();
-		Link link = network.getLinks().get(linkId);
-		
-		CompanyContainer companyContainer = this.carsharingSupplyContainer.getCompany(vehicle.getCompanyId());
-		VehiclesContainer vehiclesContainer = companyContainer.getVehicleContainer(vehicle.getCsType());
-		
-		vehiclesContainer.parkVehicle(vehicle, link);
-		
 	}	
 	private CSVehicle getVehicleAtLocation(Link currentLink, Person person, String carsharingType) {
 
 		return this.currentDemand.getVehicleOnLink(person.getId(), currentLink, carsharingType);	
 		
 	}	
+	@Override
 	public void freeParkingSpot(String vehicleId, Id<Link> linkId) {
 		
-		CSVehicle vehicle = this.carsharingSupplyContainer.getVehicleqWithId(vehicleId);
+		CSVehicle vehicle = this.carsharingSupplyContainer.getVehicleWithId(vehicleId);
 		Network network = scenario.getNetwork();
 		Link link = network.getLinks().get(linkId);
 		CompanyContainer companyContainer = this.carsharingSupplyContainer.getCompany(vehicle.getCompanyId());
@@ -185,7 +178,7 @@ public class CarsharingManagerNew implements CarsharingManagerInterface, Iterati
 
 	@Override
 	public boolean parkVehicle(String vehicleId, Id<Link> linkId) {
-		CSVehicle vehicle = this.carsharingSupplyContainer.getVehicleqWithId(vehicleId);
+		CSVehicle vehicle = this.carsharingSupplyContainer.getVehicleWithId(vehicleId);
 		Network network = scenario.getNetwork();
 		Link link = network.getLinks().get(linkId);
 		this.carsharingSupplyContainer.getCompany(vehicle.getCompanyId()).parkVehicle(vehicle, link);
