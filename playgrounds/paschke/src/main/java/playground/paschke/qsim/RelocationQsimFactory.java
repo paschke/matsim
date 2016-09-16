@@ -1,8 +1,8 @@
 package playground.paschke.qsim;
 
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.contrib.carsharing.manager.CarsharingManagerNew;
-import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
+import org.matsim.contrib.carsharing.manager.CarsharingManagerInterface;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.contrib.carsharing.qsim.CSAgentFactory;
 import org.matsim.contrib.carsharing.qsim.ParkCSVehicles;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -31,8 +31,8 @@ public class RelocationQsimFactory implements Provider<Netsim>{
 	@Inject private Scenario scenario;
 	@Inject private EventsManager eventsManager;
 	
-	@Inject private CarsharingSupplyContainer carsharingSupply;
-	@Inject private CarsharingManagerNew carsharingManager;
+	@Inject private CarsharingSupplyInterface carsharingSupply;
+	@Inject private CarsharingManagerInterface carsharingManager;
 
 	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation;
 	@Inject private Provider<TripRouter> routerProvider;

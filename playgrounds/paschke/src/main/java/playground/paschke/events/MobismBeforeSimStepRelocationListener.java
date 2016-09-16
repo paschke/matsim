@@ -13,23 +13,25 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.carsharing.manager.demand.RentalInfo;
-import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.contrib.carsharing.manager.supply.FreeFloatingVehiclesContainer;
 import org.matsim.contrib.carsharing.vehicles.CSVehicle;
 import org.matsim.core.mobsim.framework.MobsimAgent.State;
 import org.matsim.core.mobsim.framework.events.MobsimBeforeSimStepEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeSimStepListener;
 import org.matsim.core.mobsim.qsim.QSim;
-import playground.paschke.qsim.CarSharingDemandTracker;
-import playground.paschke.qsim.RelocationAgent;
-import playground.paschke.qsim.CarsharingVehicleRelocation;
-import playground.paschke.qsim.RelocationInfo;
+
 import com.google.inject.Inject;
+
+import playground.paschke.qsim.CarSharingDemandTracker;
+import playground.paschke.qsim.CarsharingVehicleRelocation;
+import playground.paschke.qsim.RelocationAgent;
+import playground.paschke.qsim.RelocationInfo;
 
 public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimStepListener {
 	private static final Logger log = Logger.getLogger("dummy");
 
-	@Inject private CarsharingSupplyContainer carsharingSupply;
+	@Inject private CarsharingSupplyInterface carsharingSupply;
 
 	@Inject private CarSharingDemandTracker demandTracker;
 

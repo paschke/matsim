@@ -90,7 +90,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 		this.relocations.add(info);
 
 		CompanyContainer companyContainer = this.carsharingSupply.getCompany(this.companyId);		
-		CSVehicle vehicle = this.carsharingSupply.getVehicleqWithId(info.getVehicleId());
+		CSVehicle vehicle = this.carsharingSupply.getVehicleWithId(info.getVehicleId());
 		companyContainer.reserveVehicle(vehicle);
 
 		log.info("relocationAgent " + this.id + " removed vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
@@ -325,7 +325,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	private void deliverCarSharingVehicle() {
 		CompanyContainer companyContainer = this.carsharingSupply.getCompany(this.companyId);		
-		CSVehicle vehicle = this.carsharingSupply.getVehicleqWithId(this.relocations.get(0).getVehicleId());
+		CSVehicle vehicle = this.carsharingSupply.getVehicleWithId(this.relocations.get(0).getVehicleId());
 		companyContainer.parkVehicle(vehicle, this.scenario.getNetwork().getLinks().get(this.getCurrentLinkId()));
 	}
 
