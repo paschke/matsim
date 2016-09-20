@@ -74,7 +74,7 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 
 				// count number of vehicles in car sharing relocation zones
 				// TODO: does this apply to several carsharing modes??
-				FreeFloatingVehiclesContainer vehiclesContainer = (FreeFloatingVehiclesContainer) this.carsharingSupply.getCompany(companyId).getVehicleContainer("FF");
+				FreeFloatingVehiclesContainer vehiclesContainer = (FreeFloatingVehiclesContainer) this.carsharingSupply.getCompany(companyId).getVehicleContainer("freefloating");
 				Iterator<Entry<CSVehicle, Link>> ffVehiclesIterator = vehiclesContainer.getFfvehiclesMap().entrySet().iterator();
 				while (ffVehiclesIterator.hasNext()) {
 					Entry<CSVehicle, Link> vehicleEntry = ffVehiclesIterator.next();

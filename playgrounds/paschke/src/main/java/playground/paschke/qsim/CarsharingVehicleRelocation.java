@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -218,9 +219,10 @@ public class CarsharingVehicleRelocation {
 	}
 
 	public ArrayList<RelocationInfo> calculateRelocations(String companyId, String carsharingType, double now, double then) {
+		List<RelocationZone> relocationZones = this.getRelocationZones(companyId);
 		ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
 
-		Collections.sort(this.getRelocationZones().get(companyId), new Comparator<RelocationZone>() {
+		Collections.sort(relocationZones, new Comparator<RelocationZone>() {
 
 			@Override
 			public int compare(RelocationZone o1, RelocationZone o2) {
@@ -235,22 +237,20 @@ public class CarsharingVehicleRelocation {
 		});
 
 		int evenIndex = 0;
-		Iterator<RelocationZone> iterator = this.getRelocationZones().get(companyId).iterator();
-		while (iterator.hasNext()) {
-			RelocationZone nextZone = (RelocationZone) iterator.next();
+		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
+			RelocationZone nextZone = iterator.next();
 
 			if (nextZone.getNumberOfSurplusVehicles(1.1) <= 0) {
-				evenIndex++;
+				evenIndex = iterator.previousIndex();
 			} else {
 				break;
 			}
 		}
 
-		List<RelocationZone> surplusZones = this.getRelocationZones().get(companyId).subList(evenIndex, (this.getRelocationZones().size() - 1));
+		List<RelocationZone> surplusZones = relocationZones.subList(evenIndex, (relocationZones.size() - 1));
 		Collections.reverse(surplusZones);
 
-		iterator = this.getRelocationZones().get(companyId).iterator();
-		while (iterator.hasNext()) {
+		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
 			RelocationZone nextZone = (RelocationZone) iterator.next();
 
 			if (nextZone.getNumberOfSurplusVehicles() < -1) {
