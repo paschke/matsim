@@ -52,7 +52,7 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 		return this.coords;
 	}
 
-	public void write(final Double time, final String filename, Map<Id<RelocationZone>, Map<String, Integer>> status) {
+	public void writeFile(final Double time, final String filename, Map<Id<RelocationZone>, Map<String, Integer>> status) {
 		String[] colors = {"ff", "f0", "dc", "c8", "b4", "a0", "8c", "78", "64", "50"};
 
 		this.openFile(filename);

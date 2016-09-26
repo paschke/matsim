@@ -58,7 +58,7 @@ public class RelocationListener implements IterationStartsListener, IterationEnd
 					Double time = statusEntry.getKey();
 					String filename = this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), time + ".relocation_zones.xml");
 
-					writer.write(time, filename, statusEntry.getValue());
+					writer.writeFile(time, filename, statusEntry.getValue());
 				}
 			}
 
