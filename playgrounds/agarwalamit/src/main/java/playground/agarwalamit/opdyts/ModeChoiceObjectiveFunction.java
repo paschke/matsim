@@ -22,6 +22,7 @@ package playground.agarwalamit.opdyts;
 import floetteroed.opdyts.ObjectiveFunction;
 import floetteroed.opdyts.SimulatorState;
 import org.apache.log4j.Logger;
+import org.matsim.analysis.TransportPlanningMainModeIdentifier;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -55,12 +56,9 @@ class ModeChoiceObjectiveFunction implements ObjectiveFunction {
 
     private MainModeIdentifier mainModeIdentifier ;
 
-    @Inject
-    ExperiencedPlansService service ;
-    @Inject
-    TripRouter tripRouter ;
-    @Inject
-    Network network ;
+    @Inject ExperiencedPlansService service ;
+    @Inject TripRouter tripRouter ;
+    @Inject Network network ;
     // Documentation: "Guice injects ... fields of all values that are bound using toInstance(). These are injected at injector-creation time."
     // https://github.com/google/guice/wiki/InjectionPoints
     // I read that as "the fields are injected (every time again) when the instance is injected".
@@ -71,31 +69,30 @@ class ModeChoiceObjectiveFunction implements ObjectiveFunction {
         tripBeelineDistances
     } ;
 
-    // container that contains the statistics containers:
     private final Map<StatType,Databins<String>> statsContainer = new TreeMap<>() ;
-
-    // container that contains the sum (to write averages):
     private final Map<StatType,DataMap<String>> sumsContainer  = new TreeMap<>() ;
-    // yy for time being not fully symmetric with DatabinsMap! kai, oct'15
-
     private final Map<StatType,Databins<String>> meaContainer = new TreeMap<>() ;
 
 
-    ModeChoiceObjectiveFunction() {
+    ModeChoiceObjectiveFunction(final boolean isUsingPatna) {
         for ( StatType statType : StatType.values() ) {
             // define the bin boundaries:
             switch ( statType ) {
                 case tripBeelineDistances: {
                     double[] dataBoundariesTmp = {0., 100., 200., 500., 1000., 2000., 5000., 10000., 20000., 50000., 100000.} ;
                     {
-                        this.statsContainer.put( statType, new Databins<>( statType.name(), dataBoundariesTmp )) ;
+                        final Databins<String> databins = new Databins<>( statType.name(), dataBoundariesTmp );
+                        this.statsContainer.put( statType, databins) ;
                     }
                     {
-                        final Databins<String> databins = new Databins<>( statType.name(), dataBoundariesTmp );
-                        // leg mode for 5 plans is car and for rest 5, it is bicycle.
-                        // trying to achieve 2 car and 8 bike plans. amit 19/09/2016
-                        databins.addValue( TransportMode.car, 2, 100.);
-                        databins.addValue( "bicycle", 8, 100.);
+                        final Databins<String> databins = new Databins<>( statType.name(), dataBoundariesTmp ) ;
+//					final double carVal = 3753.; // relaxed
+                        final double carVal = 1000. ;
+                        databins.addValue( TransportMode.car, 8, carVal);
+
+                        if(isUsingPatna) databins.addValue( "bicycle", 8, 4000.-carVal);
+                        else databins.addValue( TransportMode.pt, 8, 4000.-carVal);
+
                         this.meaContainer.put( statType, databins) ;
                     }
                     break; }
@@ -105,16 +102,19 @@ class ModeChoiceObjectiveFunction implements ObjectiveFunction {
         }
 
         // for Patna, all legs have same trip mode.
-        mainModeIdentifier = new MainModeIdentifier() {
-            @Override
-            public String identifyMainMode(List<? extends PlanElement> tripElements) {
-                for(PlanElement pe : tripElements) {
-                    if (pe instanceof  Leg ) return ( (Leg) pe).getMode();
+        if(isUsingPatna) {
+            mainModeIdentifier = new MainModeIdentifier() {
+                @Override
+                public String identifyMainMode(List<? extends PlanElement> tripElements) {
+                    for (PlanElement pe : tripElements) {
+                        if (pe instanceof Leg) return ((Leg) pe).getMode();
+                    }
+                    throw new RuntimeException("No instance of leg is found.");
                 }
-                throw new RuntimeException("No instance of leg is found.");
-            }
-        };
-
+            };
+        } else {
+            mainModeIdentifier = new TransportPlanningMainModeIdentifier();
+        }
     }
 
     @Override public double value(SimulatorState state) {
@@ -134,7 +134,8 @@ class ModeChoiceObjectiveFunction implements ObjectiveFunction {
             }
         }
 
-        double objective = 0 ;
+        double objective = 0. ;
+        double sum = 0.;
         for ( Map.Entry<StatType, Databins<String>> entry : statsContainer.entrySet() ) {
             StatType theStatType = entry.getKey() ;  // currently only one type ;
             log.warn( "statType=" + statType );
@@ -146,11 +147,15 @@ class ModeChoiceObjectiveFunction implements ObjectiveFunction {
                 double[] reaVal = this.meaContainer.get( theStatType).getValues(mode) ;
                 for ( int ii=0 ; ii<value.length ; ii++ ) {
                     double diff = value[ii] - reaVal[ii] ;
-                    log.warn( "distanceBnd=" + databins.getDataBoundaries()[ii] + "; reaVal=" + reaVal[ii] + "; simVal=" + value[ii] ) ;
+                    if ( reaVal[ii]>0.1 || value[ii]>0.1 ) {
+                        log.warn( "distanceBnd=" + databins.getDataBoundaries()[ii] + "; objVal=" + reaVal[ii] + "; simVal=" + value[ii] ) ;
+                    }
                     objective += diff * diff ;
+                    sum += reaVal[ii] ;
                 }
             }
         }
+        objective /= (sum*sum) ;
         log.warn( "objective=" + objective );
         return objective ;
 
@@ -187,7 +192,8 @@ class ModeChoiceObjectiveFunction implements ObjectiveFunction {
         } else {
             if ( noCoordCnt < 1 ) {
                 noCoordCnt ++ ;
-                log.warn("either fromAct or to Act has no Coord; using link coordinates as substitutes.\n" + Gbl.ONLYONCE ) ;
+				log.warn("either fromAct or to Act has no Coord; using link coordinates as substitutes.") ;
+				log.warn(Gbl.ONLYONCE ) ;
             }
             Link fromLink = network.getLinks().get( fromAct.getLinkId() ) ;
             Link   toLink = network.getLinks().get(   toAct.getLinkId() ) ;

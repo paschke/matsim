@@ -17,9 +17,10 @@
  *                                                                         *
  * *********************************************************************** */
 
-package playground.agarwalamit;
+package playground.agarwalamit.emisisons;
 
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,8 +41,8 @@ import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.testcases.MatsimTestUtils;
+import playground.agarwalamit.emissions.EmissionModalTravelDisutilityCalculatorFactory;
 import playground.benjamin.internalization.EmissionCostModule;
-import playground.benjamin.internalization.EmissionTravelDisutilityCalculatorFactory;
 import playground.benjamin.internalization.InternalizeEmissionsControlerListener;
 
 import java.util.ArrayList;
@@ -76,7 +77,7 @@ public class EquilMixedTrafficEmissionTest {
 		return Arrays.asList(considerCO2);
 	}
 
-	@Test
+	@Test @Ignore
 	public void emissionTollTest() {
 		//see an example with detailed explanations -- package opdytsintegration.example.networkparameters.RunNetworkParameters 
 
@@ -97,7 +98,7 @@ public class EquilMixedTrafficEmissionTest {
 		emissionModule.createEmissionHandler();
 
 		EmissionCostModule emissionCostModule = new EmissionCostModule( 1.0, isConsideringCO2Costs );
-		final EmissionTravelDisutilityCalculatorFactory emissionTducf = new EmissionTravelDisutilityCalculatorFactory(emissionModule, emissionCostModule, scenario.getConfig().planCalcScore());
+		final EmissionModalTravelDisutilityCalculatorFactory emissionTducf = new EmissionModalTravelDisutilityCalculatorFactory(emissionModule, emissionCostModule, scenario.getConfig().planCalcScore());
 
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
