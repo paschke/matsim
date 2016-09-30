@@ -10,6 +10,7 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.contrib.carsharing.manager.demand.membership.MembershipContainer;
+import org.matsim.contrib.carsharing.manager.demand.membership.PersonMembership;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.algorithms.PlanAlgorithm;
 import org.matsim.core.router.StageActivityTypes;
@@ -47,21 +48,33 @@ public final class ChooseRandomTripMode implements PlanAlgorithm {
 		if (cnt == 0) {
 			return;
 		}
+
 		int rndIdx = this.rng.nextInt(cnt);
 		
-		for(Leg l:t.get(rndIdx).getLegsOnly()) 
-			if (l.getMode().equals( "car" ) || l.getMode().equals( "bike" ) || l.getMode().equals("twoway"))
+		for (Leg l:t.get(rndIdx).getLegsOnly()) {
+			if (l.getMode().equals( "car" ) || l.getMode().equals( "bike" ) || l.getMode().equals("twoway")) {
 				return;
-		
-		if (this.memberships.getPerPersonMemberships().get(personId).getMembershipsPerCSType().containsKey("freefloating"))
-			ffcard = true;
-		if (this.memberships.getPerPersonMemberships().get(personId).getMembershipsPerCSType().containsKey("oneway"))
-			owcard = true;
-		
-			//don't change the trips between the same links
-			if (!t.get(rndIdx).getOriginActivity().getLinkId().toString().equals(t.get(rndIdx).getDestinationActivity().getLinkId().toString()))
-				setRandomTripMode(t.get(rndIdx), plan, ffcard, owcard);
-			else return;
+			}
+		}
+
+		PersonMembership membership = this.memberships.getPerPersonMemberships().get(personId);
+
+		if (membership != null) {
+			if (this.memberships.getPerPersonMemberships().get(personId).getMembershipsPerCSType().containsKey("freefloating")) {
+				ffcard = true;
+			}
+
+			if (this.memberships.getPerPersonMemberships().get(personId).getMembershipsPerCSType().containsKey("oneway")) {
+				owcard = true;
+			}
+		}
+
+		//don't change the trips between the same links
+		if (!t.get(rndIdx).getOriginActivity().getLinkId().toString().equals(t.get(rndIdx).getDestinationActivity().getLinkId().toString())) {
+			setRandomTripMode(t.get(rndIdx), plan, ffcard, owcard);
+		} else {
+			return;
+		}
 	}
 
 	private void setRandomTripMode(final Trip trip, final Plan plan, boolean ffcard, boolean owcard) {		
