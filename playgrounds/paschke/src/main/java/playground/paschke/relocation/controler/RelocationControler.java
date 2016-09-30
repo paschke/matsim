@@ -70,6 +70,9 @@ public class RelocationControler {
 
 		final CarsharingConfigGroup configGroup = (CarsharingConfigGroup) scenario.getConfig().getModule( CarsharingConfigGroup.GROUP_NAME );
 
+		// this is necessary to populate the companies list
+		reader.readFile(configGroup.getvehiclelocations());
+
 		Set<String> carsharingCompanies = reader.getCompanies().keySet();
 
 		MembershipReader membershipReader = new MembershipReader();
