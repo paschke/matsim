@@ -56,25 +56,20 @@ public final class ChooseRandomTripMode implements PlanAlgorithm {
 				return;
 			}
 		}
-
-		PersonMembership membership = this.memberships.getPerPersonMemberships().get(personId);
-
-		if (membership != null) {
-			if (this.memberships.getPerPersonMemberships().get(personId).getMembershipsPerCSType().containsKey("freefloating")) {
+		
+		PersonMembership personMemmbership = this.memberships.getPerPersonMemberships().get(personId);
+		
+		if (personMemmbership != null) {
+			if (personMemmbership.getMembershipsPerCSType().containsKey("freefloating"))
 				ffcard = true;
-			}
-
-			if (this.memberships.getPerPersonMemberships().get(personId).getMembershipsPerCSType().containsKey("oneway")) {
+			if (personMemmbership.getMembershipsPerCSType().containsKey("oneway"))
 				owcard = true;
-			}
 		}
-
-		//don't change the trips between the same links
-		if (!t.get(rndIdx).getOriginActivity().getLinkId().toString().equals(t.get(rndIdx).getDestinationActivity().getLinkId().toString())) {
-			setRandomTripMode(t.get(rndIdx), plan, ffcard, owcard);
-		} else {
-			return;
-		}
+		
+			//don't change the trips between the same links
+			if (!t.get(rndIdx).getOriginActivity().getLinkId().toString().equals(t.get(rndIdx).getDestinationActivity().getLinkId().toString()))
+				setRandomTripMode(t.get(rndIdx), plan, ffcard, owcard);
+			else return;
 	}
 
 	private void setRandomTripMode(final Trip trip, final Plan plan, boolean ffcard, boolean owcard) {		

@@ -55,14 +55,12 @@ public class CarsharingCurrentRentalsInfo {
 	
 	public CSVehicle getVehicleOnLink(Link link, String type) {
 		QuadTree<CSVehicle> vehicleLocations = currentRentals.get(type);
-
 		if (vehicleLocations != null) {
 			Coord coord = link.getCoord();
 			Collection<CSVehicle> vehicles = vehicleLocations.getDisk(coord.getX(), coord.getY(), 0.0);
-
-			if (vehicles.size() > 0) {
-				return vehicles.iterator().next();
-			}
+			
+			if (!vehicles.isEmpty())
+				return (CSVehicle) vehicles.iterator().next();
 		}
 
 		return null;
@@ -77,7 +75,7 @@ public class CarsharingCurrentRentalsInfo {
 	}
 	
 	public boolean removeVehicle(Link link, CSVehicle vehicle, String type) {
-		QuadTree<CSVehicle> vehicleLocations = currentRentals.get(type);
+		QuadTree<CSVehicle> vehicleLocations = currentRentals.get(type);		
 		Coord coord = link.getCoord();
 		
 		return vehicleLocations.remove(coord.getX(), coord.getY(), vehicle);
