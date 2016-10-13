@@ -36,8 +36,8 @@ public class CarSharingDemandTracker implements IterationStartsListener, Iterati
 					CSVehicle vehicle = this.carsharingSupplyContainer.getVehicleWithId(rentalInfo.getVehId().toString());
 
 					if (
-							(vehicle.getCompanyId() == companyId) &&
-							(rentalInfo.getCarsharingType() == carsharingType) &&
+							(vehicle.getCompanyId().equals(companyId)) &&
+							(rentalInfo.getCarsharingType().equals(carsharingType)) &&
 							(rentalInfo.getAccessStartTime() > startTime) &&
 							(rentalInfo.getAccessStartTime() < endTime)
 					) {

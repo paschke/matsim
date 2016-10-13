@@ -65,7 +65,7 @@ public class RelocationQsimFactory implements Provider<Netsim>{
 		ParkCSVehicles parkSource = new ParkCSVehicles(qSim, this.carsharingSupply);
 		qSim.addAgentSource(parkSource);
 
-		RelocationAgentSource relocationAgentSource = new RelocationAgentSource(this.scenario, qSim, carsharingVehicleRelocation, routerProvider);
+		RelocationAgentSource relocationAgentSource = new RelocationAgentSource(this.scenario, qSim, this.carsharingVehicleRelocation, this.routerProvider, this.carsharingSupply);
 		qSim.addAgentSource(relocationAgentSource);
 
 		return qSim;

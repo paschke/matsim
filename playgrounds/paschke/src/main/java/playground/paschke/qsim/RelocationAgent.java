@@ -12,6 +12,7 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.contrib.carsharing.manager.supply.CompanyContainer;
 import org.matsim.contrib.carsharing.vehicles.CSVehicle;
 import org.matsim.core.mobsim.framework.MobsimDriverAgent;
@@ -42,7 +43,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 	private MobsimTimer mobsimTimer;
 	private Scenario scenario;
 
-	@Inject private CarsharingSupplyContainer carsharingSupply;
+	private CarsharingSupplyInterface carsharingSupply;
 	// RelocationAgent needs CompanyContainer and Company
 
 	private Id<Link> homeLinkId;
@@ -65,7 +66,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 		this.state = State.ACTIVITY;
 	}
 
-	public void setCarsharingSupplyContainer(CarsharingSupplyContainer carsharingSupply) {
+	public void setCarsharingSupplyContainer(CarsharingSupplyInterface carsharingSupply) {
 		this.carsharingSupply = carsharingSupply;
 	}
 
@@ -341,7 +342,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public Id<Vehicle> getPlannedVehicleId() {
-		return (this.relocations.get(0) != null) ? Id.create("FF_" + this.relocations.get(0).getVehicleId(), Vehicle.class) : null;
+		return (this.relocations.get(0) != null) ? Id.create(this.relocations.get(0).getVehicleId(), Vehicle.class) : null;
 	}
 
 	@Override

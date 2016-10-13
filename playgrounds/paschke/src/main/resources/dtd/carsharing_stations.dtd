@@ -3,39 +3,38 @@
 <!-- $Id$ -->
 
 <!-- ============================================================ -->
-<!ELEMENT companies          (company*)>
+<!ELEMENT companies (company*)>
 <!ATTLIST companies
-          name           CDATA   #IMPLIED
-          reference_layer  CDATA #IMPLIED
-          xml:lang       NMTOKEN "de-CH">
+	name			CDATA #IMPLIED
+    reference_layer	CDATA #IMPLIED
+    xml:lang		NMTOKEN "de-CH">
 
 
-<!ELEMENT company          (twoway*,oneway*,freefloating*)>
+<!ELEMENT company (twoway*,oneway*,freefloating*)>
 <!ATTLIST company
-          name           CDATA   #IMPLIED>
+	name			CDATA #IMPLIED>
 
-<!ELEMENT twoway          (vehicle*)>
+<!ELEMENT twoway (vehicle*)>
 <!ATTLIST twoway
-          id           CDATA   #REQUIRED
-          lat  	       CDATA #REQUIRED
-          lon       CDATA #REQUIRED>
+	id				CDATA #REQUIRED
+	x				CDATA #REQUIRED
+	y				CDATA #REQUIRED>
 
-<!ELEMENT oneway          (vehicle*)>
+<!ELEMENT oneway (vehicle*)>
 <!ATTLIST oneway
-          id           CDATA   #REQUIRED
-          lat  	       CDATA #REQUIRED
-          lon       CDATA #REQUIRED
-	  freeparking	CDATA #REQUIRED>
+	id				CDATA #REQUIRED
+	x				CDATA #REQUIRED
+	y				CDATA #REQUIRED
+	freeparking		CDATA #REQUIRED>
 
-<!ELEMENT freefloating          EMPTY>
+<!ELEMENT freefloating EMPTY>
 <!ATTLIST freefloating
-          id           CDATA   #REQUIRED
-          lat  	       CDATA #REQUIRED
-          lon       CDATA #REQUIRED
-	  type	CDATA #REQUIRED>
+	id				CDATA #REQUIRED
+	x				CDATA #REQUIRED
+	y				CDATA #REQUIRED
+	type			CDATA #REQUIRED>
 
-<!ELEMENT vehicle         EMPTY>
+<!ELEMENT vehicle EMPTY>
 <!ATTLIST vehicle
-          type             CDATA                    #REQUIRED
-          vehicleID            CDATA                    #REQUIRED>
-
+	type			CDATA #REQUIRED
+	vehicleID		CDATA #REQUIRED>

@@ -12,6 +12,8 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
+import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.core.mobsim.framework.AgentSource;
 import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.network.NetworkUtils;
@@ -32,12 +34,15 @@ public class RelocationAgentSource implements AgentSource {
 
 	private Provider<TripRouter> routerProvider;
 
+	private CarsharingSupplyInterface carsharingSupply;
+
 	@Inject
-	public RelocationAgentSource(Scenario scenario, QSim qSim, CarsharingVehicleRelocation carsharingVehicleRelocation, Provider<TripRouter> routerProvider) {
+	public RelocationAgentSource(Scenario scenario, QSim qSim, CarsharingVehicleRelocation carsharingVehicleRelocation, Provider<TripRouter> routerProvider, CarsharingSupplyInterface carsharingSupply) {
 		this.relocationAgentFactory = new RelocationAgentFactory(scenario);
 		this.qSim = qSim;
 		this.carsharingVehicleRelocation = carsharingVehicleRelocation;
 		this.routerProvider = routerProvider;
+		this.carsharingSupply = carsharingSupply;
 	}
 
 	@Override
@@ -68,6 +73,7 @@ public class RelocationAgentSource implements AgentSource {
 					RelocationAgent agent = this.relocationAgentFactory.createRelocationAgent(id, companyId, link.getId());
 					agent.setGuidance(new Guidance(this.routerProvider.get()));
 					agent.setMobsimTimer(this.qSim.getSimTimer());
+					agent.setCarsharingSupplyContainer(this.carsharingSupply);
 
 					relocationAgents.put(id, agent);
 					this.qSim.insertAgentIntoMobsim(agent);

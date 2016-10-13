@@ -64,7 +64,7 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 				this.carsharingVehicleRelocation.resetRelocationZones(companyId);
 
 				// estimate demand in cells from logged CarSharingRequests
-				for (RentalInfo rentalInfo : this.demandTracker.getRentalsInInterval("FF", companyId, now, then)) {
+				for (RentalInfo rentalInfo : this.demandTracker.getRentalsInInterval("freefloating", companyId, now, then)) {
 					Link originLink = scenario.getNetwork().getLinks().get(rentalInfo.getOriginLinkId());
 					this.carsharingVehicleRelocation.addExpectedRequests(companyId, originLink, 1);
 
@@ -86,7 +86,7 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 				// compare available vehicles to demand for each zone, store result
 				this.carsharingVehicleRelocation.storeStatus(companyId, now);
 
-				for (RelocationInfo info : this.carsharingVehicleRelocation.calculateRelocations(companyId, "FF", now, then)) {
+				for (RelocationInfo info : this.carsharingVehicleRelocation.calculateRelocations(companyId, "freefloating", now, then)) {
 					log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
 
 					if (this.carsharingVehicleRelocation.useRelocation()) {
@@ -117,7 +117,7 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 
 			int counter = 0;
 			while (counter < agentBaseData.get("number")) {
-				Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + baseId + "_"  + counter);
+				Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + companyId + "_" + baseId + "_"  + counter);
 				RelocationAgent agent = (RelocationAgent) qSim.getAgentMap().get(id);
 
 				if ((agent.getState() == State.ACTIVITY) && (agent.getRelocations().size() == 0)) {
