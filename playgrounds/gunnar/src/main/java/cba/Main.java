@@ -1,9 +1,11 @@
 package cba;
 
+import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
@@ -16,6 +18,7 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.router.TripRouter;
 import org.matsim.core.router.TripRouterModule;
+import org.matsim.core.router.costcalculators.TravelDisutilityModule;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scenario.ScenarioByInstanceModule;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -38,11 +41,15 @@ public class Main {
 	 * ============================================================
 	 */
 
-	static final int outerIts = 2;
+	static final int outerIts = 10;
 	static final int popSize = 100;
-	static final double replanProba = 1.0;
-	static final String expectationFilePrefix = "./testdata/cba/expectation";
+	static final double replanProba = 0.1;
+	static final String expectationFilePrefix = "./testdata/cba/expectation-before-it";
+	static final String experienceFilePrefix = "./testdata/cba/experience-after-it";
 
+	static final int maxTrials = 1;
+	static final int maxFailures = 1;
+	
 	/*-
 	 * ============================================================ 
 	 *      DEMAND MODEL
@@ -66,14 +73,6 @@ public class Main {
 			reader.readFile("./testdata/cba/output/ITERS/it." + lastIt + "/" + lastIt + ".events.xml.gz");
 			final TravelTime carTravelTime = travelTimeCalculator.getLinkTravelTimes();
 
-			// >>>>>>>>>> COPY & PASTE FROM TripRouterImplTest.java >>>>>>>>>>
-
-			/*
-			 * TODO Does this now behave like the TripRouter in the last
-			 * iteration of the last simulation run (from which the
-			 * carTravelTime comes)? Where do the PT travel times come from?
-			 */
-
 			final com.google.inject.Injector injector = org.matsim.core.controler.Injector
 					.createInjector(scenario.getConfig(), new AbstractModule() {
 						@Override
@@ -84,16 +83,15 @@ public class Main {
 										public void install() {
 											install(new ScenarioByInstanceModule(scenario));
 											addTravelTimeBinding("car").toInstance(carTravelTime);
+											install(new TravelDisutilityModule());
 										}
 									}));
 						}
 					});
 			final Provider<TripRouter> factory = injector.getProvider(TripRouter.class);
 
-			// <<<<<<<<<< COPY & PASTE FROM TripRouterImplTest.java <<<<<<<<<<
-
 			DemandModel.replanPopulation(scenario, factory, replanProba,
-					expectationFilePrefix + "_" + outerIt + ".txt");
+					expectationFilePrefix + outerIt + ".txt", maxTrials, maxFailures);
 		}
 
 		final PopulationWriter popwriter = new PopulationWriter(scenario.getPopulation(), scenario.getNetwork());
@@ -123,6 +121,18 @@ public class Main {
 		});
 		// controler.addOverridingModule(new ExperiencedPlansModule());
 		controler.run();
+
+		final PrintWriter writer;
+		try {
+			writer = new PrintWriter(experienceFilePrefix + outerIt + ".txt");
+		} catch (FileNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+		for (Person person : controler.getScenario().getPopulation().getPersons().values()) {
+			writer.println(person.getId() + "\t" + person.getSelectedPlan().getScore());
+		}
+		writer.flush();
+		writer.close();
 	}
 
 	/*-
