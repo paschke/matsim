@@ -13,7 +13,7 @@ import org.xml.sax.Attributes;
 
 import com.vividsolutions.jts.geom.MultiPolygon;
 
-public class CarsharingAreasReader extends MatsimXmlParser {
+public class FreefloatingAreasReader extends MatsimXmlParser {
 	private PolygonFeatureFactory polygonFeatureFactory;
 
 	private SimpleFeature carsharingAreas = null;
@@ -26,7 +26,7 @@ public class CarsharingAreasReader extends MatsimXmlParser {
 
 	private ArrayList<Coord> coords;
 
-	public CarsharingAreasReader() {
+	public FreefloatingAreasReader() {
 		this.polygonFeatureFactory = new PolygonFeatureFactory.Builder()
 				.setName("carsharing_area")
 				.setCrs(DefaultGeographicCRS.WGS84)

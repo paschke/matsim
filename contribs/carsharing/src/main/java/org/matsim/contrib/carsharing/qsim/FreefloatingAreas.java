@@ -4,7 +4,7 @@ import java.io.IOException;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.contrib.carsharing.config.CarsharingAreasReader;
+import org.matsim.contrib.carsharing.config.FreefloatingAreasReader;
 import org.matsim.contrib.carsharing.config.FreeFloatingConfigGroup;
 import org.matsim.core.utils.gis.PointFeatureFactory;
 import org.opengis.feature.simple.SimpleFeature;
@@ -12,7 +12,7 @@ import org.opengis.feature.simple.SimpleFeature;
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 
-public class CarsharingAreas {
+public class FreefloatingAreas {
 	private Scenario scenario;
 
 	private PointFeatureFactory pointFeatureFactory;
@@ -21,7 +21,7 @@ public class CarsharingAreas {
 
 	private SimpleFeature carsharingAreas = null;
 
-	public CarsharingAreas(Scenario scenario) {
+	public FreefloatingAreas(Scenario scenario) {
 		this.pointFeatureFactory = new PointFeatureFactory.Builder()
 				.setName("point")
 				.setCrs(DefaultGeographicCRS.WGS84)
@@ -34,7 +34,7 @@ public class CarsharingAreas {
 		final FreeFloatingConfigGroup configGroupff = (FreeFloatingConfigGroup)
 				this.scenario.getConfig().getModule( FreeFloatingConfigGroup.GROUP_NAME );
 
-		CarsharingAreasReader reader = new CarsharingAreasReader();
+		FreefloatingAreasReader reader = new FreefloatingAreasReader();
 		reader.readFile(configGroupff.getAreas());
 		this.carsharingAreas = reader.getCarsharingAreas();
 	}
