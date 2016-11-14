@@ -45,6 +45,7 @@ import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarsharingVehicleRelocation;
 import playground.paschke.qsim.RelocationListener;
 import playground.paschke.qsim.RelocationQsimFactory;
+import playground.paschke.utils.ExampleCarsharingUtils;
 
 
 public class RelocationControler {
@@ -72,14 +73,13 @@ public class RelocationControler {
 
 		// this is necessary to populate the companies list
 		reader.readFile(configGroup.getvehiclelocations());
-
 		Set<String> carsharingCompanies = reader.getCompanies().keySet();
 
 		MembershipReader membershipReader = new MembershipReader();
 		membershipReader.readFile(configGroup.getmembership());
 		final MembershipContainer memberships = membershipReader.getMembershipContainer();
 
-		final CostsCalculatorContainer costsCalculatorContainer = CarsharingUtils.createCompanyCostsStructure(carsharingCompanies);
+		final CostsCalculatorContainer costsCalculatorContainer = ExampleCarsharingUtils.createCompanyCostsStructure(carsharingCompanies);
 
 		final CarsharingVehicleRelocation carsharingVehicleRelocation = new CarsharingVehicleRelocation(controler.getScenario());
 
