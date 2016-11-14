@@ -30,7 +30,7 @@ import java.util.List;
 
 /**
  * @author illenberger
- *         <p/>
+ *         <p></p>
  *         Used to divide tasks between threads in {@link PSim}. Copied here to
  *         avoid dependence.
  */
@@ -181,5 +181,14 @@ public class CollectionUtils {
         List<Integer[]> out2 = split(testArraySplit,3);
         out2 = split(testArraySplit,2);
 
+    }
+
+    public static double sumElements(Collection<Double> values) {
+        double sum = 0;
+        for (Double value : values) {
+           sum += value ;
+        }
+
+        return sum;
     }
 }

@@ -1,26 +1,27 @@
 package org.matsim.contrib.carsharing.config;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Stack;
 
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Coord;
+import org.matsim.contrib.carsharing.qsim.FreefloatingAreas;
 import org.matsim.core.utils.gis.PolygonFeatureFactory;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.core.utils.misc.Counter;
 import org.opengis.feature.simple.SimpleFeature;
 import org.xml.sax.Attributes;
 
-import com.vividsolutions.jts.geom.MultiPolygon;
-
 public class FreefloatingAreasReader extends MatsimXmlParser {
 	private PolygonFeatureFactory polygonFeatureFactory;
 
-	private SimpleFeature carsharingAreas = null;
-
-	private ArrayList<String> ids = new ArrayList<String>();
+	private Map<String, FreefloatingAreas> freefloatingAreas = new HashMap<String, FreefloatingAreas>();
 
 	private Counter counter;
+
+	private String companyName;
 
 	private String idString = null;
 
@@ -28,7 +29,7 @@ public class FreefloatingAreasReader extends MatsimXmlParser {
 
 	public FreefloatingAreasReader() {
 		this.polygonFeatureFactory = new PolygonFeatureFactory.Builder()
-				.setName("carsharing_area")
+				.setName("freefloating_area")
 				.setCrs(DefaultGeographicCRS.WGS84)
 				.addAttribute("id", String.class)
 				.create();
@@ -38,6 +39,10 @@ public class FreefloatingAreasReader extends MatsimXmlParser {
 	public void startTag(String name, Attributes atts, Stack<String> context) {
 		if (name.equals("areas")) {
 			counter = new Counter("reading freefloating area # ");
+		}
+
+		if (name.equals("company")) {
+			this.companyName = atts.getValue("name");
 		}
 
 		if (name.equals("area")) {
@@ -63,11 +68,10 @@ public class FreefloatingAreasReader extends MatsimXmlParser {
 	public void endTag(final String name, final String content, final Stack<String> context) {
 		if (name.equals("area")) {
 			Coord[] coordsArray = this.coords.toArray(new Coord[this.coords.size()]);
-			SimpleFeature carsharingArea = this.polygonFeatureFactory.createPolygon(coordsArray);
-			carsharingArea.setAttribute("id", this.idString);
+			SimpleFeature area = this.polygonFeatureFactory.createPolygon(coordsArray);
+			area.setAttribute("id", this.idString);
 
-			// create union of local and instance variable carsharingArea
-			this.add(carsharingArea);
+			this.addArea(area);
 		}
 
 		if (name.equals("areas")) {
@@ -75,27 +79,18 @@ public class FreefloatingAreasReader extends MatsimXmlParser {
 		}
 	}
 
-	public SimpleFeature getCarsharingAreas() {
-		return this.carsharingAreas;
+	public Map<String, FreefloatingAreas> getFreefloatingAreas() {
+		return this.freefloatingAreas;
 	}
 
-	public void add(SimpleFeature carsharingArea) {
-		if (carsharingArea.getName().getLocalPart() == "carsharing_area") {
-			String id = (String) carsharingArea.getAttribute("id");
-
-			if (this.ids.contains(id) == false) {
-				this.ids.add(id);
-
-				if (this.carsharingAreas == null) {
-					this.carsharingAreas = carsharingArea;
-				} else {
-					// merge geometries!
-					MultiPolygon oldArea = (MultiPolygon) this.carsharingAreas.getAttribute("the_geom");
-					MultiPolygon newArea = (MultiPolygon) carsharingArea.getAttribute("the_geom");
-					MultiPolygon unitedArea = (MultiPolygon) oldArea.union(newArea);
-					this.carsharingAreas.setAttribute("the_geom", unitedArea);
-				}
+	public void addArea(SimpleFeature area) {
+		// TODO: what was the purpose of this check?
+		if (area.getName().getLocalPart() == "freefloating_area") {
+			if (this.getFreefloatingAreas().containsKey(this.companyName) == false) {
+				this.getFreefloatingAreas().put(this.companyName, new FreefloatingAreas());
 			}
+
+			this.getFreefloatingAreas().get(this.companyName).add(area);
 		}
 	}
 }

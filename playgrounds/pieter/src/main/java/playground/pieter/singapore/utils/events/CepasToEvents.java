@@ -673,7 +673,7 @@ public class CepasToEvents {
          * are visited in order. If dwell event n is at a stop out of the route
          * order, it first checks if the dwell event n+1 is in order, in which
          * case the bad dwell event n is erased.
-         * <p/>
+         * <p></p>
          * If dwell event n+1 also visits a stop out of order, it then resets
          * the iterator for stops, and creates a new cluster of dwell events.
          */
@@ -1511,7 +1511,7 @@ public class CepasToEvents {
      * When transactions are evaluated for each stop, this constant is used as
      * the minimum time between two consecutive transactions that tells us that
      * they belong to separate dwell events.
-     * <p/>
+     * <p></p>
      * So, if a route starts and ends at the same stop, this is the minimum rest
      * time between two runs of the route by the same vehicle.
      */
@@ -1568,7 +1568,7 @@ public class CepasToEvents {
         MatsimNetworkReader nwr = new MatsimNetworkReader(scenario.getNetwork());
         nwr.readFile(networkFile);
         scenario.getConfig().transit().setUseTransit(true);
-        scenario.getConfig().scenario().setUseVehicles(true);
+//        scenario.getConfig().scenario().setUseVehicles(true);
         TransitScheduleReader tsr = new TransitScheduleReader(scenario);
         tsr.readFile(transitSchedule);
         this.outputEventsPath = outputEventsPath;
@@ -1797,7 +1797,7 @@ public class CepasToEvents {
 //			dba.executeStatement(query);
 //			query = String
                     .format("create table %s_passenger_preprocess as select card_id, boarding_stop_stn, alighting_stop_stn, (EXTRACT(epoch FROM (ride_start_time::TEXT)::interval)) as boarding_time,"
-                                    + "((EXTRACT(epoch FROM (ride_start_time::TEXT)::interval)) + (60 * ride_time))::INT AS alighting_time, "
+                                    + "((EXTRACT(epoch FROM (ride_start_time::TEXT)::interval)) + (60 * ride_duration))::INT AS alighting_time, "
                                     + "srvc_number, direction, bus_reg_num"
                                     + " from %s order by srvc_number, direction, bus_reg_num, boarding_time, alighting_time;"
                                     + "alter table %s_passenger_preprocess add column idx serial;", tripTableName,
@@ -1825,7 +1825,7 @@ public class CepasToEvents {
      * Cepas lines on the fly from whatever records are contained in the Cepas
      * transaction table. Each vehicle is put in a map, distinguished by
      * line_route_busRegNum.
-     * <p/>
+     * <p></p>
      * This method is recursive: if the supporting table doesn't exist, it
      * creates it and call itself again, to make future calls faster.
      *

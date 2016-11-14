@@ -41,20 +41,20 @@ import java.util.Map;
  * The idea, as the name says, is to not remove the worst plan, but remove plans such that diversity is maintained.
  * The design idea stems from path size logit, which reduces the probability to select alternatives which are similar
  * to other alternatives by adding a penalty to their utility.  
- * <p/>
+ * <p></p>
  * So if you have, for example, 4 similar plans with high scores and one other plan with a lower score, then the scores of 
  * the similar plans are artificially reduced, and one of them will in consequence be removed. 
  * In the present incarnation, we make sure that not the best of those 4 will be removed.
- * <p/>
+ * <p></p>
  * Note that once all similar plans are removed, the remaining best plan will not be similar to any other plan any more, and
  * thus no longer incur a similarity penalty.  So it will never be removed.
- * <p/>
+ * <p></p>
  * This class has <i>not</i> yet been extensively tested and so it is not clear if it contains bugs, how well it works, or if parameters
  * should be set differently.  If someone wants to experiment, the class presumably should be made configurable (or copied before 
  * modification). 
- * <p/>
+ * <p></p>
  * There is also material in playground.vsp .
- * <p/>
+ * <p></p>
  * There are also some hints to literature at {@link PopulationUtils#calculateSimilarity}
  * 
  * @author nagel, ikaddoura
@@ -77,27 +77,33 @@ public final class DiversityGeneratingPlansRemover extends AbstractPlanSelector 
 			}
 		};
 
-		@Inject
-		final void setNetwork(Network network) {
+		@Inject final Builder setNetwork(Network network) {
 			this.network = network;
+			return this ;
 		}
-		public final void setActTypeWeight ( double val ) {
+		public final Builder setActTypeWeight ( double val ) {
 			this.actTypeWeight = val ;
+			return this ;
 		}
-		public final void setLocationWeight( double val ) {
+		public final Builder setLocationWeight( double val ) {
 			this.locationWeight = val ;
+			return this ;
 		}
-		public final void setActTimeParameter( double val) {
+		public final Builder setActTimeParameter( double val) {
 			this.actTimeParameter = val ;
+			return this ;
 		}
-		public final void setSameRoutePenalty( double val) {
+		public final Builder setSameRoutePenalty( double val) {
 			this.sameRoutePenalty = val;
+			return this ;
 		}
-		public final void setSameModePenalty( double val) {
+		public final Builder setSameModePenalty( double val) {
 			this.sameModePenalty = val;
+			return this ;
 		}
-		public final void setStageActivityTypes( StageActivityTypes val) {
+		public final Builder setStageActivityTypes( StageActivityTypes val) {
 			this.stageActivities = val;
+			return this ;
 		}
 		@Override
 		public final DiversityGeneratingPlansRemover get() {

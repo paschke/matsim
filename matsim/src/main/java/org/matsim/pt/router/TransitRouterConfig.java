@@ -58,7 +58,7 @@ public class TransitRouterConfig implements MatsimParameters {
 	/**
 	 * The distance in meters that agents can walk to get from one stop to
 	 * another stop of a nearby transit line.
-	 * <p/>
+	 * <p></p>
 	 * Is this really needed?  If the marg utl of walk is correctly set, this should come out automagically.
 	 * kai, feb'11
 	 * This value is used to generate the walk connections between stop facilities. If they are used,
@@ -93,6 +93,8 @@ public class TransitRouterConfig implements MatsimParameters {
 
 	private Double beelineDistanceFactor;
 
+	private final double directWalkFactor ;
+
 	public TransitRouterConfig(final Config config) {
 		this(config.planCalcScore(), config.plansCalcRoute(), config.transitRouter(), config.vspExperimental());
 	}
@@ -126,6 +128,7 @@ public class TransitRouterConfig implements MatsimParameters {
 		this.setExtensionRadius(trConfig.getExtensionRadius());
 		this.setBeelineWalkConnectionDistance(trConfig.getMaxBeelineWalkConnectionDistance());
 		this.setAdditionalTransferTime(trConfig.getAdditionalTransferTime());
+		this.directWalkFactor = trConfig.getDirectWalkFactor() ;
 	}
 
 	public void setUtilityOfLineSwitch_utl(final double utilityOfLineSwitch_utl_sec) {
@@ -134,7 +137,7 @@ public class TransitRouterConfig implements MatsimParameters {
 
 	/**
 	 * The additional utility to be added when an agent switches lines.  Normally negative
-	 * <p/>
+	 * <p></p>
 	 * The "_utl" can go as soon as we are confident that there are no more utilities in "Eu".  kai, feb'11
 	 */
 	public double getUtilityOfLineSwitch_utl() {
@@ -234,5 +237,10 @@ public class TransitRouterConfig implements MatsimParameters {
 	public final Double getBeelineDistanceFactor() {
 		return this.beelineDistanceFactor;
 	}
+
+	public double getDirectWalkFactor() {
+		return this.directWalkFactor ;
+	}
+
 
 }

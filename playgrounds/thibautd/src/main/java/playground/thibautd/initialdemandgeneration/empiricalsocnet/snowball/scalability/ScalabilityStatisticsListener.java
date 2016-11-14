@@ -32,6 +32,7 @@ import playground.thibautd.initialdemandgeneration.empiricalsocnet.framework.Ego
 import playground.thibautd.initialdemandgeneration.empiricalsocnet.framework.SocialNetworkSampler;
 import playground.thibautd.initialdemandgeneration.empiricalsocnet.snowball.SnowballLocator;
 import playground.thibautd.initialdemandgeneration.socnetgen.framework.SnaUtils;
+import playground.ivt.utils.MonitoringUtils;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -39,8 +40,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
+import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
 import static playground.meisterk.PersonAnalyseTimesByActivityType.Activities.e;
@@ -60,6 +63,7 @@ public class ScalabilityStatisticsListener implements AutoCloseable {
 	private int currTryNr = -1;
 
 	private long start_ms = -1;
+	private final AtomicLong peakMemory_bytes = new AtomicLong( -1 );
 
 	public ScalabilityStatisticsListener( final String file ) {
 		this.writer = IOUtils.getBufferedWriter( file );
@@ -71,11 +75,13 @@ public class ScalabilityStatisticsListener implements AutoCloseable {
 					"distanceMin\tdistanceQ1\tdistanceMedian\tdistanceQ3\tdistanceMax\t" +
 					"overlapMin\toverlapQ1\toverlapMedian\toverlapQ3\toverlapMax\t" +
 					"nConnectedComponents\t" +
-					"componentSizeMin\tcomponentSizeQ1\tcomponentSizeMedian\tcomponentSizeQ3\tcomponentSizeMax" );
+					"componentSizeMin\tcomponentSizeQ1\tcomponentSizeMedian\tcomponentSizeQ3\tcomponentSizeMax\t" +
+					"peakMemoryUsage_bytes" );
 		}
 		catch ( IOException e ) {
 			throw new UncheckedIOException( e );
 		}
+		MonitoringUtils.listenBytesUsageOnGC( usage -> peakMemory_bytes.updateAndGet( peak -> usage > peak ? usage : peak ) );
 	}
 
 	@Inject
@@ -91,8 +97,8 @@ public class ScalabilityStatisticsListener implements AutoCloseable {
 		for ( Ego e : clique ) {
 			nCliqueTies.adjustOrPutValue(
 					e,
-					clique.size(),
-					clique.size() );
+					clique.size() - 1,
+					clique.size() - 1 );
 		}
 	}
 
@@ -103,6 +109,7 @@ public class ScalabilityStatisticsListener implements AutoCloseable {
 		this.currSample = sample;
 		this.currTryNr = tryNr;
 		this.start_ms = System.currentTimeMillis();
+		peakMemory_bytes.set( -1 );
 	}
 
 	public void endTry( final SocialNetwork sn ) {
@@ -116,7 +123,13 @@ public class ScalabilityStatisticsListener implements AutoCloseable {
 			writer.write( "\t" );
 
 			log.info( "write clique size statistics..." );
-			writeBoxPlot( cliques , Set::size );
+			writeBoxPlot(
+					// count each clique once per ego.
+					cliques.stream()
+							.flatMap( c -> c.stream().map( e -> c ) )
+							.collect( Collectors.toList() ) ,
+					Set::size );
+
 			writer.write( "\t" );
 
 			log.info( "write degree statistics..." );
@@ -128,12 +141,20 @@ public class ScalabilityStatisticsListener implements AutoCloseable {
 			writer.write( "\t" );
 
 			log.info( "write overlap statistics..." );
-			writeBoxPlot( egos , (Ego e) -> nCliqueTies.get( e ) / e.getAlters().size() );
+			writeBoxPlot(
+					egos.stream()
+							.filter(
+									e -> e.getAlters().size() > 0 )
+							.collect( Collectors.toList() ),
+					(Ego e) -> nCliqueTies.get( e ) / e.getAlters().size() );
 
 			log.info( "write connected components statistics..." );
 			final Collection<Set<Id>> components = SnaUtils.identifyConnectedComponents( sn );
 			writer.write( "\t"+components.size()+"\t" );
 			writeBoxPlot( components , Set::size );
+
+			log.info( "write memory statistics..." );
+			writer.write( "\t"+peakMemory_bytes.get() );
 
 			log.info( "write statistics for try "+currTryNr+" of sample rate "+currSample+": DONE" );
 			writer.flush();
@@ -157,7 +178,6 @@ public class ScalabilityStatisticsListener implements AutoCloseable {
 	private <T> void writeBoxPlotFlat( final Collection<T> objs, final Function<T,DoubleStream> stat ) throws IOException {
 		final double[] arr = objs.stream().flatMapToDouble( stat ).toArray();
 
-		// could sort a random subset only if collection very long, for efficiency (only if really too long)
 		Arrays.sort( arr );
 
 		final int last = arr.length - 1;

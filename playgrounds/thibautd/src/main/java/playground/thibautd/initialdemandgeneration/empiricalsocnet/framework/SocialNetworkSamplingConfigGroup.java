@@ -26,19 +26,10 @@ import org.matsim.core.config.ReflectiveConfigGroup;
 public class SocialNetworkSamplingConfigGroup extends ReflectiveConfigGroup {
 	private static final String GROUP_NAME = "socialNetworkSampler";
 
-	private boolean rebalanceKdTree = false;
+
 
 	public SocialNetworkSamplingConfigGroup( ) {
 		super( GROUP_NAME );
 	}
 
-	@StringGetter("rebalanceKdTree")
-	public boolean doRebalanceKdTree() {
-		return rebalanceKdTree;
-	}
-
-	@StringSetter("rebalanceKdTree")
-	public void setRebalanceKdTree( final boolean rebalanceKdTree ) {
-		this.rebalanceKdTree = rebalanceKdTree;
-	}
 }

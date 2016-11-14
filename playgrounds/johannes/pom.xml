@@ -40,25 +40,24 @@
 			<name>Geotools repository</name>
 			<url>http://download.osgeo.org/webdav/geotools</url>
 		</repository>
-		<!-- repeating repositories below although they are in socnetgen in attempt 
-			to repair intermittent build failures. kai, sep'15 -->
-		<!--<repository>
-			<id>basex</id>
-			<name>BaseX Maven Repository</name>
-			<url>http://files.basex.org/maven</url>
-		</repository>
-		<repository>
-			<id>xqj</id>
-			<name>XQJ Maven Repository</name>
-			<url>http://xqj.net/maven</url>
-		</repository>-->
 	</repositories>
-	<dependencies>
 
+	<dependencies>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
 			<version>3.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.5.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.googlecode.json-simple</groupId>
+			<artifactId>json-simple</artifactId>
+			<version>1.1.1</version>
 		</dependency>
 
 		<dependency>
@@ -102,7 +101,7 @@
 									<manifest>
 										<addClasspath>true</addClasspath>
 										<classpathPrefix>libs/</classpathPrefix>
-										<mainClass>org.matsim.run.ReleaseInfo</mainClass>
+										<mainClass>playground.johannes.gsv.synPop.osm.BuildingSynthesizer</mainClass>
 									</manifest>
 								</archive>
 							</configuration>
