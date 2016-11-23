@@ -40,6 +40,7 @@ import org.matsim.core.config.consistency.ConfigConsistencyCheckerImpl;
 import org.matsim.core.controler.corelisteners.ControlerDefaultCoreListenersModule;
 import org.matsim.core.controler.listener.ControlerListener;
 import org.matsim.core.events.handler.EventHandler;
+import org.matsim.core.gbl.Gbl;
 import org.matsim.core.replanning.ReplanningContext;
 import org.matsim.core.replanning.StrategyManager;
 import org.matsim.core.router.TripRouter;
@@ -174,7 +175,6 @@ public final class Controler implements ControlerI, MatsimServices {
 	 */
 	@Override
 	public final void run() {
-		this.injectorCreated = true;
 		this.injector = Injector.createInjector(config, AbstractModule.override(Collections.singleton(new AbstractModule() {
 			@Override
 			public void install() {
@@ -187,6 +187,7 @@ public final class Controler implements ControlerI, MatsimServices {
 				//install(new ScenarioByInstanceModule(scenario));
 			}
 		}), overrides));
+		this.injectorCreated = true;
 		ControlerI controler = injector.getInstance(ControlerI.class);
 		controler.run();
 	}
@@ -242,6 +243,7 @@ public final class Controler implements ControlerI, MatsimServices {
     @Override
 	public final Scenario getScenario() {
 		if (this.injectorCreated) {
+			Gbl.assertNotNull(this.injector);
 			return this.injector.getInstance(Scenario.class);
 		} else {
 			if ( scenario == null ) {

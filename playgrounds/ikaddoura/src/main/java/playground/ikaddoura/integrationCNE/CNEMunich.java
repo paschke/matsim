@@ -24,17 +24,23 @@ package playground.ikaddoura.integrationCNE;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
-
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.contrib.emissions.utils.EmissionsConfigGroup;
 import org.matsim.contrib.noise.NoiseConfigGroup;
+import org.matsim.contrib.noise.data.NoiseAllocationApproach;
 import org.matsim.contrib.noise.utils.MergeNoiseCSVFile;
 import org.matsim.contrib.noise.utils.ProcessNoiseImmissions;
 import org.matsim.contrib.otfvis.OTFVisFileWriterModule;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
@@ -45,15 +51,26 @@ import org.matsim.core.replanning.modules.SubtourModeChoice;
 import org.matsim.core.replanning.selectors.RandomPlanSelector;
 import org.matsim.core.replanning.strategies.DefaultPlanStrategiesModule;
 import org.matsim.core.router.TripRouter;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
-
 import playground.agarwalamit.analysis.modalShare.ModalShareFromEvents;
 import playground.agarwalamit.mixedTraffic.patnaIndia.input.joint.JointCalibrationControler;
 import playground.agarwalamit.munich.utils.MunichPersonFilter;
 import playground.agarwalamit.munich.utils.MunichPersonFilter.MunichUserGroup;
 import playground.ikaddoura.analysis.detailedPersonTripAnalysis.PersonTripCongestionNoiseAnalysisMain;
+import playground.vsp.airPollution.exposure.GridTools;
+import playground.vsp.airPollution.exposure.ResponsibilityGridTools;
 
 public class CNEMunich {
+
+	private static final Integer noOfXCells = 160;
+	private static final Integer noOfYCells = 120;
+	static final double xMin = 4452550.25;
+	static final double xMax = 4479483.33;
+	static final double yMin = 5324955.00;
+	static final double yMax = 5345696.81;
+	private static final Double timeBinSize = 3600.;
+	private static final int noOfTimeBins = 30;
 	
 	public static void main(String[] args) throws IOException {
 		
@@ -68,10 +85,15 @@ public class CNEMunich {
 			
 			configFile = "../../../runs-svn/cne_test/input/config.xml";
 		}
-				
-		CNEIntegration cneIntegration = new CNEIntegration(configFile);
-		
-		Controler controler = cneIntegration.prepareControler();
+
+		Scenario scenario = ScenarioUtils.loadScenario(ConfigUtils.loadConfig(configFile));
+		Controler controler = new Controler(scenario);
+
+		GridTools gt = new GridTools(scenario.getNetwork().getLinks(), xMin, xMax, yMin, yMax, noOfXCells, noOfYCells);
+		ResponsibilityGridTools rgt = new ResponsibilityGridTools(timeBinSize, noOfTimeBins, gt);
+
+		CNEIntegration cneIntegration = new CNEIntegration(controler, gt, rgt);
+		controler = cneIntegration.prepareControler();
 
 		// scenario-specific settings
 		
@@ -109,6 +131,42 @@ public class CNEMunich {
 				});
 			}
 		});
+		
+		// noise
+		
+		NoiseConfigGroup noiseParameters = (NoiseConfigGroup) controler.getScenario().getConfig().getModule("noise");
+
+		noiseParameters.setReceiverPointGap(100.);
+		
+		// TODO define area
+//		static final double xMin = 4452550.25;
+//		static final double xMax = 4479483.33;
+//		static final double yMin = 5324955.00;
+//		static final double yMax = 5345696.81;
+		String[] consideredActivitiesForReceiverPointGrid = {"home", "work", "educ_primary", "educ_secondary", "educ_higher", "kiga"};
+		noiseParameters.setConsideredActivitiesForReceiverPointGridArray(consideredActivitiesForReceiverPointGrid);
+			
+		// TODO: all activities
+		String[] consideredActivitiesForDamages = {"home", "work", "educ_primary", "educ_secondary", "educ_higher", "kiga"};
+		noiseParameters.setConsideredActivitiesForDamageCalculationArray(consideredActivitiesForDamages);
+		
+		// TODO
+		String[] hgvIdPrefixes = { "gv" };
+		noiseParameters.setHgvIdPrefixesArray(hgvIdPrefixes);
+						
+		noiseParameters.setNoiseAllocationApproach(NoiseAllocationApproach.MarginalCost);
+				
+		noiseParameters.setScaleFactor(1.);
+
+		// TODO
+		Set<Id<Link>> tunnelLinkIDs = new HashSet<Id<Link>>();
+		// 595958075
+//		576277210-576277209-576275366-593677922
+//		591541992
+
+//		tunnelLinkIDs.add(Id.create("108041", Link.class));
+//		tunnelLinkIDs.add(Id.create("108142", Link.class));
+		noiseParameters.setTunnelLinkIDsSet(tunnelLinkIDs);
 		
 		controler.run();
 			
