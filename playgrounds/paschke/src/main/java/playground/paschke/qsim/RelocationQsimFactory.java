@@ -34,7 +34,7 @@ public class RelocationQsimFactory implements Provider<Netsim>{
 	@Inject private CarsharingSupplyInterface carsharingSupply;
 	@Inject private CarsharingManagerInterface carsharingManager;
 
-	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation;
+	@Inject private CarsharingVehicleRelocationContainer carsharingVehicleRelocation;
 	@Inject private Provider<TripRouter> routerProvider;
 
 	@Override

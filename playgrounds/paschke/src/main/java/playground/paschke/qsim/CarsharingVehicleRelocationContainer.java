@@ -2,32 +2,30 @@ package playground.paschke.qsim;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.carsharing.config.CarsharingVehicleRelocationConfigGroup;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.utils.gis.PointFeatureFactory;
-import org.matsim.core.utils.misc.Time;
 import org.opengis.feature.simple.SimpleFeature;
 
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 
-public class CarsharingVehicleRelocation {
+public class CarsharingVehicleRelocationContainer {
 	private Scenario scenario;
 
 	private PointFeatureFactory pointFeatureFactory;
@@ -36,26 +34,31 @@ public class CarsharingVehicleRelocation {
 
 	public static final String ELEMENT_NAME = "carSharingRelocationZones";
 
+	private RelocationAgentFactory relocationAgentFactory;
+
 	private Map<String, List<RelocationZone>> relocationZones;
 
 	private Map<String, List<Double>> relocationTimes;
 
-	private Map<String, Map<String, Map<String, Double>>> relocationAgentBases;
+	private Map<String, Map<Id<Person>, RelocationAgent>> relocationAgents;
 
-	private ArrayList<RelocationInfo> relocations;
+	private Map<String, List<RelocationInfo>> relocations;
 
 	private Map<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> status = new HashMap<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>>();
 
 	private boolean useRelocation = false;
 
-	public CarsharingVehicleRelocation(Scenario sc) {
+	public CarsharingVehicleRelocationContainer(Scenario sc) {
 		this.scenario = sc;
+		this.relocationAgentFactory = new RelocationAgentFactory(this.scenario);
 		this.pointFeatureFactory = new PointFeatureFactory.Builder()
 				.setName("point")
 				.setCrs(DefaultGeographicCRS.WGS84)
 				.create();
 
-		this.relocations = new ArrayList<RelocationInfo>();
+		this.relocationAgents = new HashMap<String, Map<Id<Person>, RelocationAgent>>();
+
+		this.relocations = new HashMap<String, List<RelocationInfo>>();
 
 		final CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
 				this.scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
@@ -87,7 +90,38 @@ public class CarsharingVehicleRelocation {
 
 		RelocationAgentsReader reader = new RelocationAgentsReader();
 		reader.readFile(confGroup.getRelocationAgents());
-		this.relocationAgentBases = reader.getRelocationAgentBases();
+
+		Network network = this.scenario.getNetwork();
+		Map<String, Map<String, Map<String, Double>>> relocationAgentBases = reader.getRelocationAgentBases();
+
+		Iterator<Entry<String, Map<String, Map<String, Double>>>> companiesIterator = relocationAgentBases.entrySet().iterator();
+		while (companiesIterator.hasNext()) {
+			Entry<String, Map<String, Map<String, Double>>> companyEntry = companiesIterator.next();
+			String companyId = companyEntry.getKey();
+			this.relocationAgents.put(companyId, new HashMap<Id<Person>, RelocationAgent>());
+			Iterator<Entry<String, Map<String, Double>>> baseIterator = companyEntry.getValue().entrySet().iterator();
+
+			while (baseIterator.hasNext()) {
+				Entry<String, Map<String, Double>> baseEntry = baseIterator.next();
+				String baseId = baseEntry.getKey();
+				HashMap<String, Double> agentBaseData = (HashMap<String, Double>) baseEntry.getValue();
+
+				Coord coord = new Coord(agentBaseData.get("x"), agentBaseData.get("y"));
+				Link link = (Link) NetworkUtils.getNearestLinkExactly(network, coord);
+
+				int counter = 0;
+				while (counter < agentBaseData.get("number")) {
+					Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + companyId + "_" + baseId + "_"  + counter);
+					RelocationAgent agent = this.relocationAgentFactory.createRelocationAgent(id, companyId, link.getId());
+					//agent.setGuidance(new Guidance(this.routerProvider.get()));
+					//agent.setMobsimTimer(this.qSim.getSimTimer());
+					//agent.setCarsharingSupplyContainer(this.carsharingSupply);
+
+					this.relocationAgents.get(companyId).put(id, agent);
+					counter++;
+				}
+			}
+		}
 	}
 
 	public Map<String, List<RelocationZone>> getRelocationZones() {
@@ -114,20 +148,36 @@ public class CarsharingVehicleRelocation {
 		return null;
 	}
 
-	public Map<String, Map<String, Map<String, Double>>> getRelocationAgentBases() {
-		return this.relocationAgentBases;
+	public Map<String, Map<Id<Person>, RelocationAgent>> getRelocationAgents() {
+		return this.relocationAgents;
 	}
 
-	public Map<String, Map<String, Double>> getRelocationAgentBases(String companyId) {
-		if (this.getRelocationAgentBases().keySet().contains(companyId)) {
-			return this.getRelocationAgentBases().get(companyId);
+	public Map<Id<Person>, RelocationAgent> getRelocationAgents(String companyId) {
+		if (this.getRelocationAgents().keySet().contains(companyId)) {
+			return this.getRelocationAgents().get(companyId);
 		}
 
 		return null;
 	}
 
-	public List<RelocationInfo> getRelocations() {
+	public Map<String, List<RelocationInfo>> getRelocations() {
 		return this.relocations;
+	}
+
+	public List<RelocationInfo> getRelocations(String companyId) {
+		if (this.getRelocations().keySet().contains(companyId)) {
+			return this.getRelocations().get(companyId);
+		}
+
+		return null;
+	}
+
+	public void addRelocation(String companyId, RelocationInfo info) {
+		if (this.getRelocations(companyId) == null) {
+			this.getRelocations().put(companyId, new ArrayList<RelocationInfo>());
+		}
+
+		this.getRelocations(companyId).add(info);
 	}
 
 	public boolean useRelocation() {
@@ -213,86 +263,13 @@ public class CarsharingVehicleRelocation {
 		}
 	}
 
-	public void reset() {
-		this.resetRelocationZones();
-		this.relocations = new ArrayList<RelocationInfo>();
+	public void resetRelocations() {
+		this.relocations = new HashMap<String, List<RelocationInfo>>();
 	}
 
-	public ArrayList<RelocationInfo> calculateRelocations(String companyId, String carsharingType, double now, double then) {
-		List<RelocationZone> relocationZones = this.getRelocationZones(companyId);
-		ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
-
-		Collections.sort(relocationZones, new Comparator<RelocationZone>() {
-
-			@Override
-			public int compare(RelocationZone o1, RelocationZone o2) {
-				if (o1.getNumberOfSurplusVehicles() < o2.getNumberOfSurplusVehicles()) {
-					return -1;
-				} else if (o1.getNumberOfSurplusVehicles() > o2.getNumberOfSurplusVehicles()) {
-					return 1;
-				} else {
-					return o1.getId().toString().compareTo(o2.getId().toString());
-				}
-			}
-		});
-
-		int evenIndex = 0;
-		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
-			RelocationZone nextZone = iterator.next();
-
-			if (nextZone.getNumberOfSurplusVehicles(1.1) <= 0) {
-				evenIndex = iterator.previousIndex();
-			} else {
-				break;
-			}
-		}
-
-		List<RelocationZone> surplusZones = relocationZones.subList(evenIndex, (relocationZones.size() - 1));
-		Collections.reverse(surplusZones);
-
-		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
-			RelocationZone nextZone = (RelocationZone) iterator.next();
-
-			if (nextZone.getNumberOfSurplusVehicles() < -1) {
-				log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
-
-				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
-					log.info("counting down surplus vehicles: " + i);
-					Link fromLink = null;
-					Link toLink = (Link) ((Set<Link>) nextZone.getExpectedRequests().keySet()).iterator().next();
-					String surplusZoneId = null;
-					String vehicleId = null;
-
-					Iterator<RelocationZone> surplusZonesIterator = surplusZones.iterator();
-					while (surplusZonesIterator.hasNext()) {
-						RelocationZone surplusZone = surplusZonesIterator.next();
-
-						if (surplusZone.getNumberOfSurplusVehicles(1.1) > 0) {
-							surplusZoneId = surplusZone.getId().toString();
-							Iterator<Link> links = surplusZone.getVehicles().keySet().iterator();
-							if (links.hasNext()) {
-								fromLink = links.next();
-								ArrayList<String> vehicleIds = surplusZone.getVehicles().get(fromLink);
-								vehicleId = vehicleIds.get(0);
-								surplusZone.removeVehicles(fromLink, new ArrayList<String>(Arrays.asList(new String[]{vehicleId})));
-
-								break;
-							}
-						}
-					}
-
-					if ((fromLink != null) && (vehicleId != null)) {
-						relocations.add(new RelocationInfo(Time.writeTime(now) + " - " + Time.writeTime(then), companyId, vehicleId, carsharingType, fromLink.getId(), toLink.getId(), surplusZoneId, nextZone.getId().toString()));
-					}
-				}
-			} else {
-				break;
-			}
-		}
-
-		this.relocations.addAll(relocations);
-
-		return relocations;
+	public void reset() {
+		this.resetRelocationZones();
+		this.resetRelocations();
 	}
 
 	public void storeStatus(String companyId, double now) {

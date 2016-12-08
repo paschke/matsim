@@ -42,8 +42,9 @@ import org.matsim.core.scenario.ScenarioUtils;
 import playground.paschke.events.MobismBeforeSimStepRelocationListener;
 import playground.paschke.events.SetupListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
-import playground.paschke.qsim.CarsharingVehicleRelocation;
-import playground.paschke.qsim.RelocationListener;
+import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
+import playground.paschke.qsim.KmlWriterListener;
+import playground.paschke.qsim.SimpleRelocationListener;
 import playground.paschke.qsim.RelocationQsimFactory;
 import playground.paschke.utils.ExampleCarsharingUtils;
 
@@ -81,12 +82,12 @@ public class RelocationControler {
 
 		final CostsCalculatorContainer costsCalculatorContainer = ExampleCarsharingUtils.createCompanyCostsStructure(carsharingCompanies);
 
-		final CarsharingVehicleRelocation carsharingVehicleRelocation = new CarsharingVehicleRelocation(controler.getScenario());
+		final CarsharingVehicleRelocationContainer carsharingVehicleRelocation = new CarsharingVehicleRelocationContainer(controler.getScenario());
 
 		final SetupListener setupListener = new SetupListener();
 		final CarSharingDemandTracker demandTracker = new CarSharingDemandTracker();
 		final CarsharingListener carsharingListener = new CarsharingListener();
-		final RelocationListener relocationListener = new RelocationListener(configGroup.getStatsWriterFrequency());
+		final KmlWriterListener relocationListener = new KmlWriterListener(configGroup.getStatsWriterFrequency());
 		final CarsharingSupplyContainer carsharingSupplyContainer = new CarsharingSupplyContainer(controler.getScenario());
 		carsharingSupplyContainer.populateSupply();
 		final KeepingTheCarModel keepingCarModel = new KeepingTheCarModelExample();
@@ -111,7 +112,7 @@ public class RelocationControler {
 				bind(MembershipContainer.class).toInstance(memberships);
 			    bind(CarsharingSupplyInterface.class).toInstance(carsharingSupplyContainer);
 			    bind(CarsharingManagerInterface.class).toInstance(carsharingManager);
-				bind(CarsharingVehicleRelocation.class).toInstance(carsharingVehicleRelocation);
+				bind(CarsharingVehicleRelocationContainer.class).toInstance(carsharingVehicleRelocation);
 				bind(CarSharingDemandTracker.class).toInstance(demandTracker);
 				bind(DemandHandler.class).asEagerSingleton();
 			}
@@ -142,6 +143,7 @@ public class RelocationControler {
 				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
 				addEventHandlerBinding().to(PersonArrivalDepartureHandler.class);
 				addEventHandlerBinding().to(DemandHandler.class);
+				addEventHandlerBinding().to(SimpleRelocationListener.class);
 			}
 		});
 

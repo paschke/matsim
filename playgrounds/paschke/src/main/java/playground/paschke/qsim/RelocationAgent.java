@@ -2,6 +2,7 @@ package playground.paschke.qsim;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -11,7 +12,6 @@ import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
-import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyContainer;
 import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.contrib.carsharing.manager.supply.CompanyContainer;
 import org.matsim.contrib.carsharing.vehicles.CSVehicle;
@@ -23,8 +23,6 @@ import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.facilities.Facility;
 import org.matsim.vehicles.Vehicle;
-
-import com.google.inject.Inject;
 
 /**
  * Mostly copied from tutorial.programming.ownMobsimAgentUsingRouter.MyMobsimAgent
@@ -200,11 +198,11 @@ public class RelocationAgent implements MobsimDriverAgent {
 		if (this.relocations.isEmpty() == false) {
 			return now;
 		} else if (now < 21600) {
-			return 21600;
+			return 21600 + 60;
 		} else if (now < 64800) {
 			// TODO: "before 6pm, check back in 3 hours", hard coded. Make this configurable.
 			double endTime = (now + 10800 - (now % 10800));
-			return endTime;
+			return endTime + 60;
 		} else {
 			return Double.POSITIVE_INFINITY;
 		}

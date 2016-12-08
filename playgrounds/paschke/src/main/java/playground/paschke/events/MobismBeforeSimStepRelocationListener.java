@@ -1,22 +1,18 @@
 package playground.paschke.events;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.carsharing.manager.demand.RentalInfo;
 import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.contrib.carsharing.manager.supply.FreeFloatingVehiclesContainer;
 import org.matsim.contrib.carsharing.vehicles.CSVehicle;
-import org.matsim.core.mobsim.framework.MobsimAgent.State;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.mobsim.framework.events.MobsimBeforeSimStepEvent;
 import org.matsim.core.mobsim.framework.listeners.MobsimBeforeSimStepListener;
 import org.matsim.core.mobsim.qsim.QSim;
@@ -24,18 +20,18 @@ import org.matsim.core.mobsim.qsim.QSim;
 import com.google.inject.Inject;
 
 import playground.paschke.qsim.CarSharingDemandTracker;
-import playground.paschke.qsim.CarsharingVehicleRelocation;
-import playground.paschke.qsim.RelocationAgent;
-import playground.paschke.qsim.RelocationInfo;
+import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
 
 public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimStepListener {
-	private static final Logger log = Logger.getLogger("dummy");
+	public static final Logger log = Logger.getLogger("dummy");
 
 	@Inject private CarsharingSupplyInterface carsharingSupply;
 
 	@Inject private CarSharingDemandTracker demandTracker;
 
-	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation;
+	@Inject private CarsharingVehicleRelocationContainer carsharingVehicleRelocation;
+
+	@Inject EventsManager eventsManager;
 
 	@SuppressWarnings("rawtypes")
 	@Override
@@ -86,49 +82,8 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 				// compare available vehicles to demand for each zone, store result
 				this.carsharingVehicleRelocation.storeStatus(companyId, now);
 
-				for (RelocationInfo info : this.carsharingVehicleRelocation.calculateRelocations(companyId, "freefloating", now, then)) {
-					log.info("RelocationZones suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
-
-					if (this.carsharingVehicleRelocation.useRelocation()) {
-						this.dispatchRelocation(qSim, info);
-					}
-				}
+				eventsManager.processEvent(new DispatchRelocationsEvent(now, then, companyId));
 			}
 		}
-	}
-
-	private void dispatchRelocation(QSim qSim, RelocationInfo info) {
-		RelocationAgent agent = this.getRelocationAgent(qSim, info.getCompanyId());
-
-		if (agent != null) {
-			info.setAgentId(agent.getId());
-			agent.dispatchRelocation(info);
-		}
-	}
-
-	private RelocationAgent getRelocationAgent(QSim qSim, String companyId) {
-		Map<String, Map<String, Double>> relocationAgentBasesList = this.carsharingVehicleRelocation.getRelocationAgentBases(companyId);
-
-		Iterator<Entry<String, Map<String, Double>>> baseIterator = relocationAgentBasesList.entrySet().iterator();
-		while (baseIterator.hasNext()) {
-			Entry<String, Map<String, Double>> entry = baseIterator.next();
-			String baseId = entry.getKey();
-			HashMap<String, Double> agentBaseData = (HashMap<String, Double>) entry.getValue();
-
-			int counter = 0;
-			while (counter < agentBaseData.get("number")) {
-				Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + companyId + "_" + baseId + "_"  + counter);
-				RelocationAgent agent = (RelocationAgent) qSim.getAgentMap().get(id);
-
-				if ((agent.getState() == State.ACTIVITY) && (agent.getRelocations().size() == 0)) {
-					log.info("RelocationAgent " + agent.getId() + " reused from the agent pool");
-					return agent;
-				}
-
-				counter++;
-			}
-		}
-
-		return null;
 	}
 }

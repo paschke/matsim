@@ -9,7 +9,6 @@ public class RelocationInfo {
 	private String timeSlot;
 	private String companyId;
 	private String vehicleId;
-	private String carsharingType;
 	private Id<Link> startLinkId;
 	private Id<Link> endLinkId;
 	private String startZoneId;
@@ -18,11 +17,10 @@ public class RelocationInfo {
 	private double endTime;
 	private Id<Person> agentId;
 
-	public RelocationInfo(String timeSlot, String companyId, String vehicleId, String carsharingType, Id<Link> startLinkId, Id<Link> endLinkId, String startZoneId, String endZoneId) {
+	public RelocationInfo(String timeSlot, String companyId, String vehicleId, Id<Link> startLinkId, Id<Link> endLinkId, String startZoneId, String endZoneId) {
 		this.timeSlot		= timeSlot;
 		this.companyId		= companyId;
 		this.vehicleId 		= vehicleId;
-		this.carsharingType	= carsharingType;
 		this.startLinkId 	= startLinkId;
 		this.endLinkId 		= endLinkId;
 		this.startZoneId	= startZoneId;
@@ -35,10 +33,6 @@ public class RelocationInfo {
 
 	public String getVehicleId() {
 		return this.vehicleId;
-	}
-
-	public String getCarsharingType() {
-		return this.carsharingType;
 	}
 
 	public Id<Link> getStartLinkId() {
@@ -95,7 +89,6 @@ public class RelocationInfo {
 				(this.getEndLinkId() == null ? "null" : this.getEndLinkId().toString()) + "	" +
 				this.getCompanyId() + "	" +
 				this.getVehicleId() + "	" +
-				this.getCarsharingType() + "	" +
 				(this.getAgentId() == null ? "null" : this.getAgentId().toString());
 	}
 }

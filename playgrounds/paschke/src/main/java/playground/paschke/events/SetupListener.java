@@ -7,10 +7,10 @@ import org.matsim.core.controler.listener.StartupListener;
 
 import com.google.inject.Inject;
 
-import playground.paschke.qsim.CarsharingVehicleRelocation;
+import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
 
 public class SetupListener implements StartupListener {
-	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation; 
+	@Inject private CarsharingVehicleRelocationContainer carsharingVehicleRelocation; 
 
 	@Override
 	public void notifyStartup(StartupEvent event) {

@@ -20,20 +20,20 @@ import org.matsim.core.utils.io.IOUtils;
 import com.google.inject.Inject;
 import com.vividsolutions.jts.geom.MultiPolygon;
 
-public class RelocationListener implements IterationStartsListener, IterationEndsListener {
+public class KmlWriterListener implements IterationStartsListener, IterationEndsListener {
 	int frequency = 0;
 
-	@Inject private CarsharingVehicleRelocation carsharingVehicleRelocation;
+	@Inject private CarsharingVehicleRelocationContainer carsharingVehicleRelocation;
 
 	@Inject private OutputDirectoryHierarchy outputDirectoryHierarchy;
 
-	public RelocationListener(int frequency) {
+	public KmlWriterListener(int frequency) {
 		this.frequency = frequency;
 	}
 
 	@Override
 	public void notifyIterationStarts(IterationStartsEvent event) {
-		this.carsharingVehicleRelocation.resetRelocationZones();
+		this.carsharingVehicleRelocation.reset();
 	}
 
 	@Override
@@ -63,16 +63,19 @@ public class RelocationListener implements IterationStartsListener, IterationEnd
 			}
 
 			// log relocations
-			ArrayList<RelocationInfo> relocations = (ArrayList<RelocationInfo>) this.carsharingVehicleRelocation.getRelocations();
-
 			final BufferedWriter outRelocations = IOUtils.getBufferedWriter(this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), "relocations"));
 			try {
-				outRelocations.write("timeSlot	startZone	endZone	startTime	endTime	startLink	endLink	vehicleID	agentID");
-				outRelocations.newLine();
+				for (Entry<String, List<RelocationInfo>> companyEntry : this.carsharingVehicleRelocation.getRelocations().entrySet()) {
+					String companyId = companyEntry.getKey();
+					List<RelocationInfo> companyRelocations = companyEntry.getValue();
 
-				for (RelocationInfo i: relocations) {
-					outRelocations.write(i.toString());
+					outRelocations.write("timeSlot	startZone	endZone	startTime	endTime	startLink	endLink	companyID	vehicleID	agentID");
 					outRelocations.newLine();
+
+					for (RelocationInfo i: companyRelocations) {
+						outRelocations.write(i.toString());
+						outRelocations.newLine();
+					}
 				}
 
 				outRelocations.flush();
