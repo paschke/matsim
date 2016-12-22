@@ -86,13 +86,15 @@ public class RelocationAgent implements MobsimDriverAgent {
      * - reserve car sharing vehicle, aka remove it from storage structure
      */
 	public void dispatchRelocation(RelocationInfo info) {
-		this.relocations.add(info);
-
 		CompanyContainer companyContainer = this.carsharingSupply.getCompany(this.companyId);		
 		CSVehicle vehicle = this.carsharingSupply.getVehicleWithId(info.getVehicleId());
-		companyContainer.reserveVehicle(vehicle);
+		if (true == companyContainer.reserveVehicle(vehicle)) {
+			this.relocations.add(info);
 
-		log.info("relocationAgent " + this.id + " removed vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
+			log.info("relocationAgent " + this.id + " removed vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
+		}
+
+		log.info("relocationAgent " + this.id + " could not remove vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
 	}
 
 	public void setMobsimTimer(MobsimTimer mobsimTimer) {
@@ -197,12 +199,12 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 		if (this.relocations.isEmpty() == false) {
 			return now;
-		} else if (now < 21600) {
-			return 21600 + 60;
-		} else if (now < 64800) {
+		} else if (now < (21600 + 1)) {
+			return (21600 + 1);
+		} else if (now < (64800 + 1)) {
 			// TODO: "before 6pm, check back in 3 hours", hard coded. Make this configurable.
 			double endTime = (now + 10800 - (now % 10800));
-			return endTime + 60;
+			return endTime + 1;
 		} else {
 			return Double.POSITIVE_INFINITY;
 		}
