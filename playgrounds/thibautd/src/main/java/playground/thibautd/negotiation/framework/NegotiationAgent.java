@@ -21,11 +21,16 @@ package playground.thibautd.negotiation.framework;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Identifiable;
 import org.matsim.api.core.v01.population.Person;
+import playground.ivt.utils.ConcurrentStopWatch;
+
+import java.util.Collection;
 
 /**
  * @author thibautd
  */
 public class NegotiationAgent<P extends Proposition> implements Identifiable<Person> {
+	private final ConcurrentStopWatch<StopWatchMeasurement> stopwatch;
+
 	private final Id<Person> id;
 
 	private final PropositionUtility<P> utility;
@@ -35,16 +40,16 @@ public class NegotiationAgent<P extends Proposition> implements Identifiable<Per
 	private double currentBestUtil;
 	private P currentBestProp = null;
 
-	public NegotiationAgent( final Id<Person> id,
-			final PropositionUtility<P> utility,
-			final AlternativesGenerator<P> alternativesGenerator,
-			final NegotiatingAgents<P> negotiatingAgents ) {
+	NegotiationAgent( final Id<Person> id,
+			final NegotiatingAgents<P> negotiatingAgents,
+			final ConcurrentStopWatch<StopWatchMeasurement> stopwatch ) {
 		this.id = id;
-		this.utility = utility;
+		this.utility = negotiatingAgents.getUtility();
+		this.stopwatch = stopwatch;
 		// ie cost of being alone
 		// find a way to do without nulls
 		this.currentBestUtil = utility.utility( this , null );
-		this.alternativesGenerator = alternativesGenerator;
+		this.alternativesGenerator = negotiatingAgents.getAlternativesGenerator();
 		this.negotiatingAgents = negotiatingAgents;
 	}
 
@@ -60,31 +65,54 @@ public class NegotiationAgent<P extends Proposition> implements Identifiable<Per
 	public boolean planActivity() {
 		boolean found = false;
 
-		for ( P proposition : alternativesGenerator.generateAlternatives( this ) ) {
-			if ( !negotiatingAgents.contains( proposition.getProposedIds() ) ) continue;
+		stopwatch.startMeasurement( StopWatchMeasurement.total );
+
+		stopwatch.startMeasurement( StopWatchMeasurement.generateAlternatives );
+		final Collection<P> alternatives = alternativesGenerator.generateAlternatives( this );
+		stopwatch.endMeasurement( StopWatchMeasurement.generateAlternatives );
+
+		for ( P proposition : alternatives ) {
+			if ( !proposition.getProposed().stream().allMatch( a -> negotiatingAgents.contains( a.getId() ) ) ) continue;
+
+			stopwatch.startMeasurement( StopWatchMeasurement.utility );
 			final double u = utility.utility( this , proposition );
+			stopwatch.endMeasurement( StopWatchMeasurement.utility );
 			if ( u < currentBestUtil ) continue;
 
-			if ( !proposition.getProposedIds().stream()
+			stopwatch.startMeasurement( StopWatchMeasurement.askAcceptance );
+			if ( !proposition.getProposed().stream()
+					.map( Person::getId )
 					.map( negotiatingAgents::get )
-					.allMatch( a -> a.accept( proposition ) ) ) continue;
+					.allMatch( a -> a.accept( proposition ) ) ) {
+				stopwatch.endMeasurement( StopWatchMeasurement.askAcceptance );
+				continue;
+			}
+			stopwatch.endMeasurement( StopWatchMeasurement.askAcceptance );
 
 			found = true;
 			currentBestUtil = u;
 			currentBestProp = proposition;
 		}
 
+		stopwatch.startMeasurement( StopWatchMeasurement.notifyResult );
 		if ( found ) {
-			currentBestProp.getGroupIds().stream()
+			currentBestProp.getGroup().stream()
+					.map( Person::getId )
 					.map( negotiatingAgents::get )
 					.forEach( a -> a.notifyAccepted( currentBestProp ) );
 		}
+		stopwatch.endMeasurement( StopWatchMeasurement.notifyResult );
+		stopwatch.endMeasurement( StopWatchMeasurement.total );
 
 		return found;
 	}
 
 	public P getBestProposition() {
 		return currentBestProp;
+	}
+
+	public double getBestUtility() {
+		return currentBestUtil;
 	}
 
 	@Override

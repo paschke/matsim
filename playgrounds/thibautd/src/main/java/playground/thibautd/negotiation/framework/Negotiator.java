@@ -18,39 +18,59 @@
  * *********************************************************************** */
 package playground.thibautd.negotiation.framework;
 
-import org.matsim.core.utils.misc.Counter;
+import com.google.common.util.concurrent.AtomicDouble;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import org.apache.log4j.Logger;
+import playground.ivt.utils.ConcurrentStopWatch;
+import playground.thibautd.utils.LambdaCounter;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
  * @author thibautd
  */
+@Singleton
 public class Negotiator<P extends Proposition> {
+	private static final Logger log = Logger.getLogger( Negotiator.class );
+	private final boolean logStopwatch;
 
 	private final NegotiatorConfigGroup configGroup;
+	private final NegotiatingAgents<P> agents;
+	private final ConcurrentStopWatch<StopWatchMeasurement> stopwatch;
 
+	@Inject
 	public Negotiator(
-			final NegotiatorConfigGroup configGroup ) {
+			final NegotiatorConfigGroup configGroup,
+			final NegotiatingAgents<P> agents,
+			final ConcurrentStopWatch<StopWatchMeasurement> stopwatch ) {
 		this.configGroup = configGroup;
+		this.agents = agents;
+		this.stopwatch = stopwatch;
+		logStopwatch = configGroup.isLogStopwatch();
 	}
 
 	public void negotiate(
-			final NegotiatingAgents<P> agents,
-			final Consumer<P> acceptedPropositionCallback ) {
-		double currentSuccessFraction = 1;
+			final Consumer<NegotiationAgent<P>> acceptedPropositionCallback ) {
+		final AtomicDouble currentSuccessFraction = new AtomicDouble( 1 );
 
-		final Counter counter = new Counter( "negotiation round # " );
-		while ( currentSuccessFraction > configGroup.getImprovingFractionThreshold() ) {
+		final LambdaCounter counter =
+				new LambdaCounter( l -> {
+					log.info( "Negotiation round # " + l + ": success fraction " + currentSuccessFraction );
+					if ( logStopwatch ) stopwatch.printStats( TimeUnit.MILLISECONDS );
+				} );
+		while ( currentSuccessFraction.get() > configGroup.getImprovingFractionThreshold() ) {
 			counter.incCounter();
 			final NegotiationAgent<P> agent = agents.getRandomAgent();
 			final boolean success = agent.planActivity();
 
-			currentSuccessFraction = updateSuccess( currentSuccessFraction , success );
+			currentSuccessFraction.set( updateSuccess( currentSuccessFraction.get() , success ) );
 		}
 		counter.printCounter();
 
 		for ( NegotiationAgent<P> agent : agents ) {
-			acceptedPropositionCallback.accept( agent.getBestProposition() );
+			acceptedPropositionCallback.accept( agent );
 		}
 	}
 

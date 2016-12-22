@@ -22,20 +22,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.TransportMode;
 import org.matsim.contrib.accessibility.AccessibilityConfigGroup;
-import org.matsim.contrib.accessibility.AccessibilityContributionCalculator;
-import org.matsim.contrib.accessibility.AccessibilityStartupListener;
-import org.matsim.contrib.accessibility.ConstantSpeedModeProvider;
 import org.matsim.contrib.accessibility.FacilityTypes;
-import org.matsim.contrib.accessibility.FreeSpeedNetworkModeProvider;
-import org.matsim.contrib.accessibility.Modes4Accessibility;
-import org.matsim.contrib.accessibility.NetworkModeProvider;
 import org.matsim.contrib.accessibility.utils.AccessibilityUtils;
 import org.matsim.contrib.accessibility.utils.VisualizationUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
 import org.matsim.core.scenario.MutableScenario;
@@ -43,9 +35,6 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.facilities.ActivityFacilities;
 
-import com.google.inject.Key;
-import com.google.inject.multibindings.MapBinder;
-import com.google.inject.name.Names;
 import com.vividsolutions.jts.geom.Envelope;
 
 import playground.dziemke.utils.LogToOutputSaver;
@@ -58,7 +47,6 @@ public class AccessibilityComputationCottbus {
 	
 	public static void main(String[] args) {
 		// Input and output	
-//		String runOutputFolder = "../../../public-svn/matsim/scenarios/countries/de/cottbus/cottbus-with-pt/output/cb02/";
 		String runOutputFolder = "../../../public-svn/matsim/scenarios/countries/de/cottbus/commuter-population-only-car-traffic-only-100pct-2016-03-18/";
 		String accessibilityOutputDirectory = runOutputFolder + "accessibilities/";
 		String networkFile = "network_wgs84_utm33n.xml.gz";
@@ -67,7 +55,7 @@ public class AccessibilityComputationCottbus {
 		// Parameters
 		final Double cellSize = 200.;
 		String crs = TransformationFactory.WGS84_UTM33N; // EPSG:32633 -- UTM33N
-		Envelope envelope = new Envelope(447000,5729000,461000,5740000);
+		Envelope envelope = new Envelope(447000,461000,5729000,5740000);
 		final String runId = "de_cottbus_" + "2106-11-10" + "_" + cellSize.toString().split("\\.")[0];
 		final boolean push2Geoserver = false;
 
@@ -90,10 +78,6 @@ public class AccessibilityComputationCottbus {
 		config.controler().setOverwriteFileSetting(OverwriteFileSetting.deleteDirectoryIfExists);
 		config.controler().setOutputDirectory(accessibilityOutputDirectory);
 		config.controler().setLastIteration(0);
-		AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.GROUP_NAME, AccessibilityConfigGroup.class);
-		acg.setComputingAccessibilityForMode(Modes4Accessibility.car, true); // if this is not set to true, output CSV will give NaN values
-		acg.setComputingAccessibilityForMode(Modes4Accessibility.bike, true);
-		acg.setComputingAccessibilityForMode(Modes4Accessibility.walk, true);
 		MutableScenario scenario = (MutableScenario) ScenarioUtils.loadScenario(config);
 //		config.transit().setTransitScheduleFile(runOutputFolder + "output_transitSchedule.xml.gz");
 //		config.transit().setVehiclesFile(runOutputFolder + "output_transitVehicles.xml.gz");
@@ -116,39 +100,45 @@ public class AccessibilityComputationCottbus {
 
 		// Controller
 		final Controler controler = new Controler(scenario);
-		controler.addControlerListener(new AccessibilityStartupListener(activityTypes, densityFacilities, crs, runId, envelope, cellSize, push2Geoserver));
+//		controler.addControlerListener(new AccessibilityStartupListener(activityTypes, densityFacilities, crs, runId, envelope, cellSize, push2Geoserver));
+		if ( true ) {
+			throw new RuntimeException("AccessibilityStartupListener is no longer supported; please switch to GridBasedAccessibilityModule. kai, dec'16") ;
+		}
 
-		// Add calculators
-		controler.addOverridingModule(new AbstractModule() {
-			@Override
-			public void install() {
-				MapBinder<String,AccessibilityContributionCalculator> accBinder = MapBinder.newMapBinder(this.binder(), String.class, AccessibilityContributionCalculator.class);
-				{
-					String mode = "freeSpeed";
-					this.binder().bind(AccessibilityContributionCalculator.class).annotatedWith(Names.named(mode)).toProvider(new FreeSpeedNetworkModeProvider(TransportMode.car));
-					accBinder.addBinding(mode).to(Key.get(AccessibilityContributionCalculator.class, Names.named(mode)));
-					if (!modes.contains(mode)) modes.add(mode); // This install method is called four times, but each new mode should only be added once
-				}
-				{
-					String mode = TransportMode.car;
-					this.binder().bind(AccessibilityContributionCalculator.class).annotatedWith(Names.named(mode)).toProvider(new NetworkModeProvider(mode));
-					accBinder.addBinding(mode).to(Key.get(AccessibilityContributionCalculator.class, Names.named(mode)));
-					if (!modes.contains(mode)) modes.add(mode); // This install method is called four times, but each new mode should only be added once
-				}
-				{ 
-					String mode = TransportMode.bike;
-					this.binder().bind(AccessibilityContributionCalculator.class).annotatedWith(Names.named(mode)).toProvider(new ConstantSpeedModeProvider(mode));
-					accBinder.addBinding(mode).to(Key.get(AccessibilityContributionCalculator.class, Names.named(mode)));
-					if (!modes.contains(mode)) modes.add(mode); // This install method is called four times, but each new mode should only be added once
-				}
-				{
-					final String mode = TransportMode.walk;
-					this.binder().bind(AccessibilityContributionCalculator.class).annotatedWith(Names.named(mode)).toProvider(new ConstantSpeedModeProvider(mode));
-					accBinder.addBinding(mode).to(Key.get(AccessibilityContributionCalculator.class, Names.named(mode)));
-					if (!modes.contains(mode)) modes.add(mode); // This install method is called four times, but each new mode should only be added once
-				}
-			}
-		});
+		if ( true ) {
+			throw new RuntimeException("The now following execution path is no longer supported; please set the modes in the config (as it was earlier). kai, dec'16" ) ;
+		}
+//		// Add calculators
+//		controler.addOverridingModule(new AbstractModule() {
+//			@Override
+//			public void install() {
+//				MapBinder<String,AccessibilityContributionCalculator> accBinder = MapBinder.newMapBinder(this.binder(), String.class, AccessibilityContributionCalculator.class);
+//				{
+//					String mode = "freeSpeed";
+//					this.binder().bind(AccessibilityContributionCalculator.class).annotatedWith(Names.named(mode)).toProvider(new FreeSpeedNetworkModeProvider(TransportMode.car));
+//					accBinder.addBinding(mode).to(Key.get(AccessibilityContributionCalculator.class, Names.named(mode)));
+//					if (!modes.contains(mode)) modes.add(mode); // This install method is called four times, but each new mode should only be added once
+//				}
+//				{
+//					String mode = TransportMode.car;
+//					this.binder().bind(AccessibilityContributionCalculator.class).annotatedWith(Names.named(mode)).toProvider(new NetworkModeProvider(mode));
+//					accBinder.addBinding(mode).to(Key.get(AccessibilityContributionCalculator.class, Names.named(mode)));
+//					if (!modes.contains(mode)) modes.add(mode); // This install method is called four times, but each new mode should only be added once
+//				}
+//				{ 
+//					String mode = TransportMode.bike;
+//					this.binder().bind(AccessibilityContributionCalculator.class).annotatedWith(Names.named(mode)).toProvider(new ConstantSpeedModeProvider(mode));
+//					accBinder.addBinding(mode).to(Key.get(AccessibilityContributionCalculator.class, Names.named(mode)));
+//					if (!modes.contains(mode)) modes.add(mode); // This install method is called four times, but each new mode should only be added once
+//				}
+//				{
+//					final String mode = TransportMode.walk;
+//					this.binder().bind(AccessibilityContributionCalculator.class).annotatedWith(Names.named(mode)).toProvider(new ConstantSpeedModeProvider(mode));
+//					accBinder.addBinding(mode).to(Key.get(AccessibilityContributionCalculator.class, Names.named(mode)));
+//					if (!modes.contains(mode)) modes.add(mode); // This install method is called four times, but each new mode should only be added once
+//				}
+//			}
+//		});
 		controler.run();
 
 		// QGis

@@ -28,6 +28,9 @@ import java.util.Set;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.parking.parkingsearch.evaluation.ParkedVechiclesVisualiser;
+import org.matsim.contrib.parking.parkingsearch.evaluation.ParkingSearchAndEgressTimeEvaluator;
+import org.matsim.contrib.parking.parkingsearch.evaluation.ParkingSearchEvaluator;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.network.NetworkUtils;
@@ -36,9 +39,6 @@ import org.matsim.core.utils.io.tabularFileParser.TabularFileHandler;
 import org.matsim.core.utils.io.tabularFileParser.TabularFileParser;
 import org.matsim.core.utils.io.tabularFileParser.TabularFileParserConfig;
 
-import playground.jbischoff.parking.evaluation.ParkedVechiclesVisualiser;
-import playground.jbischoff.parking.evaluation.ParkingSearchAndEgressTimeEvaluator;
-import playground.jbischoff.parking.evaluation.ParkingSearchEvaluator;
 import playground.jbischoff.utils.JbUtils;
 
 /**
@@ -70,8 +70,8 @@ public static void main(String[] args) {
 	events.addHandler(wlpFF);
 	events.addHandler(mierendorffEval);
 	events.addHandler(klausEval);
-	String dir = "D:/runs-svn/bmw_carsharing/run22/";
-	new ParkingSearchEventsReader(events).readFile(dir+"run22.output_events.xml.gz");
+	String dir = "D:/runs-svn/bmw_carsharing/basecase/bc09_park/";
+	new ParkingSearchEventsReader(events).readFile(dir+"bc09_park.output_events.xml.gz");
 	pwde.writeEgressWalkStatistics(dir);
 	mierendorffEval.writeStats(dir+"mierendorffParkAndEgressStats.csv");
 	mierendorffEval.writeCoordTimeStamps(dir+"/mierendorffParkStamps.csv");

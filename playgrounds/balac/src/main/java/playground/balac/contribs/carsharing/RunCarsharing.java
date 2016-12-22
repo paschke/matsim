@@ -36,6 +36,10 @@ import org.matsim.contrib.carsharing.runExample.CarsharingUtils;
 import org.matsim.contrib.carsharing.scoring.CarsharingScoringFunctionFactory;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.ControlerConfigGroup;
+import org.matsim.core.config.groups.GlobalConfigGroup;
+import org.matsim.core.config.groups.StrategyConfigGroup;
+import org.matsim.core.config.groups.StrategyConfigGroup.StrategySettings;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -53,10 +57,17 @@ public class RunCarsharing {
 
 		Logger.getLogger( "org.matsim.core.controler.Injector" ).setLevel(Level.OFF);
 
-		final Config config = ConfigUtils.loadConfig(args[0]);
+		Config config = ConfigUtils.loadConfig(args[0]);
 		
-		if(Integer.parseInt(config.getModule("qsim").getValue("numberOfThreads")) > 1)
-			Logger.getLogger( "org.matsim.core.controler" ).warn("Carsharing contrib is not stable for parallel qsim!! If the error occures please use 1 as the number of threads.");
+		((ControlerConfigGroup)config.getModules().get("controler")).
+		setOutputDirectory(((ControlerConfigGroup)config.getModules().get("controler")).getOutputDirectory() 
+				 + "_" + args[1] + "_" + args[2]);		
+		
+		((GlobalConfigGroup)config.getModules().get("global")).setRandomSeed(Long.parseLong(args[1]));
+		for (StrategySettings s :((StrategyConfigGroup)config.getModules().get("strategy")).getStrategySettings()) {
+			if (s.getStrategyName().equals("CarsharingSubtourModeChoiceStrategy"))
+					s.setWeight(Double.parseDouble(args[2]));
+		}		
 		
 		CarsharingUtils.addConfigModules(config);
 
@@ -171,7 +182,7 @@ public class RunCarsharing {
 			if (s.equals("Mobility"))
 				costCalculations.put("freefloating", new CostStructure1());		
 			else {
-				costCalculations.put("freefloating", new CostStructure1());
+				costCalculations.put("freefloating", new CostStructure2());
 				costCalculations.put("twoway", new CostStructureTwoWay());
 
 			}

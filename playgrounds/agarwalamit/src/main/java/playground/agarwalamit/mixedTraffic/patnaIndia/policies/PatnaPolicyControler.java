@@ -20,15 +20,15 @@
 package playground.agarwalamit.mixedTraffic.patnaIndia.policies;
 
 import java.io.File;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
-import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.api.core.v01.population.*;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
@@ -47,19 +47,20 @@ import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.SumScoringFunction;
 import org.matsim.core.scoring.functions.*;
 import playground.agarwalamit.analysis.StatsWriter;
-import playground.agarwalamit.analysis.controlerListner.ModalShareControlerListner;
-import playground.agarwalamit.analysis.controlerListner.ModalTravelTimeControlerListner;
+import playground.agarwalamit.analysis.controlerListener.ModalShareControlerListener;
+import playground.agarwalamit.analysis.controlerListener.ModalTravelTimeControlerListener;
 import playground.agarwalamit.analysis.modalShare.ModalShareEventHandler;
 import playground.agarwalamit.analysis.modalShare.ModalShareFromEvents;
 import playground.agarwalamit.analysis.travelTime.ModalTravelTimeAnalyzer;
 import playground.agarwalamit.analysis.travelTime.ModalTripTravelTimeHandler;
 import playground.agarwalamit.mixedTraffic.counts.MultiModeCountsControlerListener;
+import playground.agarwalamit.mixedTraffic.patnaIndia.input.others.PatnaVehiclesGenerator;
+import playground.agarwalamit.mixedTraffic.patnaIndia.router.FreeSpeedTravelTimeForBike;
 import playground.agarwalamit.mixedTraffic.patnaIndia.scoring.PtFareEventHandler;
 import playground.agarwalamit.mixedTraffic.patnaIndia.utils.PatnaPersonFilter;
 import playground.agarwalamit.mixedTraffic.patnaIndia.utils.PatnaPersonFilter.PatnaUserGroup;
 import playground.agarwalamit.mixedTraffic.patnaIndia.utils.PatnaUtils;
 import playground.agarwalamit.utils.FileUtils;
-import playground.agarwalamit.utils.LoadMyScenarios;
 
 /**
  * @author amit
@@ -68,36 +69,33 @@ import playground.agarwalamit.utils.LoadMyScenarios;
 public class PatnaPolicyControler {
 
 	private static String dir = FileUtils.RUNS_SVN + "/patnaIndia/run108/jointDemand/policies/0.15pcu/";
-	private static boolean applyTrafficRestrain = false;
+	private static String configFile = dir + "/input/configBaseCaseCtd.xml";
 	private static boolean addBikeTrack = false;
-	private static boolean isAllwoingMotorbikeOnBikeTrack = true;
+	private static boolean isAllwoingMotorbikeOnBikeTrack = false;
 
 	public static void main(String[] args) {
-		Config config = ConfigUtils.createConfig();
 
+		Config config = ConfigUtils.createConfig();
 		String outputDir ;
 
 		if(args.length>0){
 			dir = args[0];
-			applyTrafficRestrain = Boolean.valueOf(args[1]);
+			configFile = args[1];
 			addBikeTrack = Boolean.valueOf(args[2]);
 			isAllwoingMotorbikeOnBikeTrack = Boolean.valueOf(args[3]);
-			outputDir = dir+args[4];
 		}  else {
-			if(applyTrafficRestrain ) {
-				if (isAllwoingMotorbikeOnBikeTrack) throw new RuntimeException("Two situations -- traffic restrain and motorbike on bike track -- are not considered.");
-				if (addBikeTrack) outputDir = dir+"/both/";
-				else outputDir = dir+"/trafficRestrain/";
-			} else if(addBikeTrack && !isAllwoingMotorbikeOnBikeTrack) outputDir = dir+"/bikeTrack/";
-			else if(isAllwoingMotorbikeOnBikeTrack) outputDir = dir+"/BT-mb/";
-			else outputDir = dir+"/baseCaseCtd/";			
+			//nothing to do
 		}
 
-		String inputDir = dir+"/input/";
+		if (addBikeTrack  && isAllwoingMotorbikeOnBikeTrack) outputDir = dir+"/BT-mb/";
+		else if(addBikeTrack ) outputDir = dir+"/BT-b/";
+		else if (! addBikeTrack ) outputDir = dir + "/bau/";
+		else throw new RuntimeException("not implemented yet.");
+
+		String inputDir = dir + "/input/";
 		String configFile = inputDir + "configBaseCaseCtd.xml";
 
 		ConfigUtils.loadConfig(config, configFile);
-
 		config.controler().setOutputDirectory(outputDir);
 
 		//==
@@ -115,6 +113,9 @@ public class PatnaPolicyControler {
 		// not anymore, there is now second calibration after cadyts and before baseCaseCtd; thus all plans in the choice set.
 		String inPlans = "baseCaseOutput_plans.xml.gz";
 		config.plans().setInputFile(inputDir + inPlans);
+		config.plans().setInputPersonAttributeFile(inputDir+"output_personAttributes.xml.gz");
+
+		config.vehicles().setVehiclesFile(null); // vehicle types are added from vehicle file later.
 		//==
 
 		config.controler().setOverwriteFileSetting(OverwriteFileSetting.deleteDirectoryIfExists);
@@ -123,28 +124,35 @@ public class PatnaPolicyControler {
 		config.travelTimeCalculator().setFilterModes(true);
 		config.travelTimeCalculator().setAnalyzedModes(String.join(",", PatnaUtils.ALL_MAIN_MODES));
 
-		// policies if any
-		if (applyTrafficRestrain && addBikeTrack ) {
-			config.network().setInputFile(inputDir + "/networkWithTrafficRestricationAndBikeTrack.xml.gz");
-		} else if (applyTrafficRestrain ) {
-			config.network().setInputFile(inputDir + "/networkWithTrafficRestrication.xml.gz");
-		} else if(addBikeTrack && !isAllwoingMotorbikeOnBikeTrack) {
-			config.network().setInputFile(inputDir + "/networkWithBikeTrack.xml.gz");
-		} else if (isAllwoingMotorbikeOnBikeTrack) {
-			config.network().setInputFile(inputDir + "/networkWithBikeMotorbikeTrack.xml.gz");
-		}
+		if( addBikeTrack) config.network().setInputFile(inputDir + "/networkWithOptimizedConnectors_halfLength.xml.gz"); // must be after getting optimum number of connectors
+		else config.network().setInputFile(inputDir+"/network.xml.gz");
 
 		Scenario scenario = ScenarioUtils.loadScenario(config);
+
+		if ( addBikeTrack ) {
+			// remove the connectors on which freespeed is only 0.01 m/s
+			scenario.getNetwork().getLinks().values().stream().filter(
+					link -> link.getId().toString().startsWith(PatnaUtils.BIKE_TRACK_CONNECTOR_PREFIX.toString()) && link.getFreespeed() == 0.01
+			).collect(Collectors.toList()).forEach(link -> scenario.getNetwork().removeLink(link.getId()));
+		}
+
+		if ( isAllwoingMotorbikeOnBikeTrack ) {
+			Set<String> allowedModesOnBikeTrack = new HashSet<>(Arrays.asList(TransportMode.bike, "motorbike"));
+			List<Link> bikeLinks = scenario.getNetwork().getLinks().values().stream().filter(
+					link -> link.getId().toString().startsWith(PatnaUtils.BIKE_TRACK_PREFIX) || link.getId().toString().startsWith(PatnaUtils.BIKE_TRACK_CONNECTOR_PREFIX)
+			).collect(Collectors.toList());
+			bikeLinks.forEach(link -> link.setAllowedModes(allowedModesOnBikeTrack));
+			bikeLinks.forEach(link -> link.setFreespeed(60./3.6)); // naturally, bikes must also be faster
+		}
+
+		String vehiclesFile = inputDir+"/output_vehicles.xml.gz"; // following is required to extract only vehicle types and not vehicle info. Amit Nov 2016
+		PatnaVehiclesGenerator.addVehiclesToScenarioFromVehicleFile(vehiclesFile, scenario);
 
 		if ( scenario.getVehicles().getVehicles().size() != 0 ) throw new RuntimeException("Only vehicle types should be loaded if vehicle source "+
 				QSimConfigGroup.VehiclesSource.modeVehicleTypesFromVehiclesData +" is assigned.");
 		scenario.getConfig().qsim().setVehiclesSource(QSimConfigGroup.VehiclesSource.modeVehicleTypesFromVehiclesData);
 
 		final Controler controler = new Controler(scenario);
-
-		// removal of some links may lead to exception if routes are not removed from leg.
-		// do this before setting a new network so that cord from removed links can be extracted.
-		if(applyTrafficRestrain ) removeRoutes(scenario, inputDir+"/network.xml.gz"); 
 
 		controler.getConfig().controler().setDumpDataAtEnd(true);
 		controler.getConfig().strategy().setMaxAgentPlanMemorySize(10);
@@ -153,10 +161,10 @@ public class PatnaPolicyControler {
 			@Override
 			public void install() {
 				this.bind(ModalShareEventHandler.class);
-				this.addControlerListenerBinding().to(ModalShareControlerListner.class);
+				this.addControlerListenerBinding().to(ModalShareControlerListener.class);
 
 				this.bind(ModalTripTravelTimeHandler.class);
-				this.addControlerListenerBinding().to(ModalTravelTimeControlerListner.class);
+				this.addControlerListenerBinding().to(ModalTravelTimeControlerListener.class);
 
 				this.addControlerListenerBinding().to(MultiModeCountsControlerListener.class);
 			}
@@ -176,6 +184,13 @@ public class PatnaPolicyControler {
 
 		// add income dependent scoring function factory
 		addScoringFunction(controler);
+
+		controler.addOverridingModule(new AbstractModule() {
+			@Override
+			public void install() {
+				addTravelTimeBinding(TransportMode.bike).to(FreeSpeedTravelTimeForBike.class);
+			}
+		});
 
 		controler.run();
 
@@ -240,36 +255,5 @@ public class PatnaPolicyControler {
 				return sumScoringFunction;
 			}
 		});
-	}
-
-	private static void removeRoutes(final Scenario scenario, final String baseCaseNetwork){
-		// this is required because routes are generated from initial base case network; and new network does not have certain links.
-		Scenario scNetwork = LoadMyScenarios.loadScenarioFromNetwork(baseCaseNetwork); 
-
-		//since some links are now removed, route in the plans will throw exception, remove them.
-		for (Person p : scenario.getPopulation().getPersons().values()){
-			for(Plan plan : p.getPlans()){
-				List<PlanElement> pes = plan.getPlanElements();
-				for (PlanElement pe :pes ){
-					if (pe instanceof Activity) { 
-						Activity act = ((Activity)pe);
-						Id<Link> linkId = act.getLinkId();
-						Coord cord = act.getCoord();
-
-						if (cord == null && linkId == null) throw new RuntimeException("Activity "+act.toString()+" do not have either of link id or coord. Aborting...");
-						else if (linkId == null ) { /*nothing to do; cord is assigned*/ }
-						else if (cord==null && ! scNetwork.getNetwork().getLinks().containsKey(linkId)) throw new RuntimeException("Activity "+act.toString()+" do not have cord and link id is not present in network. Aborting...");
-						else {
-							cord = scNetwork.getNetwork().getLinks().get(linkId).getCoord();
-							act.setLinkId(null);
-							act.setCoord(cord);
-						}
-					} else if ( pe instanceof Leg){
-						Leg leg = (Leg) pe;
-						leg.setRoute(null);
-					}
-				}
-			}
-		}
 	}
 }

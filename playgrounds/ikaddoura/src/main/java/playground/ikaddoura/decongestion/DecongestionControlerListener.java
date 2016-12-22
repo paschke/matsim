@@ -62,7 +62,6 @@ import playground.ikaddoura.decongestion.handler.DelayAnalysis;
 import playground.ikaddoura.decongestion.handler.IntervalBasedTolling;
 import playground.ikaddoura.decongestion.handler.PersonVehicleTracker;
 import playground.ikaddoura.decongestion.tollSetting.DecongestionTollSetting;
-import playground.ikaddoura.decongestion.tollSetting.old.DecongestionTollingV1;
 
 
 /**
@@ -97,12 +96,6 @@ public class DecongestionControlerListener implements StartupListener, AfterMobs
 	
 	private int nextDisableInnovativeStrategiesIteration = -1;
 	private int nextEnableInnovativeStrategiesIteration = -1;
-		
-	@Inject
-	public DecongestionControlerListener(DecongestionInfo congestionInfo){
-		this.congestionInfo = congestionInfo;
-		this.tollComputation = new DecongestionTollingV1(congestionInfo);
-	}
 	
 	@Inject
 	public DecongestionControlerListener(DecongestionInfo congestionInfo, DecongestionTollSetting decongestionTollSettingImpl) {
@@ -144,7 +137,7 @@ public class DecongestionControlerListener implements StartupListener, AfterMobs
 					&& iterationCounter > this.congestionInfo.getDecongestionConfigGroup().getFRACTION_OF_ITERATIONS_TO_START_PRICE_ADJUSTMENT() * totalNumberOfIterations) {
 				
 				log.info("+++ Iteration " + event.getIteration() + ". Update tolls per link and time bin.");
-				tollComputation.updateTolls();
+				tollComputation.updateTolls(event.getIteration());
 			}
 		}
 		
@@ -208,7 +201,7 @@ public class DecongestionControlerListener implements StartupListener, AfterMobs
 		double[] iterations1 = new double[event.getIteration() + 1];
 		double[] values1a = new double[event.getIteration() + 1];
 		double[] values1b = new double[event.getIteration() + 1];
-		for (int i = 0; i <= event.getIteration(); i++) {
+		for (int i = this.congestionInfo.getScenario().getConfig().controler().getFirstIteration(); i <= event.getIteration(); i++) {
 			iterations1[i] = i;
 			values1a[i] = this.iteration2totalDelay.get(i) / 3600.;
 			values1b[i] = this.iteration2totalTravelTime.get(i) / 3600.;
@@ -223,7 +216,7 @@ public class DecongestionControlerListener implements StartupListener, AfterMobs
 		double[] values2b = new double[event.getIteration() + 1];
 		double[] values2c = new double[event.getIteration() + 1];
 
-		for (int i = 0; i <= event.getIteration(); i++) {
+		for (int i = this.congestionInfo.getScenario().getConfig().controler().getFirstIteration(); i <= event.getIteration(); i++) {
 			iterations2[i] = i;
 			values2a[i] = this.iteration2userBenefits.get(i) + this.iteration2totalTollPayments.get(i);
 			values2b[i] = this.iteration2userBenefits.get(i);
@@ -338,12 +331,12 @@ public class DecongestionControlerListener implements StartupListener, AfterMobs
 				e1.printStackTrace();
 			}
 			try {
-				MATSimVideoUtils.createVideo(event.getServices().getConfig().controler().getOutputDirectory(), this.congestionInfo.getDecongestionConfigGroup().getWRITE_OUTPUT_ITERATION(), "delays_perLinkAndTimeBin");
+				if (this.congestionInfo.getDecongestionConfigGroup().isWRITE_LINK_INFO_CHARTS()) MATSimVideoUtils.createVideo(event.getServices().getConfig().controler().getOutputDirectory(), this.congestionInfo.getDecongestionConfigGroup().getWRITE_OUTPUT_ITERATION(), "delays_perLinkAndTimeBin");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			try {
-				MATSimVideoUtils.createVideo(event.getServices().getConfig().controler().getOutputDirectory(), this.congestionInfo.getDecongestionConfigGroup().getWRITE_OUTPUT_ITERATION(), "toll_perLinkAndTimeBin");
+				if (this.congestionInfo.getDecongestionConfigGroup().isWRITE_LINK_INFO_CHARTS()) MATSimVideoUtils.createVideo(event.getServices().getConfig().controler().getOutputDirectory(), this.congestionInfo.getDecongestionConfigGroup().getWRITE_OUTPUT_ITERATION(), "toll_perLinkAndTimeBin");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

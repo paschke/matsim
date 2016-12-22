@@ -107,7 +107,7 @@ public class VPTree<C,T> implements SpatialTree<C, T> {
 		final Queue<Node<C,T>> stack = Collections.asLifoQueue( new ArrayDeque<>() );
 		stack.add( node );
 
-		final Collection<T> all = new ArrayList<>();
+		final Collection<T> all = new ArrayList<>( node.size );
 		while ( !stack.isEmpty() ) {
 			final Node<C,T> current = stack.poll();
 
@@ -120,12 +120,12 @@ public class VPTree<C,T> implements SpatialTree<C, T> {
 	}
 
 	@Override
-	public void add( final Collection<T> toAdd ) {
+	public void add( final Collection<? extends T> toAdd ) {
 		if ( size() > 0 ) throw new IllegalStateException();
 		add( root , toAdd );
 	}
 
-	private void add( final Node<C,T> addRoot , final Collection<T> points ) {
+	private void add( final Node<C,T> addRoot , final Collection<? extends T> points ) {
 		final Queue<AddFrame<C,T>> stack = Collections.asLifoQueue( new ArrayDeque<>( 1 + (int) Math.log( 1 + points.size() ) ) );
 
 		// copy parameter list as it is modified in place
@@ -345,9 +345,47 @@ public class VPTree<C,T> implements SpatialTree<C, T> {
 
 	public Collection<T> getBall(
 			final C coord,
-			final double maxDist,
-			final Predicate<T> predicate ) {
-		return getBallsIntersection( Collections.singleton( coord ) , maxDist , predicate );
+			final double maxDist ) {
+		final Queue<Node<C,T>> stack = Collections.asLifoQueue( new ArrayDeque<>( 1 + (int) Math.log( 1 + size() )) );
+		stack.add( root );
+
+		final Collection<T> ball = new ArrayList<>();
+
+		while( !stack.isEmpty() ) {
+			final Node<C,T> current = stack.poll();
+
+			if ( current.value == null &&
+					current.close == null &&
+					current.far == null ) {
+				continue;
+			}
+
+			final double distToVp = metric.calcDistance( coord , current.coordinate );
+
+			// check if all subtree in ball
+			if ( distToVp  + current.cuttoffDistance < maxDist ) {
+				ball.addAll( getAll( current ) );
+				continue;
+			}
+
+			// check if current VP in ball
+			if ( current.value != null &&
+					distToVp < maxDist ) {
+				ball.add( current.value );
+			}
+
+			// test intersection of disc with the children
+			if ( current.close != null &&
+					distToVp - maxDist <= current.cuttoffDistance ) {
+				stack.add( current.close );
+			}
+			if ( current.far != null &&
+					distToVp + maxDist >= current.cuttoffDistance ) {
+				stack.add( current.far );
+			}
+		}
+
+		return ball;
 	}
 
 	public Collection<T> getBallsIntersection(

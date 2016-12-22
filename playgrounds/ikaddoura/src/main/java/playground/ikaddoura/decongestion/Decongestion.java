@@ -30,7 +30,6 @@ import playground.ikaddoura.decongestion.routing.TollTimeDistanceTravelDisutilit
 import playground.ikaddoura.decongestion.tollSetting.DecongestionTollSetting;
 import playground.ikaddoura.decongestion.tollSetting.DecongestionTollingBangBang;
 import playground.ikaddoura.decongestion.tollSetting.DecongestionTollingPID;
-import playground.ikaddoura.decongestion.tollSetting.old.DecongestionTollingV8;
 
 /**
 * @author ikaddoura
@@ -42,9 +41,11 @@ public class Decongestion {
 	private final DecongestionInfo info;
 	private final Controler controler;
 	
-	public Decongestion(DecongestionInfo info) {
+	private double sigma = 0.;
+		
+	public Decongestion(Controler controler, DecongestionInfo info) {
 		this.info = info;
-		this.controler = new Controler(info.getScenario());
+		this.controler = controler;
 		prepare();
 	}
 
@@ -52,25 +53,22 @@ public class Decongestion {
 								
 		DecongestionTollSetting tollSettingApproach = null;
 		
-		if (info.getDecongestionConfigGroup().getTOLLING_APPROACH().equals(TollingApproach.V8)) {
-			tollSettingApproach = new DecongestionTollingV8(info);
+		if (info.getDecongestionConfigGroup().getTOLLING_APPROACH().equals(TollingApproach.PID)) {
+			tollSettingApproach = new DecongestionTollingPID(info);	
 			
 		} else if (info.getDecongestionConfigGroup().getTOLLING_APPROACH().equals(TollingApproach.BangBang)) {
 			tollSettingApproach = new DecongestionTollingBangBang(info);
-		
-		} else if (info.getDecongestionConfigGroup().getTOLLING_APPROACH().equals(TollingApproach.PID)) {
-			tollSettingApproach = new DecongestionTollingPID(info);	
 			
 		} else if (info.getDecongestionConfigGroup().getTOLLING_APPROACH().equals(TollingApproach.NoPricing)) {
-			
-			info.getDecongestionConfigGroup().setTOLL_ADJUSTMENT(0.0);
-			info.getDecongestionConfigGroup().setINITIAL_TOLL(0.0);
+			info.getDecongestionConfigGroup().setKp(0.);
+			info.getDecongestionConfigGroup().setKd(0.);
+			info.getDecongestionConfigGroup().setKi(0.);
 			info.getDecongestionConfigGroup().setUPDATE_PRICE_INTERVAL(Integer.MAX_VALUE);
 			info.getDecongestionConfigGroup().setTOLERATED_AVERAGE_DELAY_SEC(Double.MAX_VALUE);			
-			tollSettingApproach = new DecongestionTollingV8(info);
+			tollSettingApproach = new DecongestionTollingPID(info);
 			
 		} else {
-			throw new RuntimeException("Unknown decongestion toll setting approach. Aborting...");
+			throw new RuntimeException("Decongestion toll setting approach not implemented. Aborting...");
 		}
 		
 		// decongestion pricing
@@ -84,7 +82,7 @@ public class Decongestion {
 		
 		// toll-adjusted routing
 		final TollTimeDistanceTravelDisutilityFactory travelDisutilityFactory = new TollTimeDistanceTravelDisutilityFactory(info, info.getScenario().getConfig().planCalcScore());
-		travelDisutilityFactory.setSigma(0.);
+		travelDisutilityFactory.setSigma(sigma);
 		controler.addOverridingModule(new AbstractModule(){
 			@Override
 			public void install() {
@@ -103,6 +101,10 @@ public class Decongestion {
 
 	public Controler getControler() {
 		return controler;
+	}
+	
+	public void setSigma(double sigma) {
+		this.sigma = sigma;
 	}
 
 }

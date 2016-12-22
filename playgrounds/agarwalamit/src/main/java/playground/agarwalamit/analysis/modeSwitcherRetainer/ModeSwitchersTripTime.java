@@ -18,20 +18,16 @@
  * *********************************************************************** */
 package playground.agarwalamit.analysis.modeSwitcherRetainer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-
+import java.io.BufferedWriter;
+import java.util.*;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.utils.collections.Tuple;
-
+import org.matsim.core.utils.io.IOUtils;
 import playground.agarwalamit.analysis.travelTime.ModalTravelTimeAnalyzer;
 import playground.agarwalamit.utils.FileUtils;
+import playground.agarwalamit.utils.PersonFilter;
 
 /**
  *This will first find mode switchers and then returns trip times in groups. 
@@ -43,7 +39,32 @@ public class ModeSwitchersTripTime {
 
 	private static final Logger LOG = Logger.getLogger(ModeSwitchersTripTime.class);
 
-	private final ModeSwitcherInfoCollector modeSwitchInfo = new ModeSwitcherInfoCollector();
+	public ModeSwitchersTripTime(){
+		this(null, null);
+	}
+
+	private final String userGroup;
+	private final PersonFilter pf;
+
+	public ModeSwitchersTripTime (final String userGroup, final PersonFilter personFilter) {
+		this.pf = personFilter;
+		this.userGroup = userGroup;
+
+		if( (userGroup==null && personFilter!=null) || (userGroup!=null && personFilter==null) ) {
+			throw new RuntimeException("Either of user group or person filter is null.");
+		} else if(userGroup!=null && personFilter!=null) {
+			LOG.info("Usergroup filtering is used, result will include persons from given user group only.");
+		}
+	}
+
+	private final Comparator<Tuple<String, String>> comparator = new Comparator<Tuple<String, String>>() {
+		@Override
+		public int compare(Tuple<String, String> o1, Tuple<String, String> o2) {
+			return o1.toString().compareTo(o2.toString());
+		}
+	};
+
+	private final SortedMap<Tuple<String, String>, ModeSwitcherInfoCollector> modeSwitchType2InfoCollector = new TreeMap<>(comparator);
 
 	public static void main(String[] args) {
 
@@ -52,16 +73,15 @@ public class ModeSwitchersTripTime {
 
 		for(String runNr : runCases){
 			ModeSwitchersTripTime mstt = new ModeSwitchersTripTime();
-			mstt.run(dir+runNr);
-			mstt.modeSwitchInfo.writeModeSwitcherTripTimes(dir+runNr);
+			mstt.processEventsFiles(dir+runNr, 1000, 1500);
+			mstt.writeResults(dir+runNr+"/analysis/");
 		}
 	}
 
-	public void run (String runCase){
-
+	public void processEventsFiles (final String eventsDir, final int firstIteration, final int lastIteration){
 		// data from event files
-		String eventsFileFirstIt = runCase+"/ITERS/it.1000/1000.events.xml.gz";
-		String eventsFileLastIt = runCase+"/ITERS/it.1500/1500.events.xml.gz";
+		String eventsFileFirstIt = eventsDir+"/ITERS/it."+firstIteration+"/"+firstIteration+".events.xml.gz";
+		String eventsFileLastIt = eventsDir+"/ITERS/it."+lastIteration+"/"+lastIteration+".events.xml.gz";
 
 		Map<Id<Person>, List<Tuple<String, Double>>> person2ModeTravelTimesFirstIt = getPerson2mode2TripTimes(eventsFileFirstIt);
 		Map<Id<Person>, List<Tuple<String, Double>>> person2ModeTravelTimesLastIt = getPerson2mode2TripTimes(eventsFileLastIt);
@@ -69,14 +89,16 @@ public class ModeSwitchersTripTime {
 		// start processing
 		for(Id<Person> pId : person2ModeTravelTimesFirstIt.keySet()){
 
-			if(person2ModeTravelTimesLastIt.containsKey(pId) ) {
+			if(this.userGroup !=null  && ! this.pf.getUserGroupAsStringFromPersonId(pId).equals(this.userGroup)) {
+				continue; // if using person filtering and person does not belong to desired user group, dont include it in the analysis
+			}
 
-				int numberOfLegs = 0; 
+			if(person2ModeTravelTimesLastIt.containsKey(pId) ) {
+				int numberOfLegs = 0;
 				if(person2ModeTravelTimesLastIt.get(pId).size() != person2ModeTravelTimesFirstIt.get(pId).size()) {
 					//	if person does not have same number of trips as in first iteration
-
 					LOG.warn("Person "+pId+" do not have the same number of trip legs in the two maps. This could be due to stuck and abort event. "
-							+ "\n Thus including only minimum legs (removing the common trups) for that person.");
+							+ "\n Thus including only minimum number of legs (using the common trips) for that person.");
 					numberOfLegs  = Math.min(person2ModeTravelTimesLastIt.get(pId).size(),person2ModeTravelTimesFirstIt.get(pId).size());
 
 				} else numberOfLegs = person2ModeTravelTimesLastIt.get(pId).size();
@@ -86,11 +108,9 @@ public class ModeSwitchersTripTime {
 					Tuple<String, Double> firstItMode = person2ModeTravelTimesFirstIt.get(pId).get(ii);
 					Tuple<String, Double> lastItMode = person2ModeTravelTimesLastIt.get(pId).get(ii);
 
-					String firstMode = getTravelMode(firstItMode.getFirst());
-					String lastMode = getTravelMode(lastItMode.getFirst());
+					Tuple<String, String> modeSwitchType = new Tuple<>(firstItMode.getFirst(), lastItMode.getFirst());
+					storeTripTimeInfo(pId, modeSwitchType, new Tuple<>(firstItMode.getSecond(), lastItMode.getSecond()));
 
-					Tuple<String, String> modeSwitchType = new Tuple<>(firstMode, lastMode);
-					this.modeSwitchInfo.storeTripTimeInfo(pId, modeSwitchType, new Tuple<>(firstItMode.getSecond(), lastItMode.getSecond()));
 				} 
 			} else if(!person2ModeTravelTimesLastIt.containsKey(pId)) {
 				LOG.warn("Person "+pId+ "is not present in the last iteration map. This person is thus not included in the results. Probably due to stuck and abort event.");
@@ -98,9 +118,18 @@ public class ModeSwitchersTripTime {
 		}
 	}
 
-	private String getTravelMode(String mode){
-		if(mode.equals(TransportMode.car)) return "car";
-		else return "PT";
+	private void storeTripTimeInfo(final Id<Person> personId, final Tuple<String, String> modeSwitchTyp, final Tuple<Double, Double> travelTimes){
+
+		ModeSwitcherInfoCollector infoCollector = this.modeSwitchType2InfoCollector.get(modeSwitchTyp);
+		if (infoCollector == null ) {
+			infoCollector = new ModeSwitcherInfoCollector();
+		}
+
+		infoCollector.addPersonToList(personId);
+		infoCollector.addToFirstIterationStats(travelTimes.getFirst());
+		infoCollector.addToLastIterationStats(travelTimes.getSecond());
+
+		this.modeSwitchType2InfoCollector.put(modeSwitchTyp, infoCollector);
 	}
 
 	private Map<Id<Person>, List<Tuple<String, Double>>> getPerson2mode2TripTimes(final String eventsFile){
@@ -108,8 +137,7 @@ public class ModeSwitchersTripTime {
 		ModalTravelTimeAnalyzer mtta = new ModalTravelTimeAnalyzer(eventsFile);
 		mtta.run();
 
-		SortedMap<String,Map<Id<Person>,List<Double>>> mode2Person2TripTimes = mtta.getMode2PesonId2TripTimes();
-
+		SortedMap<String, Map<Id<Person>, List<Double>>> mode2Person2TripTimes = mtta.getMode2PesonId2TripTimes();
 		Map<Id<Person>, List<Tuple<String, Double>>> person2ModeTravelTimes = new HashMap<>();
 
 
@@ -126,10 +154,31 @@ public class ModeSwitchersTripTime {
 						mode2TripTimeList.add(mode2TripTime);
 						person2ModeTravelTimes.put(p, mode2TripTimeList);
 					}
-
 				}
 			}
 		}
 		return person2ModeTravelTimes;
+	}
+
+	public void writeResults(final String outputFolder){
+		String outFile = outputFolder+"/modeSwitchersTripTimes.txt";
+		BufferedWriter writer =  IOUtils.getBufferedWriter(outFile);
+		try {
+			writer.write("firstMode \t lastMode \t numberOfLegs \t totalTripTimesForFirstIterationInHr \t totalTripTimesForLastIterationInHr \n");
+
+			for(Tuple<String, String> str: this.modeSwitchType2InfoCollector.keySet()){
+				ModeSwitcherInfoCollector infoCollector = this.modeSwitchType2InfoCollector.get(str);
+				writer.write(str.getFirst()+"\t" +
+								str.getSecond()+"\t"+
+								infoCollector.getNumberOfLegs()+"\t" +
+								infoCollector.getFirstIterationStats()/3600.+"\t" +
+								infoCollector.getLastIterationStats()/3600.+
+								"\n");
+			}
+			writer.close();
+		} catch (Exception e) {
+			throw new RuntimeException("Data is not written in file. Reason: " + e);
+		}
+		LOG.info("Data is written to "+outFile);
 	}
 }

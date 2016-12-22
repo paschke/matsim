@@ -50,7 +50,7 @@ import playground.agarwalamit.InternalizationEmissionAndCongestion.EmissionConge
 import playground.agarwalamit.InternalizationEmissionAndCongestion.InternalizeEmissionsCongestionControlerListener;
 import playground.agarwalamit.analysis.modalShare.ModalShareFromEvents;
 import playground.agarwalamit.mixedTraffic.patnaIndia.input.joint.JointCalibrationControler;
-import playground.agarwalamit.munich.controlerListner.MyEmissionCongestionMoneyEventControlerListner;
+import playground.agarwalamit.munich.controlerListener.MyEmissionCongestionMoneyEventControlerListener;
 import playground.agarwalamit.munich.utils.MunichPersonFilter;
 import playground.agarwalamit.munich.utils.MunichPersonFilter.MunichUserGroup;
 import playground.agarwalamit.utils.FileUtils;
@@ -70,11 +70,10 @@ public class SubPopMunichControler {
 
 	public static void main(String[] args) {
 
-		boolean offline = false;
+		boolean isRunningOnCluster = false;
+		if ( args.length > 0) isRunningOnCluster = true;
 
-		if(args.length==0) offline = true;
-
-		if(offline){
+		if(! isRunningOnCluster){
 			args = new String [] {
 					"false",
 					"false",
@@ -101,14 +100,6 @@ public class SubPopMunichControler {
 
 		Config config = ConfigUtils.loadConfig(configFile);
 		config.controler().setOutputDirectory(outputDir);
-
-		if(offline){
-			config.network().setInputFile("network-86-85-87-84_simplifiedWithStrongLinkMerge---withLanes.xml");
-			config.plans().setInputFile("mergedPopulation_All_1pct_scaledAndMode_workStartingTimePeakAllCommuter0800Var2h_gk4_wrappedSubActivities_usrGrp.xml.gz");
-			config.plans().setInputPersonAttributeFile("personsAttributes_1pct_usrGrp.xml.gz");
-			config.counts().setInputFile("counts-2008-01-10_correctedSums_manuallyChanged_strongLinkMerge.xml");
-			config.vehicles().setVehiclesFile("emissionVehicles_1pct.xml.gz");
-		}
 
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 
@@ -144,15 +135,6 @@ public class SubPopMunichControler {
 		ecg.setDetailedColdEmissionFactorsFile("../../matsimHBEFAStandardsFiles/EFA_ColdStart_SubSegm_2005detailed.txt");
 		ecg.setDetailedWarmEmissionFactorsFile("../../matsimHBEFAStandardsFiles/EFA_HOT_SubSegm_2005detailed.txt");
 		ecg.setEmissionRoadTypeMappingFile("../../munich/input/roadTypeMapping.txt");
-
-		if(offline){
-			ecg.setAverageColdEmissionFactorsFile("../../../input/matsimHBEFAStandardsFiles/EFA_ColdStart_vehcat_2005average.txt");
-			ecg.setAverageWarmEmissionFactorsFile("../../../input/matsimHBEFAStandardsFiles/EFA_HOT_vehcat_2005average.txt");
-			ecg.setDetailedColdEmissionFactorsFile("../../../input/matsimHBEFAStandardsFiles/EFA_ColdStart_SubSegm_2005detailed.txt");
-			ecg.setDetailedWarmEmissionFactorsFile("../../../input/matsimHBEFAStandardsFiles/EFA_HOT_SubSegm_2005detailed.txt");
-			ecg.setEmissionRoadTypeMappingFile("../../../input/munich/roadTypeMapping.txt");
-			controler.getConfig().vehicles().setVehiclesFile("../../../input/munich/emissionVehicles_1pct.xml.gz");
-		}
 
 		ecg.setUsingDetailedEmissionCalculation(true);
 		//===only emission events genertaion; used with all runs for comparisons
@@ -231,7 +213,7 @@ public class SubPopMunichControler {
 		if(writeInfoForEachPersonInEachIteration){
 			// not sure for true functionality yet
 			EmissionCostModule emissionCostModule = new EmissionCostModule(Double.parseDouble(emissionCostFactor), Boolean.parseBoolean(considerCO2Costs));
-			controler.addControlerListener(new MyEmissionCongestionMoneyEventControlerListner(emissionCostModule,emissionModule));
+			controler.addControlerListener(new MyEmissionCongestionMoneyEventControlerListener(emissionCostModule,emissionModule));
 		}
 
 		controler.run();

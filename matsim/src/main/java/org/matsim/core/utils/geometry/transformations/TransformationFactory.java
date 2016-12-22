@@ -41,6 +41,7 @@ public abstract class TransformationFactory {
 	public final static String WGS84_UTM36S = "WGS84_UTM36S"; // South Africa (eThekwini, Kwazulu-Natal)
 	public final static String WGS84_Albers = "WGS84_Albers"; // South Africa (Africa Albers Equal Conic)
 	public final static String WGS84_SA_Albers = "WGS84_SA_Albers"; // South Africa (Adapted version of Africa Albers Equal) 
+	public final static String HARTEBEESTHOEK_LO19 = "SA_Lo19"; // South Africa adaption of Transverse Mercator.
 	public final static String WGS84_UTM33N = "WGS84_UTM33N"; // Berlin
 	public final static String DHDN_GK4 = "DHDN_GK4"; // berlin/germany, for GeoTools
 	public final static String WGS84_UTM29N = "WGS84_UTM29N"; // coimbra/portugal
@@ -51,7 +52,8 @@ public abstract class TransformationFactory {
 	public final static String NAD83_UTM17N = "NAD83_UTM17N"; //Toronto, Canada
 	public static final String WGS84_TM = "WGS84_TM"; //Singapore3
 	public static final String PCS_ITRF2000_TM_UOS = "PCS_ITRF2000_TM_UOS"; // South Korea - but used by University of Seoul - probably a wrong one...
-
+	public static final String DHDN_SoldnerBerlin = "DHDN_SoldnerBerlin"; // Berlin
+	
 	/**
 	 * Returns a coordinate transformation to transform coordinates from one
 	 * coordinate system to another one.

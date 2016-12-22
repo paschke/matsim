@@ -18,9 +18,15 @@
  * *********************************************************************** */
 package playground.thibautd.negotiation.framework;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Population;
+import org.matsim.contrib.socnetsim.framework.population.SocialNetwork;
 import org.matsim.core.gbl.MatsimRandom;
+import playground.ivt.utils.ConcurrentStopWatch;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,18 +39,50 @@ import java.util.Random;
 /**
  * @author thibautd
  */
+@Singleton
 public class NegotiatingAgents<P extends Proposition> implements Iterable<NegotiationAgent<P>> {
+	private final ConcurrentStopWatch<StopWatchMeasurement> stopwatch;
+
+	private static final Logger log = Logger.getLogger( NegotiatingAgents.class );
 	private final Map<Id<Person>, NegotiationAgent<P>> agents = new HashMap<>();
+
 	private final List<NegotiationAgent<P>> agentList;
 
 	private final Random random = MatsimRandom.getLocalInstance();
 
-	public NegotiatingAgents( final Collection<NegotiationAgent<P>> allAgents ) {
-		allAgents.forEach( a -> agents.put( a.getId() , a ) );
-		agentList = new ArrayList<>( allAgents );
+	private final PropositionUtility<P> utility;
+	private final AlternativesGenerator<P> alternativesGenerator;
+
+	@Inject
+	public NegotiatingAgents(
+			final SocialNetwork socialNetwork,
+			final Population population,
+			final ConcurrentStopWatch<StopWatchMeasurement> stopwatch,
+			final PropositionUtility<P> utility,
+			final AlternativesGenerator<P> alternativesGenerator ) {
+		agentList = new ArrayList<>( socialNetwork.getEgos().size() );
+		this.stopwatch = stopwatch;
+		this.utility = utility;
+		this.alternativesGenerator = alternativesGenerator;
+
+		socialNetwork.getEgos().stream()
+				.map( population.getPersons()::get )
+				.map( p -> new NegotiationAgent<>( p.getId() , this, this.stopwatch ) )
+				.forEach( a -> {
+					agentList.add( a );
+					agents.put( a.getId() , a );
+				} );
+
+		log.info( "Negotiating Agents initialized with "+agentList.size()
+				+" agents from population "+population.getPersons().size()
+				+" with social network with "+socialNetwork.getEgos().size() );
 	}
 
 	public NegotiationAgent<P> getRandomAgent() {
+		// get a random sublist and get the agent with the minimum best utility from it.
+		// avoids loosing too much time re-considering "lucky" agents
+		//final List<NegotiationAgent<P>> choiceSet = RandomUtils.sublist_withSideEffect( random , agentList , 100 );
+		//return choiceSet.stream().min( (a1, a2) -> Double.compare( a1.getBestUtility() , a2.getBestUtility() ) ).get();
 		return agentList.get( random.nextInt( agentList.size() ) );
 	}
 
@@ -67,6 +105,14 @@ public class NegotiatingAgents<P extends Proposition> implements Iterable<Negoti
 	@Override
 	public Iterator<NegotiationAgent<P>> iterator() {
 		return agents.values().iterator();
+	}
+
+	public PropositionUtility<P> getUtility() {
+		return utility;
+	}
+
+	public AlternativesGenerator<P> getAlternativesGenerator() {
+		return alternativesGenerator;
 	}
 }
 
