@@ -61,7 +61,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 		this.currentLinkId = this.homeLinkId = homeLinkId;
 		this.scenario = scenario;
 
-		this.state = State.ACTIVITY;
+		this.startActivity();
 	}
 
 	public void setCarsharingSupplyContainer(CarsharingSupplyInterface carsharingSupply) {
@@ -92,9 +92,9 @@ public class RelocationAgent implements MobsimDriverAgent {
 			this.relocations.add(info);
 
 			log.info("relocationAgent " + this.id + " removed vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
+		} else {
+			log.info("relocationAgent " + this.id + " could not remove vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
 		}
-
-		log.info("relocationAgent " + this.id + " could not remove vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId());
 	}
 
 	public void setMobsimTimer(MobsimTimer mobsimTimer) {
@@ -117,7 +117,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 		this.relocations.clear();
 		this.planElements.clear();
 		this.currentLinkId = this.homeLinkId;
-		this.state = State.ACTIVITY;
+		this.startActivity();
 
 		log.info("resetting agent " + this.getId());
 	}
@@ -157,6 +157,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 		Activity activity = PopulationUtils. createActivityFromLinkId("work", this.getCurrentLinkId());
 		activity.setStartTime(this.getTimeOfDay());
 		this.planElements.add(activity);
+		this.state = State.ACTIVITY;
 	}
 
 	protected void endActivity() {
@@ -180,7 +181,7 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	@Override
 	public Id<Link> getDestinationLinkId() {
-		return this.destinationLinkId ;
+		return this.destinationLinkId;
 	}
 
 	@Override
@@ -216,7 +217,8 @@ public class RelocationAgent implements MobsimDriverAgent {
 			this.endActivity();
 			this.prepareRelocation(this.relocations.get(0));
 		} catch (IndexOutOfBoundsException e) {
-			// do nothing, assuming that the only activity that this user can have is idling at his home link
+			// resume idling
+			this.startActivity();
 		}
 	}
 
@@ -239,10 +241,17 @@ public class RelocationAgent implements MobsimDriverAgent {
 		this.endLeg();
 
 		if (this.relocations.isEmpty()) {
-			this.state = State.ACTIVITY;
+			this.destinationLinkId = null;
 			this.startActivity();
 		} else {
-			if (this.getDestinationLinkId().equals(this.relocations.get(0).getStartLinkId())) {
+			if (this.getDestinationLinkId().equals(this.homeLinkId)) {
+				try {
+					this.prepareRelocation(this.relocations.get(0));
+				} catch (IndexOutOfBoundsException e) {
+					this.destinationLinkId = null;
+					this.startActivity();
+				}
+			} else if (this.getDestinationLinkId().equals(this.relocations.get(0).getStartLinkId())) {
 				RelocationInfo relocationInfo = this.relocations.get(0);
 				relocationInfo.setStartTime(now);
 				this.executeRelocation(relocationInfo);
