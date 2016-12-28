@@ -2,7 +2,6 @@ package playground.paschke.qsim;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -66,7 +65,6 @@ public class KmlWriterListener implements IterationStartsListener, IterationEnds
 			final BufferedWriter outRelocations = IOUtils.getBufferedWriter(this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), "relocations"));
 			try {
 				for (Entry<String, List<RelocationInfo>> companyEntry : this.carsharingVehicleRelocation.getRelocations().entrySet()) {
-					String companyId = companyEntry.getKey();
 					List<RelocationInfo> companyRelocations = companyEntry.getValue();
 
 					outRelocations.write("timeSlot	startZone	endZone	startTime	endTime	startLink	endLink	companyID	vehicleID	agentID");
