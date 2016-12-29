@@ -19,6 +19,7 @@ import org.matsim.core.mobsim.qsim.QSim;
 
 import com.google.inject.Inject;
 
+import playground.paschke.events.handlers.DemandDistributionHandler;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
 
@@ -28,6 +29,8 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 	@Inject private CarsharingSupplyInterface carsharingSupply;
 
 	@Inject private CarSharingDemandTracker demandTracker;
+
+	@Inject private DemandDistributionHandler demandDistributionHandler;
 
 	@Inject private CarsharingVehicleRelocationContainer carsharingVehicleRelocation;
 
@@ -56,6 +59,8 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 				}
 
 				log.info("time to relocate " + companyId + " vehicles: " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
+
+				this.demandDistributionHandler.reset(companyId, now);
 
 				this.carsharingVehicleRelocation.resetRelocationZones(companyId);
 

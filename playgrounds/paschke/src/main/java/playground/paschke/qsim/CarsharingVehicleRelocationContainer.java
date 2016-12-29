@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.log4j.Logger;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -29,8 +28,6 @@ public class CarsharingVehicleRelocationContainer {
 	private Scenario scenario;
 
 	private PointFeatureFactory pointFeatureFactory;
-
-	private static final Logger log = Logger.getLogger("dummy");
 
 	public static final String ELEMENT_NAME = "carSharingRelocationZones";
 
@@ -184,24 +181,32 @@ public class CarsharingVehicleRelocationContainer {
 		return this.useRelocation;
 	}
 
+	public RelocationZone getRelocationZone(String companyId, Coord coord) {
+		if (this.getRelocationZones().keySet().contains(companyId)) {
+			SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(coord, new Object[0], null);
+			Point point = (Point) pointFeature.getAttribute("the_geom");
+
+			for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
+				MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
+
+				if (polygon.contains(point)) {
+					return relocationZone;
+				}
+			}
+		}
+
+		return null;
+	}
+
 	public void addExpectedRequests(String companyId, Link link) {
 		this.addExpectedRequests(companyId, link, 1);
 	}
 
 	public void addExpectedRequests(String companyId, Link link, int numberOfRequests) {
-		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
-		Point point = (Point) pointFeature.getAttribute("the_geom");
+		RelocationZone relocationZone = this.getRelocationZone(companyId, link.getCoord());
 
-		if (this.getRelocationZones().keySet().contains(companyId)) {
-			for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
-				MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
-
-				if (polygon.contains(point)) {
-					relocationZone.addExpectedRequests(link, numberOfRequests);
-
-					break;
-				}
-			}
+		if (null != relocationZone) {
+			relocationZone.addExpectedRequests(link, numberOfRequests);
 		}
 	}
 
@@ -210,36 +215,18 @@ public class CarsharingVehicleRelocationContainer {
 	}
 
 	public void addExpectedReturns(String companyId, Link link, int numberOfReturns) {
-		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
-		Point point = (Point) pointFeature.getAttribute("the_geom");
+		RelocationZone relocationZone = this.getRelocationZone(companyId, link.getCoord());
 
-		if (this.getRelocationZones().keySet().contains(companyId)) {
-			for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
-				MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
-
-				if (polygon.contains(point)) {
-					relocationZone.addExpectedReturns(link, numberOfReturns);
-
-					break;
-				}
-			}
+		if (null != relocationZone) {
+			relocationZone.addExpectedReturns(link, numberOfReturns);
 		}
 	}
 
 	public void addVehicles(String companyId, Link link, ArrayList<String> IDs) {
-		SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(link.getCoord(), new Object[0], null);
-		Point point = (Point) pointFeature.getAttribute("the_geom");
+		RelocationZone relocationZone = this.getRelocationZone(companyId, link.getCoord());
 
-		if (this.getRelocationZones().keySet().contains(companyId)) {
-			for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
-				MultiPolygon polygon = (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom");
-
-				if (polygon.contains(point)) {
-					relocationZone.addVehicles(link, IDs);
-
-					break;
-				}
-			}
+		if (null != relocationZone) {
+			relocationZone.addVehicles(link, IDs);
 		}
 	}
 

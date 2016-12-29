@@ -41,6 +41,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 
 import playground.paschke.events.MobismBeforeSimStepRelocationListener;
 import playground.paschke.events.SetupListener;
+import playground.paschke.events.handlers.DemandDistributionHandler;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
 import playground.paschke.qsim.KmlWriterListener;
@@ -115,6 +116,7 @@ public class RelocationControler {
 				bind(CarsharingVehicleRelocationContainer.class).toInstance(carsharingVehicleRelocation);
 				bind(CarSharingDemandTracker.class).toInstance(demandTracker);
 				bind(DemandHandler.class).asEagerSingleton();
+				bind(DemandDistributionHandler.class).asEagerSingleton();
 			}
 		});
 
@@ -143,6 +145,7 @@ public class RelocationControler {
 				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
 				addEventHandlerBinding().to(PersonArrivalDepartureHandler.class);
 				addEventHandlerBinding().to(DemandHandler.class);
+				addEventHandlerBinding().to(DemandDistributionHandler.class);
 				addEventHandlerBinding().to(SimpleRelocationListener.class);
 			}
 		});

@@ -1,6 +1,8 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +77,15 @@ public class RelocationZonesReader extends MatsimXmlParser {
 			SimpleFeature relocationZonePolygon = this.polygonFeatureFactory.createPolygon(coordsArray);
 			RelocationZone relocationZone = new RelocationZone(Id.create(this.idString, RelocationZone.class), relocationZonePolygon);
 			this.relocationZones.get(this.companyId).add(relocationZone);
+		}
+
+		if (name.equals("company")) {
+			Collections.sort(this.relocationZones.get(this.companyId), new Comparator<RelocationZone>() {
+		        @Override
+				public int compare(RelocationZone relocationZone1, RelocationZone relocationZone2) {
+		            return  relocationZone1.getId().compareTo(relocationZone2.getId());
+		        }
+		    });
 		}
 
 		if (name.equals("relocationZones")) {
