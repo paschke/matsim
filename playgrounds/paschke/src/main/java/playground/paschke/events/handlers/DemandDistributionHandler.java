@@ -2,8 +2,6 @@ package playground.paschke.events.handlers;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 
@@ -11,7 +9,9 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.carsharing.events.NoVehicleCarSharingEvent;
 import org.matsim.contrib.carsharing.events.StartRentalEvent;
+import org.matsim.contrib.carsharing.events.handlers.NoVehicleCarSharingEventHandler;
 import org.matsim.contrib.carsharing.events.handlers.StartRentalEventHandler;
 
 import com.google.inject.Inject;
@@ -19,7 +19,7 @@ import com.google.inject.Inject;
 import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
 import playground.paschke.qsim.RelocationZone;
 
-public class DemandDistributionHandler implements StartRentalEventHandler {
+public class DemandDistributionHandler implements StartRentalEventHandler, NoVehicleCarSharingEventHandler {
 
 	@Inject Scenario scenario;
 
@@ -53,28 +53,24 @@ public class DemandDistributionHandler implements StartRentalEventHandler {
 		RelocationZone destinationZone = this.carsharingVehicleRelocation.getRelocationZone(companyId, destinationLink.getCoord());
 
 		if ((originZone != null) && (destinationZone != null)) {
-			if (!this.ODMatrices.keySet().contains(companyId)) {
-				this.ODMatrices.put(companyId, new TreeMap<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>());
-			}
+			this.addODRelation(companyId, originZone, destinationZone);
+		}
+	}
 
-			if (this.ODMatrices.get(companyId).isEmpty()) {
-				this.ODMatrices.get(companyId).put(new Double(0), new HashMap<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>());
-			}
+	@Override
+	public void handleEvent(NoVehicleCarSharingEvent event) {
+		Network network = this.scenario.getNetwork();
 
-			SortedSet<Double> keySet = (SortedSet<Double>) this.ODMatrices.get(companyId).keySet();
-			Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> ODMatrix = this.ODMatrices.get(companyId).get(keySet.last());
+		Link originLink = network.getLinks().get(event.getOriginLinkId());
+		Link destinationLink = network.getLinks().get(event.getDestinationLinkId());
 
-			if (!ODMatrix.keySet().contains(originZone.getId())) {
-				Map<Id<RelocationZone>, Integer> destinations = new HashMap<Id<RelocationZone>, Integer>();
-				ODMatrix.put(originZone.getId(), destinations);
-			}
+		String companyId = event.getCompanyId();
 
-			if (!ODMatrix.get(originZone.getId()).keySet().contains(destinationZone.getId())) {
-				ODMatrix.get(originZone.getId()).put(destinationZone.getId(), new Integer(1));
-			} else {
-				Integer oldCount = ODMatrix.get(originZone.getId()).get(destinationZone.getId());
-				ODMatrix.get(originZone.getId()).put(destinationZone.getId(), new Integer(oldCount.intValue() + 1));
-			}
+		RelocationZone originZone = this.carsharingVehicleRelocation.getRelocationZone(companyId, originLink.getCoord());
+		RelocationZone destinationZone = this.carsharingVehicleRelocation.getRelocationZone(companyId, destinationLink.getCoord());
+
+		if ((originZone != null) && (destinationZone != null)) {
+			this.addODRelation(companyId, originZone, destinationZone);
 		}
 	}
 
@@ -100,5 +96,30 @@ public class DemandDistributionHandler implements StartRentalEventHandler {
 
 	public Map<String, Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> getODMatrices() {
 		return this.ODMatrices;
+	}
+
+	protected void addODRelation(String companyId, RelocationZone originZone, RelocationZone destinationZone) {
+		if (!this.ODMatrices.keySet().contains(companyId)) {
+			this.ODMatrices.put(companyId, new TreeMap<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>());
+		}
+
+		if (this.ODMatrices.get(companyId).isEmpty()) {
+			this.ODMatrices.get(companyId).put(new Double(0), new HashMap<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>());
+		}
+
+		SortedSet<Double> keySet = (SortedSet<Double>) this.ODMatrices.get(companyId).keySet();
+		Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> ODMatrix = this.ODMatrices.get(companyId).get(keySet.last());
+
+		if (!ODMatrix.keySet().contains(originZone.getId())) {
+			Map<Id<RelocationZone>, Integer> destinations = new HashMap<Id<RelocationZone>, Integer>();
+			ODMatrix.put(originZone.getId(), destinations);
+		}
+
+		if (!ODMatrix.get(originZone.getId()).keySet().contains(destinationZone.getId())) {
+			ODMatrix.get(originZone.getId()).put(destinationZone.getId(), new Integer(1));
+		} else {
+			Integer oldCount = ODMatrix.get(originZone.getId()).get(destinationZone.getId());
+			ODMatrix.get(originZone.getId()).put(destinationZone.getId(), new Integer(oldCount.intValue() + 1));
+		}
 	}
 }

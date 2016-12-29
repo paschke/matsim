@@ -100,10 +100,10 @@ public class KmlWriterListener implements IterationStartsListener, IterationEnds
 						outODMatrix.newLine();
 
 						Double start = companyODMatrix.getKey();
-						outODMatrix.write(start.toString() + "	");
+						outODMatrix.write(start.toString());
 
 						for (RelocationZone relocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
-							outODMatrix.write(relocationZone.getId().toString() + "	");
+							outODMatrix.write("	" + relocationZone.getId().toString());
 						}
 
 						Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> origins = companyODMatrix.getValue();
@@ -115,7 +115,7 @@ public class KmlWriterListener implements IterationStartsListener, IterationEnds
 							for (RelocationZone destinationRelocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
 								if (origins.keySet().contains(originRelocationZone.getId())) {
 									if (origins.get(originRelocationZone.getId()).keySet().contains(destinationRelocationZone.getId())) {
-										outODMatrix.write("	" + origins.get(originRelocationZone.getId()).get(destinationRelocationZone.getId()).toString() + "	");
+										outODMatrix.write("	" + origins.get(originRelocationZone.getId()).get(destinationRelocationZone.getId()).toString());
 									} else {
 										outODMatrix.write("	0");
 									}
