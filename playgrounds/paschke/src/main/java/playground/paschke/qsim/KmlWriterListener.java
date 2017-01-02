@@ -2,6 +2,8 @@ package playground.paschke.qsim;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -89,38 +91,54 @@ public class KmlWriterListener implements IterationStartsListener, IterationEnds
 			// log trip OD-Matrix
 			final BufferedWriter outODMatrix = IOUtils.getBufferedWriter(this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), "CS-OD-Matrix.txt"));
 			try {
-				for (Entry<String, Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> companyEntry : this.demandDistributionHandler.getODMatrices().entrySet()) {
+				for (Entry<String, Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>> companyEntry : this.demandDistributionHandler.getODMatrices().entrySet()) {
 					String companyId = companyEntry.getKey();
 					outODMatrix.write(companyId);
 					outODMatrix.newLine();
+					List<RelocationZone> relocationZones = this.carsharingVehicleRelocation.getRelocationZones(companyId);
 
-					Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> companyODMatrices = companyEntry.getValue();
+					Collections.sort(relocationZones, new Comparator<RelocationZone>() {
+				        @Override
+						public int compare(RelocationZone relocationZone1, RelocationZone relocationZone2) {
+				            return relocationZone1.getId().compareTo(relocationZone2.getId());
+				        }
+				    });
 
-					for (Entry<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> companyODMatrix : companyODMatrices.entrySet()) {
+
+					Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> companyODMatrices = companyEntry.getValue();
+
+					for (Entry<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> timeEntry : companyODMatrices.entrySet()) {
 						outODMatrix.newLine();
-
-						Double start = companyODMatrix.getKey();
+						Double start = timeEntry.getKey();
 						outODMatrix.write(start.toString());
 
-						for (RelocationZone relocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
-							outODMatrix.write("	" + relocationZone.getId().toString());
-						}
+						Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> eventTypeMatrices = timeEntry.getValue();
 
-						Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> origins = companyODMatrix.getValue();
-
-						for (RelocationZone originRelocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
+						for (Entry<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> eventTypeODMatrix : eventTypeMatrices.entrySet()) {
 							outODMatrix.newLine();
-							outODMatrix.write(originRelocationZone.getId().toString());
+							String eventType = eventTypeODMatrix.getKey();
+							outODMatrix.write(eventType);
 
-							for (RelocationZone destinationRelocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
-								if (origins.keySet().contains(originRelocationZone.getId())) {
-									if (origins.get(originRelocationZone.getId()).keySet().contains(destinationRelocationZone.getId())) {
-										outODMatrix.write("	" + origins.get(originRelocationZone.getId()).get(destinationRelocationZone.getId()).toString());
+							for (RelocationZone relocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
+								outODMatrix.write("	" + relocationZone.getId().toString());
+							}
+
+							Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> origins = eventTypeODMatrix.getValue();
+
+							for (RelocationZone originRelocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
+								outODMatrix.newLine();
+								outODMatrix.write(originRelocationZone.getId().toString());
+
+								for (RelocationZone destinationRelocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
+									if (origins.keySet().contains(originRelocationZone.getId())) {
+										if (origins.get(originRelocationZone.getId()).keySet().contains(destinationRelocationZone.getId())) {
+											outODMatrix.write("	" + origins.get(originRelocationZone.getId()).get(destinationRelocationZone.getId()).toString());
+										} else {
+											outODMatrix.write("	0");
+										}
 									} else {
 										outODMatrix.write("	0");
 									}
-								} else {
-									outODMatrix.write("	0");
 								}
 							}
 						}

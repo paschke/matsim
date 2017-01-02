@@ -25,19 +25,21 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 
 	@Inject CarsharingVehicleRelocationContainer carsharingVehicleRelocation;
 
-	Map<String, Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> ODMatrices = new HashMap<String, Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>();
+	Map<String, Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>> ODMatrices = new HashMap<String, Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>>();
 
 	@Override
 	public void reset(int iteration) {
-		this.ODMatrices = new HashMap<String, Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>();
+		this.ODMatrices = new HashMap<String, Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>>();
 	}
 
 	public void reset(String companyId, double time) {
 		if (!this.ODMatrices.keySet().contains(companyId)) {
-			this.ODMatrices.put(companyId, new TreeMap<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>());
+			this.ODMatrices.put(companyId, new TreeMap<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>());
 		}
 
-		this.ODMatrices.get(companyId).put(time, new HashMap<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>());
+		this.ODMatrices.get(companyId).put(time, new HashMap<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>());
+		this.ODMatrices.get(companyId).get(time).put("rentals", new HashMap<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>());
+		this.ODMatrices.get(companyId).get(time).put("no_vehicle", new HashMap<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>());
 	}
 
 	@Override
@@ -53,7 +55,7 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 		RelocationZone destinationZone = this.carsharingVehicleRelocation.getRelocationZone(companyId, destinationLink.getCoord());
 
 		if ((originZone != null) && (destinationZone != null)) {
-			this.addODRelation(companyId, originZone, destinationZone);
+			this.addODRelation(companyId, "rentals", originZone, destinationZone);
 		}
 	}
 
@@ -70,22 +72,22 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 		RelocationZone destinationZone = this.carsharingVehicleRelocation.getRelocationZone(companyId, destinationLink.getCoord());
 
 		if ((originZone != null) && (destinationZone != null)) {
-			this.addODRelation(companyId, originZone, destinationZone);
+			this.addODRelation(companyId, "no_vehicle", originZone, destinationZone);
 		}
 	}
 
-	public Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> getODMatrix(String companyId, Double time) {
-		Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> companyODMatrices = this.getODMatrices(companyId);
+	public Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> getODMatrix(String companyId, String eventType, Double time) {
+		Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> companyODMatrices = this.getODMatrices(companyId);
 
-		if ((null != companyODMatrices) && (companyODMatrices.keySet().contains(time))) {
-			return companyODMatrices.get(time);
+		if ((null != companyODMatrices) && (companyODMatrices.keySet().contains(time)) && (companyODMatrices.get(time).keySet().contains(eventType))) {
+			return companyODMatrices.get(time).get(eventType);
 		}
 
 		return null;
 	}
 
-	public Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> getODMatrices(String companyId) {
-		Map<String, Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> ODMatrices = this.getODMatrices();
+	public Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> getODMatrices(String companyId) {
+		Map<String, Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>> ODMatrices = this.getODMatrices();
 
 		if (ODMatrices.keySet().contains(companyId)) {
 			return this.ODMatrices.get(companyId);
@@ -94,21 +96,24 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 		return null;
 	}
 
-	public Map<String, Map<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> getODMatrices() {
+	public Map<String, Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>> getODMatrices() {
 		return this.ODMatrices;
 	}
 
-	protected void addODRelation(String companyId, RelocationZone originZone, RelocationZone destinationZone) {
+	protected void addODRelation(String companyId, String eventType, RelocationZone originZone, RelocationZone destinationZone) {
 		if (!this.ODMatrices.keySet().contains(companyId)) {
-			this.ODMatrices.put(companyId, new TreeMap<Double, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>());
+			this.ODMatrices.put(companyId, new TreeMap<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>());
 		}
 
 		if (this.ODMatrices.get(companyId).isEmpty()) {
-			this.ODMatrices.get(companyId).put(new Double(0), new HashMap<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>());
+			this.ODMatrices.get(companyId).put(new Double(0), new HashMap<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>());
+			this.ODMatrices.get(companyId).get(new Double(0)).put("rentals", new HashMap<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>());
+			this.ODMatrices.get(companyId).get(new Double(0)).put("no_vehicle", new HashMap<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>());
 		}
 
 		SortedSet<Double> keySet = (SortedSet<Double>) this.ODMatrices.get(companyId).keySet();
-		Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> ODMatrix = this.ODMatrices.get(companyId).get(keySet.last());
+		Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> companyODMatrices = this.ODMatrices.get(companyId).get(keySet.last());
+		Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> ODMatrix = companyODMatrices.get(eventType);
 
 		if (!ODMatrix.keySet().contains(originZone.getId())) {
 			Map<Id<RelocationZone>, Integer> destinations = new HashMap<Id<RelocationZone>, Integer>();

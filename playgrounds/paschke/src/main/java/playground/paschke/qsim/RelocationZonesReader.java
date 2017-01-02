@@ -83,7 +83,7 @@ public class RelocationZonesReader extends MatsimXmlParser {
 			Collections.sort(this.relocationZones.get(this.companyId), new Comparator<RelocationZone>() {
 		        @Override
 				public int compare(RelocationZone relocationZone1, RelocationZone relocationZone2) {
-		            return  relocationZone1.getId().compareTo(relocationZone2.getId());
+		            return relocationZone1.getId().compareTo(relocationZone2.getId());
 		        }
 		    });
 		}
