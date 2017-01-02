@@ -12,7 +12,7 @@ public class CarsharingVehicleRelocationConfigGroup extends ReflectiveConfigGrou
 
 	private String relocationAgentsInputFile = null;
 
-	private boolean useRelocation = false;
+	private Integer moduleEnableAfterIteration = null;
 
 	public CarsharingVehicleRelocationConfigGroup() {
 		super(GROUP_NAME);
@@ -48,13 +48,13 @@ public class CarsharingVehicleRelocationConfigGroup extends ReflectiveConfigGrou
 		this.relocationAgentsInputFile = relocationAgentsInputFile;
 	}
 
-	@StringGetter( "useRelocation" )
-	public boolean useRelocation() {
-		return this.useRelocation;
+	@StringGetter( "moduleEnableAfterIteration" )
+	public Integer moduleEnableAfterIteration() {
+		return this.moduleEnableAfterIteration;
 	}
 
-	@StringSetter( "useRelocation" )
-	public void setUseRelocation(final boolean useRelocation) {
-		this.useRelocation = useRelocation;
+	@StringSetter( "moduleEnableAfterIteration" )
+	public void setModuleEnableAfterIteration(final String moduleEnableAfterIteration) {
+		this.moduleEnableAfterIteration = Integer.parseInt( moduleEnableAfterIteration );
 	}
 }

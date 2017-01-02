@@ -43,7 +43,7 @@ public class CarsharingVehicleRelocationContainer {
 
 	private Map<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> status = new HashMap<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>>();
 
-	private boolean useRelocation = false;
+	private Integer moduleEnableAfterIteration = null;
 
 	public CarsharingVehicleRelocationContainer(Scenario sc) {
 		this.scenario = sc;
@@ -60,7 +60,7 @@ public class CarsharingVehicleRelocationContainer {
 		final CarsharingVehicleRelocationConfigGroup confGroup = (CarsharingVehicleRelocationConfigGroup)
 				this.scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
 
-		this.useRelocation = confGroup.useRelocation();
+		this.moduleEnableAfterIteration = confGroup.moduleEnableAfterIteration();
 	}
 
 	public void readRelocationZones() throws IOException {
@@ -177,8 +177,8 @@ public class CarsharingVehicleRelocationContainer {
 		this.getRelocations(companyId).add(info);
 	}
 
-	public boolean useRelocation() {
-		return this.useRelocation;
+	public Integer moduleEnableAfterIteration() {
+		return this.moduleEnableAfterIteration;
 	}
 
 	public RelocationZone getRelocationZone(String companyId, Coord coord) {

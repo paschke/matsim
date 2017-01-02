@@ -25,6 +25,8 @@ import playground.paschke.events.handlers.DispatchRelocationsEventHandler;
 public class SimpleRelocationListener implements DispatchRelocationsEventHandler {
 	@Inject private CarsharingVehicleRelocationContainer carsharingVehicleRelocation;
 
+	private int iteration;
+
 	public static final Logger log = Logger.getLogger("dummy");
 
 	@Override
@@ -36,7 +38,7 @@ public class SimpleRelocationListener implements DispatchRelocationsEventHandler
 			this.carsharingVehicleRelocation.addRelocation(companyId, info);
 			log.info("SimpleRelocationListener suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
 
-			if (this.carsharingVehicleRelocation.useRelocation()) {
+			if (this.iteration > this.carsharingVehicleRelocation.moduleEnableAfterIteration()) {
 				RelocationAgent agent = this.getRelocationAgent(companyId);
 
 				if (agent != null) {
@@ -65,7 +67,7 @@ public class SimpleRelocationListener implements DispatchRelocationsEventHandler
 
 	@Override
 	public void reset(int iteration) {
-		// TODO Auto-generated method stub
+		this.iteration = iteration;
 	}
 
 	public ArrayList<RelocationInfo> calculateRelocations(String timeSlot, String companyId, List<RelocationZone> relocationZones) {
