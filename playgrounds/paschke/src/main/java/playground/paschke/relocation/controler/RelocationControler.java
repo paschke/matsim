@@ -44,6 +44,7 @@ import playground.paschke.events.SetupListener;
 import playground.paschke.events.handlers.DemandDistributionHandler;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
+import playground.paschke.qsim.FFVehiclesRentalsWriterListener;
 import playground.paschke.qsim.KmlWriterListener;
 import playground.paschke.qsim.SimpleRelocationListener;
 import playground.paschke.qsim.RelocationQsimFactory;
@@ -89,6 +90,7 @@ public class RelocationControler {
 		final CarSharingDemandTracker demandTracker = new CarSharingDemandTracker();
 		final CarsharingListener carsharingListener = new CarsharingListener();
 		final KmlWriterListener relocationListener = new KmlWriterListener(configGroup.getStatsWriterFrequency());
+		final FFVehiclesRentalsWriterListener vehicleRentalsWriterListener = new FFVehiclesRentalsWriterListener(configGroup.getStatsWriterFrequency());
 		final CarsharingSupplyContainer carsharingSupplyContainer = new CarsharingSupplyContainer(controler.getScenario());
 		carsharingSupplyContainer.populateSupply();
 		final KeepingTheCarModel keepingCarModel = new KeepingTheCarModelExample();
@@ -141,6 +143,7 @@ public class RelocationControler {
 				addControlerListenerBinding().toInstance(setupListener);
 				addControlerListenerBinding().toInstance(demandTracker);
 				addControlerListenerBinding().toInstance(relocationListener);
+				addControlerListenerBinding().toInstance(vehicleRentalsWriterListener);
 				addControlerListenerBinding().to(CarsharingManagerNew.class);
 				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
 				addEventHandlerBinding().to(PersonArrivalDepartureHandler.class);
