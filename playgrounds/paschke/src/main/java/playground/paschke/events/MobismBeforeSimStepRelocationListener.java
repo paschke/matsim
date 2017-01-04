@@ -60,7 +60,7 @@ public class MobismBeforeSimStepRelocationListener implements MobsimBeforeSimSte
 
 				log.info("time to relocate " + companyId + " vehicles: " + (Math.floor(qSim.getSimTimer().getTimeOfDay()) / 3600));
 
-				this.demandDistributionHandler.reset(companyId, now);
+				this.demandDistributionHandler.createODMatrices(companyId, now);
 
 				this.carsharingVehicleRelocation.resetRelocationZones(companyId);
 

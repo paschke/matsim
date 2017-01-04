@@ -17,6 +17,8 @@ import org.matsim.core.controler.events.IterationStartsEvent;
 import org.matsim.core.controler.listener.IterationEndsListener;
 import org.matsim.core.controler.listener.IterationStartsListener;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.matrices.Matrices;
+import org.matsim.matrices.MatricesWriter;
 
 import com.google.inject.Inject;
 import com.vividsolutions.jts.geom.MultiPolygon;
@@ -88,69 +90,18 @@ public class KmlWriterListener implements IterationStartsListener, IterationEnds
 				e.printStackTrace();
 			}
 
-			// log trip OD-Matrix
-			final BufferedWriter outODMatrix = IOUtils.getBufferedWriter(this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), "CS-OD-Matrix.txt"));
-			try {
-				for (Entry<String, Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>>> companyEntry : this.demandDistributionHandler.getODMatrices().entrySet()) {
-					String companyId = companyEntry.getKey();
-					outODMatrix.write(companyId);
-					outODMatrix.newLine();
-					List<RelocationZone> relocationZones = this.carsharingVehicleRelocation.getRelocationZones(companyId);
+			// log trip OD-Matrices
+			for (Entry<String, Map<Double, Matrices>> companyEntry : this.demandDistributionHandler.getODMatrices().entrySet()) {
+				String companyId = companyEntry.getKey();
 
-					Collections.sort(relocationZones, new Comparator<RelocationZone>() {
-				        @Override
-						public int compare(RelocationZone relocationZone1, RelocationZone relocationZone2) {
-				            return relocationZone1.getId().compareTo(relocationZone2.getId());
-				        }
-				    });
+				Map<Double, Matrices> companyODMatrices = companyEntry.getValue();
 
-
-					Map<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> companyODMatrices = companyEntry.getValue();
-
-					for (Entry<Double, Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>>> timeEntry : companyODMatrices.entrySet()) {
-						outODMatrix.newLine();
-						Double start = timeEntry.getKey();
-						outODMatrix.write(start.toString());
-
-						Map<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> eventTypeMatrices = timeEntry.getValue();
-
-						for (Entry<String, Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>>> eventTypeODMatrix : eventTypeMatrices.entrySet()) {
-							outODMatrix.newLine();
-							String eventType = eventTypeODMatrix.getKey();
-							outODMatrix.write(eventType);
-
-							for (RelocationZone relocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
-								outODMatrix.write("	" + relocationZone.getId().toString());
-							}
-
-							Map<Id<RelocationZone>, Map<Id<RelocationZone>, Integer>> origins = eventTypeODMatrix.getValue();
-
-							for (RelocationZone originRelocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
-								outODMatrix.newLine();
-								outODMatrix.write(originRelocationZone.getId().toString());
-
-								for (RelocationZone destinationRelocationZone : this.carsharingVehicleRelocation.getRelocationZones(companyId)) {
-									if (origins.keySet().contains(originRelocationZone.getId())) {
-										if (origins.get(originRelocationZone.getId()).keySet().contains(destinationRelocationZone.getId())) {
-											outODMatrix.write("	" + origins.get(originRelocationZone.getId()).get(destinationRelocationZone.getId()).toString());
-										} else {
-											outODMatrix.write("	0");
-										}
-									} else {
-										outODMatrix.write("	0");
-									}
-								}
-							}
-						}
-					}
-
-					outODMatrix.newLine();
+				for (Entry<Double, Matrices> timeEntry : companyODMatrices.entrySet()) {
+					double start = timeEntry.getKey();
+					String filename = this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), "CS-OD-Matrix." + companyId + "." + start + ".txt");
+					final MatricesWriter matricesWriter = new MatricesWriter(timeEntry.getValue());
+					matricesWriter.write(filename);
 				}
-
-				outODMatrix.flush();
-				outODMatrix.close();
-			} catch (IOException e) {
-				e.printStackTrace();
 			}
 		}
 	}
