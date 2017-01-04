@@ -12,6 +12,7 @@ import org.matsim.contrib.carsharing.events.NoVehicleCarSharingEvent;
 import org.matsim.contrib.carsharing.events.StartRentalEvent;
 import org.matsim.contrib.carsharing.events.handlers.NoVehicleCarSharingEventHandler;
 import org.matsim.contrib.carsharing.events.handlers.StartRentalEventHandler;
+import org.matsim.matrices.Entry;
 import org.matsim.matrices.Matrices;
 import org.matsim.matrices.Matrix;
 
@@ -121,7 +122,17 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 		Matrix ODMatrix = companyODMatrices.getMatrix(eventType);
 
 		if (null != ODMatrix) {
-			ODMatrix.createEntry(originZone.getId().toString(), destinationZone.getId().toString(), 1);
+			String originId = originZone.getId().toString();
+			String destinationId = destinationZone.getId().toString();
+
+			Entry relation = ODMatrix.getEntry(originId, destinationId);
+
+			if (null != relation) {
+				double value = relation.getValue();
+				relation.setValue(value++);
+			} else {
+				ODMatrix.createEntry(originZone.getId().toString(), destinationZone.getId().toString(), 1);
+			}
 		}
 	}
 }
