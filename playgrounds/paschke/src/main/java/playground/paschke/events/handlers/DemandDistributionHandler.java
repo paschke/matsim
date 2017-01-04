@@ -85,7 +85,7 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 		Map<String, Map<Double, Matrices>> ODMatrices = this.getODMatrices();
 
 		if ((null != ODMatrices) && (ODMatrices.keySet().contains(companyId))) {
-			return this.ODMatrices.get(companyId);
+			return ODMatrices.get(companyId);
 		}
 
 		return null;
@@ -95,7 +95,7 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 		Map<Double, Matrices> ODMatrices = this.getODMatrices(companyId);
 
 		if ((null != ODMatrices) && (ODMatrices.keySet().contains(time))) {
-			return this.ODMatrices.get(companyId).get(time);
+			return ODMatrices.get(time);
 		}
 
 		return null;
