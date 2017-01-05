@@ -50,8 +50,7 @@ public class FFVehiclesRentalsWriter extends MatsimXmlWriter {
 							createTuple("end_time", Time.writeTime(info.getEndTime())),
 							createTuple("start_link", info.getOriginLinkId().toString()),
 							createTuple("end_link", info.getEndLinkId().toString())
-					));
-					this.writeEndTag("rental");
+					), true);
 				}
 
 				this.writeEndTag("vehicle");
