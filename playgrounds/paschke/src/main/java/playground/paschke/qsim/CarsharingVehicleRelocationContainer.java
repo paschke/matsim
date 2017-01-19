@@ -41,7 +41,7 @@ public class CarsharingVehicleRelocationContainer {
 
 	private Map<String, List<RelocationInfo>> relocations;
 
-	private Map<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> status = new HashMap<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>>();
+	private Map<String, Map<Double, Map<Id<RelocationZone>, Map<String, Double>>>> status = new HashMap<String, Map<Double, Map<Id<RelocationZone>, Map<String, Double>>>>();
 
 	private Integer moduleEnableAfterIteration = null;
 
@@ -198,30 +198,6 @@ public class CarsharingVehicleRelocationContainer {
 		return null;
 	}
 
-	public void addExpectedRequests(String companyId, Link link) {
-		this.addExpectedRequests(companyId, link, 1);
-	}
-
-	public void addExpectedRequests(String companyId, Link link, int numberOfRequests) {
-		RelocationZone relocationZone = this.getRelocationZone(companyId, link.getCoord());
-
-		if (null != relocationZone) {
-			relocationZone.addExpectedRequests(link, numberOfRequests);
-		}
-	}
-
-	public void addExpectedReturns(String companyId, Link link) {
-		this.addExpectedReturns(companyId, link, 1);
-	}
-
-	public void addExpectedReturns(String companyId, Link link, int numberOfReturns) {
-		RelocationZone relocationZone = this.getRelocationZone(companyId, link.getCoord());
-
-		if (null != relocationZone) {
-			relocationZone.addExpectedReturns(link, numberOfReturns);
-		}
-	}
-
 	public void addVehicles(String companyId, Link link, ArrayList<String> IDs) {
 		RelocationZone relocationZone = this.getRelocationZone(companyId, link.getCoord());
 
@@ -230,7 +206,7 @@ public class CarsharingVehicleRelocationContainer {
 		}
 	}
 
-	public Map<String, Map<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> getStatus() {
+	public Map<String, Map<Double, Map<Id<RelocationZone>, Map<String, Double>>>> getStatus() {
 		return this.status;
 	}
 
@@ -260,18 +236,20 @@ public class CarsharingVehicleRelocationContainer {
 	}
 
 	public void storeStatus(String companyId, double now) {
-		Map<Id<RelocationZone>, Map<String, Integer>> relocationZonesStatus = new HashMap<Id<RelocationZone>, Map<String, Integer>>();
+		Map<Id<RelocationZone>,Map<String,Double>> relocationZonesStatus = new HashMap<Id<RelocationZone>, Map<String, Double>>();
 
 		for (RelocationZone relocationZone : this.getRelocationZones().get(companyId)) {
-			Map<String, Integer> zoneStatus = new HashMap<String, Integer>();
+			Map<String,Double> zoneStatus = new HashMap<String, Double>();
 			zoneStatus.put("vehicles", relocationZone.getNumberOfVehicles());
-			zoneStatus.put("requests", relocationZone.getNumberOfExpectedRequests());
-			zoneStatus.put("returns", relocationZone.getNumberOfExpectedReturns());
+			zoneStatus.put("expectedRequests", relocationZone.getNumberOfExpectedRequests());
+			zoneStatus.put("expectedReturns", relocationZone.getNumberOfExpectedReturns());
+			zoneStatus.put("actualRequests", relocationZone.getNumberOfActualRequests());
+			zoneStatus.put("actualReturns", relocationZone.getNumberOfActualReturns());
 			relocationZonesStatus.put(relocationZone.getId(), zoneStatus);
 		}
 
 		if (this.status.get(companyId) == null) {
-			this.status.put(companyId, new HashMap<Double, Map<Id<RelocationZone>, Map<String, Integer>>>());
+			this.status.put(companyId, new HashMap<Double, Map<Id<RelocationZone>, Map<String, Double>>>());
 		}
 
 		this.status.get(companyId).put(now, relocationZonesStatus);
@@ -293,4 +271,9 @@ public class CarsharingVehicleRelocationContainer {
 
 		return adjacentZones;
 	}
+
+	public Network getNetwork() {
+		return this.scenario.getNetwork();
+	}
+
 }

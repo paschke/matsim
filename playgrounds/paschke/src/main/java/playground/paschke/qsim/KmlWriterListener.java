@@ -2,13 +2,11 @@ package playground.paschke.qsim;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
@@ -51,21 +49,42 @@ public class KmlWriterListener implements IterationStartsListener, IterationEnds
 
 			for (Entry<String, List<RelocationZone>> relocationZoneEntry : this.carsharingVehicleRelocation.getRelocationZones().entrySet()) {
 				String companyId = relocationZoneEntry.getKey();
-				List<RelocationZone> relocationZones = relocationZoneEntry.getValue();
 				Map<Id<RelocationZone>, MultiPolygon> polygons = new HashMap<Id<RelocationZone>, MultiPolygon>();
 
-				for (RelocationZone relocationZone : relocationZones) {
+				for (RelocationZone relocationZone : relocationZoneEntry.getValue()) {
 					polygons.put(relocationZone.getId(), (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom"));
 				}
+
 				writer.setPolygons(polygons);
 
-				Iterator<Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>>> statusIterator = this.carsharingVehicleRelocation.getStatus().get(companyId).entrySet().iterator();
-				while (statusIterator.hasNext()) {
-					Entry<Double, Map<Id<RelocationZone>, Map<String, Integer>>> statusEntry = statusIterator.next();
-					Double time = statusEntry.getKey();
+				for (Entry<Double, Map<Id<RelocationZone>, Map<String, Double>>> relocationZoneStatiEntry : this.carsharingVehicleRelocation.getStatus().get(companyId).entrySet()) {
+					Double time = relocationZoneStatiEntry.getKey();
+					Map<Id<RelocationZone>, Map<String, Double>> relocationZoneStati = relocationZoneStatiEntry.getValue();
 					String filename = this.outputDirectoryHierarchy.getIterationFilename(event.getIteration(), companyId + "." + time + ".relocation_zones.xml");
 
-					writer.writeFile(time, filename, statusEntry.getValue());
+					Map<Id<RelocationZone>, Map<String, Object>> relocationZoneStatiData = new TreeMap<Id<RelocationZone>, Map<String, Object>>();
+
+					for (Entry<Id<RelocationZone>, Map<String, Double>> relocationZoneStatusEntry : relocationZoneStati.entrySet()) {
+						Id<RelocationZone> relocationZoneId = relocationZoneStatusEntry.getKey();
+						Map<String, Double> relocationZoneStatus = relocationZoneStatusEntry.getValue();
+						Map<String, Object> relocationZoneContent = new HashMap<String, Object>();
+
+						Double numVehicles = relocationZoneStatus.get("vehicles");
+						Double numRequests = relocationZoneStatus.get("actualRequests");
+						Double numReturns = relocationZoneStatus.get("actualReturns");
+						Double numRequestsExpected = relocationZoneStatus.get("expectedRequests");
+						Double numReturnsExpected = relocationZoneStatus.get("expectedReturns");
+
+						Double level = (numVehicles + numReturns - numRequests);
+						relocationZoneContent.put("level", level);
+
+						String content = "ID: " + relocationZoneId.toString() + " vehicles: " + numVehicles.toString() + " requests: " + numRequests.toString() + " (expected: " + numRequestsExpected.toString() + ")" + " returns: " + numReturns.toString() + " (expected: " + numReturnsExpected.toString() + ")";
+						relocationZoneContent.put("content", content);
+
+						relocationZoneStatiData.put(relocationZoneId, relocationZoneContent);
+					}
+
+					writer.writeFile(time, filename, relocationZoneStatiData);
 				}
 			}
 

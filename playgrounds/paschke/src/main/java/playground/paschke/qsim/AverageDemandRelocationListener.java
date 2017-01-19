@@ -1,0 +1,426 @@
+package playground.paschke.qsim;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.controler.OutputDirectoryHierarchy;
+import org.matsim.core.controler.events.IterationStartsEvent;
+import org.matsim.core.controler.listener.IterationStartsListener;
+import org.matsim.core.network.NetworkUtils;
+import org.matsim.core.utils.misc.Time;
+import org.matsim.matrices.Entry;
+import org.matsim.matrices.Matrices;
+import org.matsim.matrices.MatricesWriter;
+import org.matsim.matrices.Matrix;
+
+import com.google.inject.Inject;
+import com.vividsolutions.jts.geom.MultiPolygon;
+
+import playground.paschke.events.DispatchRelocationsEvent;
+import playground.paschke.events.handlers.DispatchRelocationsEventHandler;
+
+public class AverageDemandRelocationListener implements IterationStartsListener, DispatchRelocationsEventHandler {
+
+	public static final Logger log = Logger.getLogger("dummy");
+
+	@Inject private CarsharingVehicleRelocationContainer carsharingVehicleRelocation;
+
+	@Inject private CarSharingDemandTracker demandTracker;
+
+	// temp
+	@Inject private OutputDirectoryHierarchy outputDirectoryHierarchy;
+
+	private int iteration;
+
+	protected Map<String, Map<Double, Matrices>> avgODMatrices;
+
+	@Override
+	public void notifyIterationStarts(IterationStartsEvent event) {
+		this.iteration = event.getIteration();
+
+		if (this.iteration == this.carsharingVehicleRelocation.moduleEnableAfterIteration()) {
+			List<Map<String, Map<Double, Matrices>>> previousODMatricesList = new ArrayList<Map<String, Map<Double, Matrices>>>();
+
+			for (int i = 1; i <= 20; i++) {
+				Map<String, Map<Double, Matrices>> previousODMatrices = this.demandTracker.getODMatrices(iteration - i);
+
+				if (null != previousODMatrices) {
+					previousODMatricesList.add(previousODMatrices);
+				}
+			}
+
+			this.avgODMatrices = this.calculateAvgODMAtrices(previousODMatricesList);
+
+			this.writeAvgODMatrices();
+
+			this.writeAvgODMatricesMap();
+		}
+	}
+
+	@Override
+	public void reset(int iteration) {
+		// do nothing
+	}
+
+	@Override
+	public void handleEvent(DispatchRelocationsEvent event) {
+		String companyId = event.getCompanyId();
+		Double start = event.getStart();
+		Double end = event.getEnd();
+		Matrices companyODMatrices = this.getAvgODMatrices(companyId, start);
+		List<RelocationZone> companyRelocationZones = this.carsharingVehicleRelocation.getRelocationZones(companyId);
+
+		if (null != companyODMatrices) {
+			for (RelocationZone relocationZone : companyRelocationZones) {
+				Double numReturns = new Double(0);
+				for (Entry rentalDestinationEntry : companyODMatrices.getMatrix("rentals").getToLocEntries(relocationZone.getId().toString())) {
+					numReturns = numReturns + rentalDestinationEntry.getValue();
+				}
+
+				relocationZone.setNumberOfExpectedReturns(numReturns);
+
+				Double numRequests = new Double(0);
+				for (Entry rentalOriginEntry : companyODMatrices.getMatrix("rentals").getFromLocEntries(relocationZone.getId().toString())) {
+					numRequests += rentalOriginEntry.getValue(); 
+				}
+
+				for (Entry noVehicleOriginEntry : companyODMatrices.getMatrix("no_vehicle").getFromLocEntries(relocationZone.getId().toString())) {
+					numRequests += numRequests + noVehicleOriginEntry.getValue(); 
+				}
+
+				relocationZone.setNumberOfExpectedRequests(numRequests);
+			}
+
+			for (RelocationInfo info : this.calculateRelocations(start, end, companyId, companyRelocationZones)) {
+				this.carsharingVehicleRelocation.addRelocation(companyId, info);
+				log.info("AverageDemandRelocationListener suggests we move vehicle " + info.getVehicleId() + " from link " + info.getStartLinkId() + " to " + info.getEndLinkId());
+
+				if (this.iteration > this.carsharingVehicleRelocation.moduleEnableAfterIteration()) {
+					RelocationAgent agent = this.getRelocationAgent(companyId);
+
+					if (agent != null) {
+						info.setAgentId(agent.getId());
+						agent.dispatchRelocation(info);
+					}
+				}
+			}
+		}
+	}
+
+	protected ArrayList<RelocationInfo> calculateRelocations(Double start, Double end, String companyId, List<RelocationZone> relocationZones) {
+		ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
+		relocationZones.sort(new Comparator<RelocationZone>() {
+
+			@Override
+			public int compare(RelocationZone o1, RelocationZone o2) {
+				if (o1.getNumberOfSurplusVehicles() < o2.getNumberOfSurplusVehicles()) {
+					return -1;
+				} else if (o1.getNumberOfSurplusVehicles() > o2.getNumberOfSurplusVehicles()) {
+					return 1;
+				} else {
+					return o1.getId().toString().compareTo(o2.getId().toString());
+				}
+			}
+		});
+
+		int evenIndex = 0;
+		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
+			RelocationZone nextZone = iterator.next();
+
+			if (nextZone.getNumberOfSurplusVehicles() <= 0) {
+				evenIndex = iterator.previousIndex();
+			} else {
+				break;
+			}
+		}
+
+		List<RelocationZone> surplusZones = relocationZones.subList(evenIndex, (relocationZones.size() - 1));
+		Collections.reverse(surplusZones);
+
+		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
+			RelocationZone nextZone = (RelocationZone) iterator.next();
+
+			if (nextZone.getNumberOfSurplusVehicles() < 0) {
+				log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
+
+				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
+					log.info("counting down surplus vehicles: " + i);
+
+					Link fromLink = null;
+					Link toLink = NetworkUtils.getNearestLink(this.carsharingVehicleRelocation.getNetwork(), nextZone.getCenter());
+
+					String surplusZoneId = null;
+					String vehicleId = null;
+
+					Iterator<RelocationZone> surplusZonesIterator = surplusZones.iterator();
+					while (surplusZonesIterator.hasNext()) {
+						RelocationZone surplusZone = surplusZonesIterator.next();
+
+						if (surplusZone.getNumberOfSurplusVehicles() > 0) {
+							surplusZoneId = surplusZone.getId().toString();
+							Iterator<Link> links = surplusZone.getVehicles().keySet().iterator();
+
+							if (links.hasNext()) {
+								fromLink = links.next();
+								ArrayList<String> vehicleIds = surplusZone.getVehicles().get(fromLink);
+								vehicleId = vehicleIds.get(0);
+								surplusZone.removeVehicles(fromLink, new ArrayList<String>(Arrays.asList(new String[]{vehicleId})));
+
+								break;
+							}
+						}
+					}
+
+					if ((fromLink != null) && (vehicleId != null)) {
+						String timeSlot = Time.writeTime(start) + " - " + Time.writeTime(end);
+
+						relocations.add(new RelocationInfo(timeSlot, companyId, vehicleId, fromLink.getId(), toLink.getId(), surplusZoneId, nextZone.getId().toString()));
+					}
+				}
+			} else {
+				break;
+			}
+		}
+
+		return relocations;
+	}
+
+	public Map<String, Map<Double, Matrices>> getAvgODMatrices() {
+		return this.avgODMatrices;
+	}
+
+	public Map<Double, Matrices> getAvgODMatrices(String companyId) {
+		Map<String, Map<Double, Matrices>> ODMatrices = this.getAvgODMatrices();
+
+		if ((null != ODMatrices) && (ODMatrices.keySet().contains(companyId))) {
+			return ODMatrices.get(companyId);
+		}
+
+		return null;
+	}
+
+	public Matrices getAvgODMatrices(String companyId, Double time) {
+		Map<Double, Matrices> ODMatrices = this.getAvgODMatrices(companyId);
+
+		if ((null != ODMatrices) && (ODMatrices.keySet().contains(time))) {
+			return ODMatrices.get(time);
+		}
+
+		return null;
+	}
+
+	public Matrix getAvgODMatrix(String companyId, Double time, String eventType) {
+		Matrices companyODMatrices = this.getAvgODMatrices(companyId, time);
+
+		if ((null != companyODMatrices) && (companyODMatrices.getMatrices().keySet().contains(eventType))) {
+			return companyODMatrices.getMatrix(eventType);
+		}
+
+		return null;
+	}
+
+	protected Map<String, Map<Double, Matrices>> calculateAvgODMAtrices(List<Map<String, Map<Double, Matrices>>> ODMatricesList) {
+		Map<String, Map<Double, Matrices>> avgODMatrices = new HashMap<String, Map<Double, Matrices>>();
+
+		for (Map<String, Map<Double, Matrices>> ODMatrices : ODMatricesList) {
+			avgODMatrices = this.addODMatrices(avgODMatrices, ODMatrices);
+		}
+
+		avgODMatrices = this.divideODMatrices(avgODMatrices, ODMatricesList.size());
+
+		return avgODMatrices;
+	}
+
+	protected Map<String, Map<Double, Matrices>> addODMatrices(Map<String, Map<Double, Matrices>> ODMatrices1,
+			Map<String, Map<Double, Matrices>> ODMatrices2) {
+		if (ODMatrices1.isEmpty()) {
+			return ODMatrices2;
+		}
+
+		for (java.util.Map.Entry<String, Map<Double, Matrices>> companyODMatricesEntry : ODMatrices1.entrySet()) {
+			String companyId = companyODMatricesEntry.getKey();
+			Map<Double, Matrices> companyODMatrices1 = companyODMatricesEntry.getValue();
+
+			Map<Double, Matrices> companyODMatrices2 = ODMatrices2.get(companyId);
+
+			if (null != companyODMatrices2) {
+				for (java.util.Map.Entry<Double, Matrices> intervalODMatrices1Entry : companyODMatrices1.entrySet()) {
+					Double start = intervalODMatrices1Entry.getKey();
+					Matrices intervalODMatrices1 = intervalODMatrices1Entry.getValue();
+
+					Matrices intervalODMatrices2 = companyODMatrices2.get(start);
+
+					if (null != intervalODMatrices2) {
+						Matrix Matrix1rentals = intervalODMatrices1.getMatrix("rentals");
+
+						for (ArrayList<Entry> fromLocEntries : intervalODMatrices2.getMatrix("rentals").getFromLocations().values()) {
+							for (Entry fromLocEntry: fromLocEntries) {
+								String originId = fromLocEntry.getFromLocation();
+								String destinationId = fromLocEntry.getToLocation();
+
+								double value = fromLocEntry.getValue();
+
+								Entry relation = Matrix1rentals.getEntry(originId, destinationId);
+
+								if (null != relation) {
+									value += relation.getValue();
+								}
+
+								Matrix1rentals.setEntry(originId, destinationId, value);
+							}
+						}
+
+						Matrix Matrix1noVehicle = intervalODMatrices1.getMatrix("no_vehicle");
+
+						for (ArrayList<Entry> fromLocEntries : intervalODMatrices2.getMatrix("no_vehicle").getFromLocations().values()) {
+							for (Entry fromLocEntry: fromLocEntries) {
+								String originId = fromLocEntry.getFromLocation();
+								String destinationId = fromLocEntry.getToLocation();
+
+								double value = fromLocEntry.getValue();
+
+								Entry relation = Matrix1noVehicle.getEntry(originId, destinationId);
+
+								if (null != relation) {
+									value += relation.getValue();
+								}
+
+								Matrix1noVehicle.setEntry(originId, destinationId, value);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return ODMatrices1;
+	}
+
+	protected Map<String, Map<Double, Matrices>> divideODMatrices(Map<String, Map<Double, Matrices>> ODMatrices,
+			double divisor) {
+
+		for (Map<Double, Matrices> companyODMatrices : ODMatrices.values()) {
+			for (Matrices intervalODMatrices : companyODMatrices.values()) {
+				for (Matrix matrix : intervalODMatrices.getMatrices().values()) {
+					for (ArrayList<Entry> fromLocationEntries : matrix.getFromLocations().values()) {
+						for (Entry fromLocationEntry : fromLocationEntries) {
+							double value = fromLocationEntry.getValue();
+							fromLocationEntry.setValue(value / divisor);
+						}
+					}
+				}
+			}
+		}
+
+		return ODMatrices;
+	}
+
+	protected RelocationAgent getRelocationAgent(String companyId) {
+		Map<Id<Person>, RelocationAgent> relocationAgents = this.carsharingVehicleRelocation.getRelocationAgents(companyId);
+
+		for (RelocationAgent relocationAgent : relocationAgents.values()) {
+			if (relocationAgent.getRelocations().isEmpty()) {
+				return relocationAgent;
+			}
+		}
+
+		return null;
+	}
+
+	protected void writeAvgODMatrices() {
+		for (java.util.Map.Entry<String, Map<Double, Matrices>> companyEntry : this.avgODMatrices.entrySet()) {
+			String companyId = companyEntry.getKey();
+
+			Map<Double, Matrices> companyODMatrices = companyEntry.getValue();
+
+			for (java.util.Map.Entry<Double, Matrices> timeEntry : companyODMatrices.entrySet()) {
+				double start = timeEntry.getKey();
+				String filename = this.outputDirectoryHierarchy.getIterationFilename(this.iteration, "CS-OD-AVG." + companyId + "." + start + ".txt");
+				final MatricesWriter matricesWriter = new MatricesWriter(timeEntry.getValue());
+				matricesWriter.write(filename);
+			}
+		}
+	}
+
+	protected void writeAvgODMatricesMap() {
+		RelocationZoneKmlWriter writer = new RelocationZoneKmlWriter();
+
+		for (java.util.Map.Entry<String, List<RelocationZone>> relocationZoneEntry : this.carsharingVehicleRelocation.getRelocationZones().entrySet()) {
+			String companyId = relocationZoneEntry.getKey();
+			Map<Id<RelocationZone>, MultiPolygon> polygons = new HashMap<Id<RelocationZone>, MultiPolygon>();
+
+			for (RelocationZone relocationZone : relocationZoneEntry.getValue()) {
+				polygons.put(relocationZone.getId(), (MultiPolygon) relocationZone.getPolygon().getAttribute("the_geom"));
+			}
+
+			writer.setPolygons(polygons);
+
+			for (java.util.Map.Entry<Double, Matrices> avgODMatricesEntry : this.getAvgODMatrices(companyId).entrySet()) {
+				Double time = avgODMatricesEntry.getKey();
+				Matrices avgODMatrices = avgODMatricesEntry.getValue();
+				String filename = this.outputDirectoryHierarchy.getIterationFilename(this.iteration, companyId + "." + time + ".relocation_zones_avg.xml");
+
+				Map<Id<RelocationZone>, Map<String, Object>> relocationZoneStatiData = new TreeMap<Id<RelocationZone>, Map<String, Object>>();
+
+				if (null != avgODMatrices) {
+					for (RelocationZone relocationZone : relocationZoneEntry.getValue()) {
+						Id<RelocationZone> relocationZoneId = relocationZone.getId();
+						Map<String, Object> relocationZoneContent = new HashMap<String, Object>();
+
+						Matrix rentals = avgODMatrices.getMatrix("rentals");
+						Matrix noVehicle = avgODMatrices.getMatrix("no_vehicle");
+
+						Double numRequests = new Double(0);
+						Double numReturns = new Double(0);
+
+						ArrayList<Entry> rentalsFromLocEntries = rentals.getFromLocEntries(relocationZoneId.toString());
+						if (null != rentalsFromLocEntries) {
+							for (Entry rentalOriginEntry : rentalsFromLocEntries) {
+								numRequests = numRequests + rentalOriginEntry.getValue();
+							}
+						}
+
+						ArrayList<Entry> noVehicleFromLocEntries = noVehicle.getFromLocEntries(relocationZoneId.toString());
+						if (null != noVehicleFromLocEntries) {
+							for (Entry noVehicleOriginEntry : noVehicleFromLocEntries) {
+								numRequests = numRequests + noVehicleOriginEntry.getValue();
+							}
+						}
+
+						ArrayList<Entry> rentalsToLocEntries = rentals.getToLocEntries(relocationZoneId.toString());
+						if (null != rentalsToLocEntries) {
+							for (Entry rentalDestinationEntry : rentalsToLocEntries) {
+								numReturns = numReturns + rentalDestinationEntry.getValue();
+							}
+						}
+
+						Double level = (0 - numRequests);
+						relocationZoneContent.put("level", level);
+
+						DecimalFormat decimalFormat = new DecimalFormat( "#,###,###,##0.0" );
+						String content = "ID: " + relocationZoneId.toString() + " requests: " + decimalFormat.format(numRequests) + " returns: " + decimalFormat.format(numReturns);
+						relocationZoneContent.put("content", content);
+
+						relocationZoneStatiData.put(relocationZoneId, relocationZoneContent);
+					}
+
+					writer.writeFile(time, filename, relocationZoneStatiData);
+				}
+			}
+		}
+	}
+
+}

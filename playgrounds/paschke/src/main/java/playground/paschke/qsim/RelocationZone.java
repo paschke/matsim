@@ -6,21 +6,31 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Identifiable;
 import org.matsim.api.core.v01.network.Link;
 import org.opengis.feature.simple.SimpleFeature;
 
-public class RelocationZone implements Identifiable<RelocationZone>{
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Polygon;
+
+public class RelocationZone implements Identifiable<RelocationZone> {
+
 	private Id<RelocationZone> id;
 
 	private SimpleFeature polygon;
 
-	private Map<Link, Integer> expectedRequests;
-
-	private Map<Link, Integer> expectedReturns;
-
 	private Map<Link, ArrayList<String>> vehicles;
+
+	private Double numberOfExpectedRequests;
+
+	private Double numberOfExpectedReturns;
+
+	private Double numberOfActualRequests;
+
+	private Double numberOfActualReturns;
 
 	private Comparator<Link> linkComparator = new Comparator<Link>() {
 		@Override
@@ -32,8 +42,6 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	public RelocationZone(final Id<RelocationZone> id, SimpleFeature polygon) {
 		this.id = id;
 		this.polygon = polygon;
-		this.expectedRequests = new TreeMap<Link, Integer>(linkComparator);
-		this.expectedReturns = new TreeMap<Link, Integer>(linkComparator);
 		this.vehicles = new TreeMap<Link, ArrayList<String>>(linkComparator);
 	}
 
@@ -46,12 +54,12 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 		return this.polygon;
 	}
 
-	public Map<Link, Integer> getExpectedRequests() {
-		return this.expectedRequests;
-	}
+	public Coord getCenter() {
+		Polygon polygon = (Polygon) this.getPolygon().getAttribute("the_geom");
+		Coordinate centre = polygon.getEnvelopeInternal().centre();
+		Coord coord = new Coord(centre.x, centre.y);
 
-	public Map<Link, Integer> getExpectedReturns() {
-		return this.expectedReturns;
+		return coord;
 	}
 
 	public Map<Link, ArrayList<String>> getVehicles() {
@@ -68,32 +76,8 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 		return Ids;
 	}
 
-	public int getNumberOfExpectedRequests() {
-		return getNumberOfExpectedRequests(1.0);
-	}
-
-	public int getNumberOfExpectedRequests(double safetyFactor) {
-		int number = 0;
-
-		for (Integer linkRequests : this.expectedRequests.values()) {
-			number += linkRequests.intValue();
-		}
-
-		return (int) Math.ceil(number * safetyFactor);
-	}
-
-	public int getNumberOfExpectedReturns() {
-		int number = 0;
-
-		for (Integer linkReturns : this.expectedReturns.values()) {
-			number += linkReturns.intValue();
-		}
-
-		return number;
-	}
-
-	public int getNumberOfVehicles() {
-		int number = 0;
+	public double getNumberOfVehicles() {
+		double number = 0;
 
 		for (ArrayList<String> IDs : this.getVehicles().values()) {
 			number += IDs.size();
@@ -102,30 +86,40 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 		return number;
 	}
 
-	public int getNumberOfSurplusVehicles() {
-		return this.getNumberOfSurplusVehicles(1.0);
+	public void setNumberOfExpectedRequests(Double numberOfExpectedRequests) {
+		this.numberOfExpectedRequests = numberOfExpectedRequests;
 	}
 
-	public int getNumberOfSurplusVehicles(double safetyFactor) {
-		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests(safetyFactor);
+	public Double getNumberOfExpectedRequests() {
+		return this.numberOfExpectedRequests;
 	}
 
-	public void addExpectedRequests(Link link, int numberOfRequests) {
-		if (this.expectedRequests.containsKey(link)) {
-			int previousNumberOfRequests = this.expectedRequests.get(link);
-			numberOfRequests += previousNumberOfRequests;
-		}
-
-		expectedRequests.put(link, numberOfRequests);
+	public void setNumberOfExpectedReturns(Double numberOfExpectedReturns) {
+		this.numberOfExpectedReturns = numberOfExpectedReturns;
 	}
 
-	public void addExpectedReturns(Link link, int numberOfReturns) {
-		if (this.expectedReturns.containsKey(link)) {
-			int previousNumberOfReturns = this.expectedReturns.get(link);
-			numberOfReturns += previousNumberOfReturns;
-		}
+	public Double getNumberOfExpectedReturns() {
+		return this.numberOfExpectedReturns;
+	}
 
-		expectedReturns.put(link, numberOfReturns);
+	public void setNumberOfActualRequests(Double numberOfActualRequests) {
+		this.numberOfActualRequests = numberOfActualRequests;
+	}
+
+	public Double getNumberOfActualRequests() {
+		return this.numberOfActualRequests;
+	}
+
+	public void setNumberOfActualReturns(Double numberOfActualReturns) {
+		this.numberOfActualReturns = numberOfActualReturns;
+	}
+
+	public Double getNumberOfActualReturns() {
+		return this.numberOfActualReturns;
+	}
+
+	public double getNumberOfSurplusVehicles() {
+		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests();
 	}
 
 	public void addVehicles(Link link, ArrayList<String> IDs) {
@@ -159,8 +153,11 @@ public class RelocationZone implements Identifiable<RelocationZone>{
 	}
 
 	public void reset() {
-		this.expectedRequests.clear();
-		this.expectedReturns.clear();
+		this.setNumberOfExpectedRequests(new Double(0));
+		this.setNumberOfExpectedReturns(new Double(0));
+		this.setNumberOfActualRequests(new Double(0));
+		this.setNumberOfActualReturns(new Double(0));
 		this.vehicles.clear();
 	}
+
 }

@@ -52,8 +52,11 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 		return this.coords;
 	}
 
-	public void writeFile(final Double time, final String filename, Map<Id<RelocationZone>, Map<String, Integer>> status) {
-		String[] colors = {"ff", "f0", "dc", "c8", "b4", "a0", "8c", "78", "64", "50"};
+	public void writeFile(final Double time, final String filename, Map<Id<RelocationZone>, Map<String, Object>> status) {
+		String[] lineColorsBelow = {"00000000", "ff1400ff", "ff1400f0", "ff1400dc", "ff1400c8", "ff1400b4", "ff1400a0", "ff14008c", "ff140078", "ff140064", "ff140050"};
+		String[] polyColorsBelow = {"00000000", "991400ff", "991400f0", "991400dc", "991400c8", "991400b4", "991400a0", "9914008c", "99140078", "99140064", "99140050"};
+		String[] lineColorsAbove = {"00000000", "ff00ff14", "ff00f014", "ff00dc14", "ff00c814", "ff00b414", "ff00a014", "ff008c14", "ff007814", "ff006414", "ff005014"};
+		String[] polyColorsAbove = {"00000000", "9900ff14", "9900f014", "9900dc14", "9900c814", "9900b414", "9900a014", "99008c14", "99007814", "99006414", "99005014"};
 
 		this.openFile(filename);
 		this.writeStartTag("kml", Arrays.asList(createTuple("xmlns", "http://www.opengis.net/kml/2.2"), createTuple("xmlns:gx", "http://www.google.com/kml/ext/2.2"), createTuple("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"), createTuple("xsi:schemalocation", "http://www.opengis.net/kml/2.2 https://developers.google.com/kml/schema/kml22gx.xsd")));
@@ -63,35 +66,42 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 		this.writeContent("Relocation Zones " + Time.writeTime(time), false);
 		this.writeEndTag("name");
 
-		Iterator<Entry<Id<RelocationZone>, Map<String, Integer>>> iterator = status.entrySet().iterator();
-		while (iterator.hasNext()) {
-			Entry<Id<RelocationZone>, Map<String, Integer>> entry = iterator.next();
+		for (Entry<Id<RelocationZone>, Map<String, Object>> relocationZoneEntry : status.entrySet()) {
+			Id<RelocationZone> relocationZoneId = relocationZoneEntry.getKey();
+			Map<String, Object> relocationZoneContent = relocationZoneEntry.getValue();
 
-			Integer numVehicles = entry.getValue().get("vehicles");
-			Integer numRequests = entry.getValue().get("requests");
-			Integer numReturns = entry.getValue().get("returns");
 			String lineColor = "00000000";
 			String polyColor = "00000000";
-			int diff = (numVehicles + numReturns - numRequests);
 
-			if (diff < 0) {
-				diff = (diff < -9) ? -9 : diff;
+			try {
+				Double level = (Double) relocationZoneContent.get("level");
 
-				lineColor = "ff1400" + colors[Math.abs(diff)];
-				polyColor = "991400" + colors[Math.abs(diff)];
-			} else if (diff > 0) {
-				diff = (diff > 9) ? 9 : diff;
+				if (level < 0) {
+					level = (level < -9) ? -9 : level;
 
-				lineColor = "ff00" + colors[diff] + "14";
-				polyColor = "9900" + colors[diff] + "14";
-			} else if (numVehicles > 0) {
-				lineColor = "ff00FF14";
-				polyColor = "9900FF14";
+					lineColor = lineColorsBelow[(int) Math.floor(Math.abs(level))];
+					polyColor = polyColorsBelow[(int) Math.floor(Math.abs(level))];
+				} else if (level > 0) {
+					level = (level > 9) ? 9 : level;
+
+					lineColor = lineColorsAbove[(int) Math.floor(level)];
+					polyColor = polyColorsAbove[(int) Math.floor(level)];
+				//} else if (numVehicles > 0) {
+					//lineColor = "ff00FF14";
+					//polyColor = "9900FF14";
+				}
+			} catch (Exception e) {
+				// no level
 			}
 
-			this.writeStartTag("Placemark", Arrays.asList(createTuple("id", "linepolygon_" + entry.getKey().toString())));
+			this.writeStartTag("Placemark", Arrays.asList(createTuple("id", "linepolygon_" + relocationZoneId.toString())));
 			this.writeStartTag("description", Collections.<Tuple<String, String>>emptyList());
-			this.writeContent("ID: " + entry.getKey().toString() + " vehicles: " + numVehicles.toString() + " requests: " + numRequests.toString() + " returns: " + numReturns.toString(), true);
+			try {
+				String content = (String) relocationZoneContent.get("content");
+				this.writeContent(content, true);
+			} catch (Exception e) {
+				// no content
+			}
 			this.writeEndTag("description");
 			this.writeStartTag("Style", Collections.<Tuple<String, String>>emptyList());
 			this.writeStartTag("LineStyle", Collections.<Tuple<String, String>>emptyList());
@@ -108,7 +118,7 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 			this.writeEndTag("color");
 			this.writeEndTag("PolyStyle");
 			this.writeEndTag("Style");
-			this.writePolygon(this.getCoords().get(entry.getKey()));
+			this.writePolygon(this.getCoords().get(relocationZoneId));
 			this.writeEndTag("Placemark");
 		}
 

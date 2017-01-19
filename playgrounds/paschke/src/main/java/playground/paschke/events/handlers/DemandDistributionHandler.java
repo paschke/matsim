@@ -117,6 +117,14 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 			this.createODMatrices(companyId, 0);
 		}
 
+		double numRequests = originZone.getNumberOfActualRequests();
+		originZone.setNumberOfActualRequests(numRequests + 1);
+
+		if (eventType == "rentals") {
+			double numReturns = destinationZone.getNumberOfActualReturns();
+			destinationZone.setNumberOfActualReturns(numReturns + 1);
+		}
+
 		SortedSet<Double> keySet = (SortedSet<Double>) this.ODMatrices.get(companyId).keySet();
 		Matrices companyODMatrices = this.ODMatrices.get(companyId).get(keySet.last());
 		Matrix ODMatrix = companyODMatrices.getMatrix(eventType);
@@ -125,14 +133,14 @@ public class DemandDistributionHandler implements StartRentalEventHandler, NoVeh
 			String originId = originZone.getId().toString();
 			String destinationId = destinationZone.getId().toString();
 
+			double value = 1;
 			Entry relation = ODMatrix.getEntry(originId, destinationId);
 
 			if (null != relation) {
-				double value = relation.getValue();
-				relation.setValue(value++);
-			} else {
-				ODMatrix.createEntry(originZone.getId().toString(), destinationZone.getId().toString(), 1);
+				value += relation.getValue();
 			}
+
+			ODMatrix.setEntry(originZone.getId().toString(), destinationZone.getId().toString(), value);
 		}
 	}
 }

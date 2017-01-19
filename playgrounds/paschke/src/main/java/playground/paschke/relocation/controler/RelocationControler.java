@@ -42,6 +42,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import playground.paschke.events.MobismBeforeSimStepRelocationListener;
 import playground.paschke.events.SetupListener;
 import playground.paschke.events.handlers.DemandDistributionHandler;
+import playground.paschke.qsim.AverageDemandRelocationListener;
 import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
 import playground.paschke.qsim.FFVehiclesRentalsWriterListener;
@@ -84,20 +85,20 @@ public class RelocationControler {
 
 		final CostsCalculatorContainer costsCalculatorContainer = ExampleCarsharingUtils.createCompanyCostsStructure(carsharingCompanies);
 
-		final CarsharingVehicleRelocationContainer carsharingVehicleRelocation = new CarsharingVehicleRelocationContainer(controler.getScenario());
+		final CarsharingVehicleRelocationContainer carsharingVehicleRelocation = new CarsharingVehicleRelocationContainer(scenario);
 
 		final SetupListener setupListener = new SetupListener();
 		final CarSharingDemandTracker demandTracker = new CarSharingDemandTracker();
 		final CarsharingListener carsharingListener = new CarsharingListener();
 		final KmlWriterListener relocationListener = new KmlWriterListener(configGroup.getStatsWriterFrequency());
 		final FFVehiclesRentalsWriterListener vehicleRentalsWriterListener = new FFVehiclesRentalsWriterListener(configGroup.getStatsWriterFrequency());
-		final CarsharingSupplyContainer carsharingSupplyContainer = new CarsharingSupplyContainer(controler.getScenario());
+		final CarsharingSupplyContainer carsharingSupplyContainer = new CarsharingSupplyContainer(scenario);
 		carsharingSupplyContainer.populateSupply();
 		final KeepingTheCarModel keepingCarModel = new KeepingTheCarModelExample();
 		final ChooseTheCompany chooseCompany = new ChooseTheCompanyExample();
 		final ChooseVehicleType chooseCehicleType = new ChooseVehicleTypeExample();
 		final RouterProvider routerProvider = new RouterProviderImpl();
-		final CurrentTotalDemand currentTotalDemand = new CurrentTotalDemand(controler.getScenario().getNetwork());
+		final CurrentTotalDemand currentTotalDemand = new CurrentTotalDemand(scenario.getNetwork());
 		final CarsharingManagerInterface carsharingManager = new CarsharingManagerNew();
 		final RouteCarsharingTrip routeCarsharingTrip = new RouteCarsharingTripImpl();
 
@@ -145,11 +146,12 @@ public class RelocationControler {
 				addControlerListenerBinding().toInstance(relocationListener);
 				addControlerListenerBinding().toInstance(vehicleRentalsWriterListener);
 				addControlerListenerBinding().to(CarsharingManagerNew.class);
+				addControlerListenerBinding().to(AverageDemandRelocationListener.class);
 				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
 				addEventHandlerBinding().to(PersonArrivalDepartureHandler.class);
 				addEventHandlerBinding().to(DemandHandler.class);
 				addEventHandlerBinding().to(DemandDistributionHandler.class);
-				addEventHandlerBinding().to(SimpleRelocationListener.class);
+				addEventHandlerBinding().to(AverageDemandRelocationListener.class);
 			}
 		});
 

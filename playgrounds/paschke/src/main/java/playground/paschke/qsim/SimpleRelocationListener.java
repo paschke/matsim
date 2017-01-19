@@ -1,7 +1,6 @@
 package playground.paschke.qsim;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -9,11 +8,9 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.utils.misc.Time;
 
@@ -91,7 +88,7 @@ public class SimpleRelocationListener implements DispatchRelocationsEventHandler
 		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
 			RelocationZone nextZone = iterator.next();
 
-			if (nextZone.getNumberOfSurplusVehicles(1.1) <= 0) {
+			if (nextZone.getNumberOfSurplusVehicles() <= 0) {
 				evenIndex = iterator.previousIndex();
 			} else {
 				break;
@@ -108,9 +105,9 @@ public class SimpleRelocationListener implements DispatchRelocationsEventHandler
 				log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
 
 				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
-					log.info("counting down surplus vehicles: " + i);
+/*					log.info("counting down surplus vehicles: " + i);
 					Link fromLink = null;
-					Link toLink = (Link) ((Set<Link>) nextZone.getExpectedRequests().keySet()).iterator().next();
+					Link toLink = (Link) ((Set<Link>) nextZone.getNumberOfExpectedRequests().keySet()).iterator().next();
 					String surplusZoneId = null;
 					String vehicleId = null;
 
@@ -134,7 +131,7 @@ public class SimpleRelocationListener implements DispatchRelocationsEventHandler
 
 					if ((fromLink != null) && (vehicleId != null)) {
 						relocations.add(new RelocationInfo(timeSlot, companyId, vehicleId, fromLink.getId(), toLink.getId(), surplusZoneId, nextZone.getId().toString()));
-					}
+					}*/
 				}
 			} else {
 				break;
