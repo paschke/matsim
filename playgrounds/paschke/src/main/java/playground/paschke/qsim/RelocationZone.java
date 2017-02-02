@@ -14,6 +14,8 @@ import org.matsim.api.core.v01.network.Link;
 import org.opengis.feature.simple.SimpleFeature;
 
 import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.MultiPolygon;
+import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 
 public class RelocationZone implements Identifiable<RelocationZone> {
@@ -55,9 +57,9 @@ public class RelocationZone implements Identifiable<RelocationZone> {
 	}
 
 	public Coord getCenter() {
-		Polygon polygon = (Polygon) this.getPolygon().getAttribute("the_geom");
-		Coordinate centre = polygon.getEnvelopeInternal().centre();
-		Coord coord = new Coord(centre.x, centre.y);
+		MultiPolygon polygon = (MultiPolygon) this.getPolygon().getAttribute("the_geom");
+		Point centroid = polygon.getCentroid();
+		Coord coord = new Coord(centroid.getX(), centroid.getY());
 
 		return coord;
 	}
@@ -120,6 +122,10 @@ public class RelocationZone implements Identifiable<RelocationZone> {
 
 	public double getNumberOfSurplusVehicles() {
 		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests();
+	}
+
+	public double getNumberOfRequiredVehicles() {
+		return this.getNumberOfExpectedRequests() - this.getNumberOfExpectedReturns() - this.getNumberOfVehicles(); 
 	}
 
 	public void addVehicles(Link link, ArrayList<String> IDs) {

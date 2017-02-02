@@ -77,12 +77,14 @@ public class RelocationZoneKmlWriter extends MatsimXmlWriter {
 				Double level = (Double) relocationZoneContent.get("level");
 
 				if (level < 0) {
-					level = (level < -9) ? -9 : level;
+					int stepsBelow = Math.min(lineColorsBelow.length, polyColorsBelow.length) - 1;
+					level = (level < -stepsBelow) ? -stepsBelow : level;
 
 					lineColor = lineColorsBelow[(int) Math.floor(Math.abs(level))];
 					polyColor = polyColorsBelow[(int) Math.floor(Math.abs(level))];
 				} else if (level > 0) {
-					level = (level > 9) ? 9 : level;
+					int stepsAbove = Math.min(lineColorsAbove.length, polyColorsAbove.length) - 1;
+					level = (level > stepsAbove) ? stepsAbove : level;
 
 					lineColor = lineColorsAbove[(int) Math.floor(level)];
 					polyColor = polyColorsAbove[(int) Math.floor(level)];

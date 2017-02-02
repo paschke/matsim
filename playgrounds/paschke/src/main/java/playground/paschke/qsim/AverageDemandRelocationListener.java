@@ -6,9 +6,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -84,24 +83,39 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
 		List<RelocationZone> companyRelocationZones = this.carsharingVehicleRelocation.getRelocationZones(companyId);
 
 		if (null != companyODMatrices) {
+			// TODO: doing this once would suffice
 			for (RelocationZone relocationZone : companyRelocationZones) {
-				Double numReturns = new Double(0);
-				for (Entry rentalDestinationEntry : companyODMatrices.getMatrix("rentals").getToLocEntries(relocationZone.getId().toString())) {
-					numReturns = numReturns + rentalDestinationEntry.getValue();
-				}
+				Id<RelocationZone> relocationZoneId = relocationZone.getId();
 
-				relocationZone.setNumberOfExpectedReturns(numReturns);
+				Matrix rentals = companyODMatrices.getMatrix("rentals");
+				Matrix noVehicle = companyODMatrices.getMatrix("no_vehicle");
 
 				Double numRequests = new Double(0);
-				for (Entry rentalOriginEntry : companyODMatrices.getMatrix("rentals").getFromLocEntries(relocationZone.getId().toString())) {
-					numRequests += rentalOriginEntry.getValue(); 
+				Double numReturns = new Double(0);
+
+				ArrayList<Entry> rentalsFromLocEntries = rentals.getFromLocEntries(relocationZoneId.toString());
+				if (null != rentalsFromLocEntries) {
+					for (Entry rentalOriginEntry : rentalsFromLocEntries) {
+						numRequests += rentalOriginEntry.getValue();
+					}
 				}
 
-				for (Entry noVehicleOriginEntry : companyODMatrices.getMatrix("no_vehicle").getFromLocEntries(relocationZone.getId().toString())) {
-					numRequests += numRequests + noVehicleOriginEntry.getValue(); 
+				ArrayList<Entry> noVehicleFromLocEntries = noVehicle.getFromLocEntries(relocationZoneId.toString());
+				if (null != noVehicleFromLocEntries) {
+					for (Entry noVehicleOriginEntry : noVehicleFromLocEntries) {
+						numRequests += noVehicleOriginEntry.getValue();
+					}
+				}
+
+				ArrayList<Entry> rentalsToLocEntries = rentals.getToLocEntries(relocationZoneId.toString());
+				if (null != rentalsToLocEntries) {
+					for (Entry rentalDestinationEntry : rentalsToLocEntries) {
+						numReturns += rentalDestinationEntry.getValue();
+					}
 				}
 
 				relocationZone.setNumberOfExpectedRequests(numRequests);
+				relocationZone.setNumberOfExpectedReturns(numReturns);
 			}
 
 			for (RelocationInfo info : this.calculateRelocations(start, end, companyId, companyRelocationZones)) {
@@ -121,79 +135,65 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
 	}
 
 	protected ArrayList<RelocationInfo> calculateRelocations(Double start, Double end, String companyId, List<RelocationZone> relocationZones) {
+		String timeSlot = Time.writeTime(start) + " - " + Time.writeTime(end);
 		ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
-		relocationZones.sort(new Comparator<RelocationZone>() {
+		Map<Integer, Double> surplusVehicles = new HashMap<Integer, Double>();
+		Map<Integer, Double> requiredVehicles = new HashMap<Integer, Double>();
 
-			@Override
-			public int compare(RelocationZone o1, RelocationZone o2) {
-				if (o1.getNumberOfSurplusVehicles() < o2.getNumberOfSurplusVehicles()) {
-					return -1;
-				} else if (o1.getNumberOfSurplusVehicles() > o2.getNumberOfSurplusVehicles()) {
-					return 1;
-				} else {
-					return o1.getId().toString().compareTo(o2.getId().toString());
-				}
-			}
-		});
-
-		int evenIndex = 0;
-		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
-			RelocationZone nextZone = iterator.next();
-
-			if (nextZone.getNumberOfSurplusVehicles() <= 0) {
-				evenIndex = iterator.previousIndex();
-			} else {
-				break;
+		for (RelocationZone relocationZone : relocationZones) {
+			if (relocationZone.getNumberOfSurplusVehicles() >= 1) {
+				surplusVehicles.put(new Integer(relocationZones.indexOf(relocationZone)), Math.floor(relocationZone.getNumberOfSurplusVehicles()));
+			} else if (relocationZone.getNumberOfRequiredVehicles() > 0) {
+				requiredVehicles.put(new Integer(relocationZones.indexOf(relocationZone)), Math.ceil(relocationZone.getNumberOfRequiredVehicles()));
 			}
 		}
 
-		List<RelocationZone> surplusZones = relocationZones.subList(evenIndex, (relocationZones.size() - 1));
-		Collections.reverse(surplusZones);
+		List<Map.Entry<Integer, Double>> surplusVehiclesList = new LinkedList<Map.Entry<Integer, Double>>(surplusVehicles.entrySet());
+		List<Map.Entry<Integer, Double>> requiredVehiclesList = new LinkedList<Map.Entry<Integer, Double>>(requiredVehicles.entrySet());
 
-		for (ListIterator<RelocationZone> iterator = relocationZones.listIterator(); iterator.hasNext();) {
-			RelocationZone nextZone = (RelocationZone) iterator.next();
+        Collections.sort(requiredVehiclesList, new Comparator<Map.Entry<Integer, Double>>()
+        {
+            public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
+                return o2.getValue().compareTo(o1.getValue());
+            }
+        });
 
-			if (nextZone.getNumberOfSurplusVehicles() < 0) {
-				log.info("relocationZone " + nextZone.getId().toString() + " with " + nextZone.getNumberOfSurplusVehicles() + " surplus vehicles");
+        for (Map.Entry<Integer, Double> requiredVehiclesEntry : requiredVehiclesList) {
+            while (requiredVehiclesEntry.getValue() > 0) {
+                RelocationZone originZone = null;
+                Link originLink = null;
 
-				for (int i = 0; i < Math.abs(nextZone.getNumberOfSurplusVehicles()); i++) {
-					log.info("counting down surplus vehicles: " + i);
+                RelocationZone destinationZone = relocationZones.get(requiredVehiclesEntry.getKey());
+                Link destinationLink = NetworkUtils.getNearestLink(this.carsharingVehicleRelocation.getNetwork(), destinationZone.getCenter());
 
-					Link fromLink = null;
-					Link toLink = NetworkUtils.getNearestLink(this.carsharingVehicleRelocation.getNetwork(), nextZone.getCenter());
+                String vehicleId = "";
 
-					String surplusZoneId = null;
-					String vehicleId = null;
+                Collections.sort(surplusVehiclesList, new Comparator<Map.Entry<Integer, Double>>()
+                {
+                    public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
+                        return o2.getValue().compareTo(o1.getValue());
+                    }
+                });
 
-					Iterator<RelocationZone> surplusZonesIterator = surplusZones.iterator();
-					while (surplusZonesIterator.hasNext()) {
-						RelocationZone surplusZone = surplusZonesIterator.next();
+                try {
+                    Map.Entry<Integer, Double> surplusVehiclesEntry = surplusVehiclesList.get(0);
+                    originZone = relocationZones.get(surplusVehiclesEntry.getKey());
 
-						if (surplusZone.getNumberOfSurplusVehicles() > 0) {
-							surplusZoneId = surplusZone.getId().toString();
-							Iterator<Link> links = surplusZone.getVehicles().keySet().iterator();
+                    LinkedList<Map.Entry<Link,ArrayList<String>>> vehiclesList = new LinkedList<Map.Entry<Link, ArrayList<String>>>(originZone.getVehicles().entrySet());
+                    Map.Entry<Link, ArrayList<String>> vehiclesEntry = vehiclesList.get(0);
+                    originLink = vehiclesEntry.getKey();
+                    vehicleId = vehiclesEntry.getValue().get(0);
+                    originZone.removeVehicles(originLink, new ArrayList<String>(Arrays.asList(new String[]{vehicleId})));
 
-							if (links.hasNext()) {
-								fromLink = links.next();
-								ArrayList<String> vehicleIds = surplusZone.getVehicles().get(fromLink);
-								vehicleId = vehicleIds.get(0);
-								surplusZone.removeVehicles(fromLink, new ArrayList<String>(Arrays.asList(new String[]{vehicleId})));
+                    surplusVehiclesEntry.setValue(surplusVehiclesEntry.getValue() - 1);
+                } catch (IndexOutOfBoundsException e) {
+                    break;
+                }
 
-								break;
-							}
-						}
-					}
-
-					if ((fromLink != null) && (vehicleId != null)) {
-						String timeSlot = Time.writeTime(start) + " - " + Time.writeTime(end);
-
-						relocations.add(new RelocationInfo(timeSlot, companyId, vehicleId, fromLink.getId(), toLink.getId(), surplusZoneId, nextZone.getId().toString()));
-					}
-				}
-			} else {
-				break;
-			}
-		}
+                relocations.add(new RelocationInfo(timeSlot, companyId, vehicleId, originLink.getId(), destinationLink.getId(), originZone.getId().toString(), destinationZone.getId().toString()));
+                requiredVehiclesEntry.setValue(requiredVehiclesEntry.getValue() - 1);
+            }
+        }
 
 		return relocations;
 	}
@@ -389,21 +389,21 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
 						ArrayList<Entry> rentalsFromLocEntries = rentals.getFromLocEntries(relocationZoneId.toString());
 						if (null != rentalsFromLocEntries) {
 							for (Entry rentalOriginEntry : rentalsFromLocEntries) {
-								numRequests = numRequests + rentalOriginEntry.getValue();
+								numRequests += rentalOriginEntry.getValue();
 							}
 						}
 
 						ArrayList<Entry> noVehicleFromLocEntries = noVehicle.getFromLocEntries(relocationZoneId.toString());
 						if (null != noVehicleFromLocEntries) {
 							for (Entry noVehicleOriginEntry : noVehicleFromLocEntries) {
-								numRequests = numRequests + noVehicleOriginEntry.getValue();
+								numRequests += noVehicleOriginEntry.getValue();
 							}
 						}
 
 						ArrayList<Entry> rentalsToLocEntries = rentals.getToLocEntries(relocationZoneId.toString());
 						if (null != rentalsToLocEntries) {
 							for (Entry rentalDestinationEntry : rentalsToLocEntries) {
-								numReturns = numReturns + rentalDestinationEntry.getValue();
+								numReturns += rentalDestinationEntry.getValue();
 							}
 						}
 

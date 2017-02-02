@@ -101,6 +101,7 @@ public class RelocationControler {
 		final CurrentTotalDemand currentTotalDemand = new CurrentTotalDemand(scenario.getNetwork());
 		final CarsharingManagerInterface carsharingManager = new CarsharingManagerNew();
 		final RouteCarsharingTrip routeCarsharingTrip = new RouteCarsharingTripImpl();
+		final AverageDemandRelocationListener averageDemandRelocationListener = new AverageDemandRelocationListener();
 
 		//===adding carsharing objects on supply and demand infrastructure ===
 		controler.addOverridingModule(new AbstractModule() {
@@ -146,12 +147,12 @@ public class RelocationControler {
 				addControlerListenerBinding().toInstance(relocationListener);
 				addControlerListenerBinding().toInstance(vehicleRentalsWriterListener);
 				addControlerListenerBinding().to(CarsharingManagerNew.class);
-				addControlerListenerBinding().to(AverageDemandRelocationListener.class);
+				addControlerListenerBinding().toInstance(averageDemandRelocationListener);
 				bindScoringFunctionFactory().to(CarsharingScoringFunctionFactory.class);
 				addEventHandlerBinding().to(PersonArrivalDepartureHandler.class);
 				addEventHandlerBinding().to(DemandHandler.class);
 				addEventHandlerBinding().to(DemandDistributionHandler.class);
-				addEventHandlerBinding().to(AverageDemandRelocationListener.class);
+				addEventHandlerBinding().toInstance(averageDemandRelocationListener);
 			}
 		});
 
