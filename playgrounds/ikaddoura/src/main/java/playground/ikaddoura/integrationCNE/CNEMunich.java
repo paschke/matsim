@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.emissions.utils.EmissionsConfigGroup;
 import org.matsim.contrib.noise.NoiseConfigGroup;
 import org.matsim.contrib.noise.data.NoiseAllocationApproach;
@@ -58,9 +59,9 @@ import org.matsim.core.utils.io.IOUtils;
 import playground.agarwalamit.analysis.modalShare.ModalShareFromEvents;
 import playground.agarwalamit.munich.utils.MunichPersonFilter;
 import playground.agarwalamit.munich.utils.MunichPersonFilter.MunichUserGroup;
-import playground.agarwalamit.utils.FileUtils;
-import playground.ikaddoura.analysis.detailedPersonTripAnalysis.PersonTripCongestionNoiseAnalysisMain;
+import playground.ikaddoura.analysis.detailedPersonTripAnalysis.PersonTripCongestionNoiseAnalysisRun;
 import playground.ikaddoura.integrationCNE.CNEIntegration.CongestionTollingApproach;
+import playground.ikaddoura.moneyTravelDisutility.data.AgentFilter;
 import playground.vsp.airPollution.exposure.GridTools;
 import playground.vsp.airPollution.exposure.ResponsibilityGridTools;
 
@@ -88,7 +89,9 @@ public class CNEMunich {
 	
 	private static CongestionTollingApproach congestionTollingApproach;
 	private static double kP;
-	
+
+	private static boolean modeChoice = false;
+		
 	public static void main(String[] args) throws IOException {
 				
 		if (args.length > 0) {
@@ -126,11 +129,15 @@ public class CNEMunich {
 			
 			kP = Double.parseDouble(args[7]);
 			log.info("kP: " + kP);
+
+			modeChoice = Boolean.valueOf(args[8]);
+			log.info("Mode choice for Munich scenario is "+ modeChoice);
 			
 		} else {
-			
-			configFile = FileUtils.SHARED_SVN+"/projects/detailedEval/matsim-input-files/config_1pct_v2.xml";
-//			configFile = "../../../shared-svn/projects/detailedEval/matsim-input-files/config_1pct_v2.xml";
+
+//			if (modeChoice) configFile = FileUtils.SHARED_SVN+"/projects/detailedEval/matsim-input-files/config_1pct_v2.xml";
+//			else configFile = FileUtils.SHARED_SVN+"/projects/detailedEval/matsim-input-files/config_1pct_v2_WOModeChoice.xml";
+			configFile = "../../../shared-svn/projects/detailedEval/matsim-input-files/config_1pct_v2_WOModeChoice.xml";
 
 		}
 
@@ -151,27 +158,33 @@ public class CNEMunich {
 		controler.addOverridingModule(new OTFVisFileWriterModule());
 		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
 		
-		controler.addOverridingModule(new AbstractModule() {
-			@Override
-			public void install() {
-				final Provider<TripRouter> tripRouterProvider = binder().getProvider(TripRouter.class);
-				String ug = "COMMUTER_REV_COMMUTER";
-				addPlanStrategyBinding(DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice.name().concat("_").concat(ug)).toProvider(new javax.inject.Provider<PlanStrategy>() {
-					final String[] availableModes = {"car", "pt_".concat(ug)};
-					final String[] chainBasedModes = {"car", "bike"};
-					@Inject
-					Scenario sc;
+		if (modeChoice) {
+			controler.addOverridingModule(new AbstractModule() {
+				@Override
+				public void install() {
+					final Provider<TripRouter> tripRouterProvider = binder().getProvider(TripRouter.class);
+					String ug = "COMMUTER_REV_COMMUTER";
+					addPlanStrategyBinding(DefaultPlanStrategiesModule.DefaultStrategy.SubtourModeChoice.name()
+							.concat("_")
+							.concat(ug)).toProvider(new javax.inject.Provider<PlanStrategy>() {
+						final String[] availableModes = {"car", "pt_".concat(ug)};
+						final String[] chainBasedModes = {"car", "bike"};
+						@Inject
+						Scenario sc;
 
-					@Override
-					public PlanStrategy get() {
-						final Builder builder = new Builder(new RandomPlanSelector<>());
-						builder.addStrategyModule(new SubtourModeChoice(sc.getConfig().global().getNumberOfThreads(), availableModes, chainBasedModes, false, tripRouterProvider));
-						builder.addStrategyModule(new ReRoute(sc, tripRouterProvider));
-						return builder.build();
-					}
-				});
-			}
-		});
+						@Override
+						public PlanStrategy get() {
+							final Builder builder = new Builder(new RandomPlanSelector<>());
+							builder.addStrategyModule(new SubtourModeChoice(sc.getConfig()
+									.global()
+									.getNumberOfThreads(), availableModes, chainBasedModes, false, tripRouterProvider));
+							builder.addStrategyModule(new ReRoute(sc, tripRouterProvider));
+							return builder.build();
+						}
+					});
+				}
+			});
+		}
 
 		// additional things to get the networkRoute for ride mode. For this, ride mode must be assigned in networkModes of the config file.
 		controler.addOverridingModule(new AbstractModule() {
@@ -219,6 +232,7 @@ public class CNEMunich {
 		noiseParameters.setNoiseAllocationApproach(NoiseAllocationApproach.MarginalCost);
 				
 		noiseParameters.setScaleFactor(100.);
+		noiseParameters.setComputeAvgNoiseCostPerLinkAndTime(false);
 
 		Set<Id<Link>> tunnelLinkIDs = new HashSet<Id<Link>>();
 		tunnelLinkIDs.add(Id.create("591881193", Link.class));
@@ -250,6 +264,8 @@ public class CNEMunich {
 		tunnelLinkIDs.add(Id.create("595870463-586909531-594897602", Link.class));
 		noiseParameters.setTunnelLinkIDsSet(tunnelLinkIDs);
 		
+		noiseParameters.setWriteOutputIteration(config.controler().getLastIteration() - config.controler().getFirstIteration());
+		
 		// CNE Integration
 		
 		CNEIntegration cne = new CNEIntegration(controler, gt, rgt);
@@ -260,6 +276,16 @@ public class CNEMunich {
 		cne.setCongestionTollingApproach(congestionTollingApproach);
 		cne.setkP(kP);
 		cne.setPersonFilter(new MunichPersonFilter());
+
+		cne.setAgentFilter(new AgentFilter() {
+			final String goodsVehiclesPrefix = "gv";
+			@Override
+			public String getAgentTypeFromId(Id<Person> id) {
+				if (id.toString().startsWith(goodsVehiclesPrefix)) return "gv";
+				else return "pv";
+			}
+		});
+
 		controler = cne.prepareControler();
 		
 		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
@@ -267,7 +293,7 @@ public class CNEMunich {
 			
 		// analysis
 		
-		PersonTripCongestionNoiseAnalysisMain analysis = new PersonTripCongestionNoiseAnalysisMain(controler.getConfig().controler().getOutputDirectory());
+		PersonTripCongestionNoiseAnalysisRun analysis = new PersonTripCongestionNoiseAnalysisRun(controler.getConfig().controler().getOutputDirectory());
 		analysis.run();
 		
 		String immissionsDir = controler.getConfig().controler().getOutputDirectory() + "/ITERS/it." + controler.getConfig().controler().getLastIteration() + "/immissions/";

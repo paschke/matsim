@@ -47,20 +47,20 @@ import org.matsim.core.scoring.ScoringFunctionFactory;
 import org.matsim.core.scoring.SumScoringFunction;
 import org.matsim.core.scoring.functions.*;
 import playground.agarwalamit.analysis.StatsWriter;
-import playground.agarwalamit.analysis.controlerListener.ModalShareControlerListener;
-import playground.agarwalamit.analysis.controlerListener.ModalTravelTimeControlerListener;
+import playground.agarwalamit.analysis.modalShare.ModalShareControlerListener;
 import playground.agarwalamit.analysis.modalShare.ModalShareEventHandler;
 import playground.agarwalamit.analysis.modalShare.ModalShareFromEvents;
-import playground.agarwalamit.analysis.travelTime.ModalTravelTimeAnalyzer;
-import playground.agarwalamit.analysis.travelTime.ModalTripTravelTimeHandler;
+import playground.agarwalamit.analysis.tripTime.ModalTravelTimeAnalyzer;
+import playground.agarwalamit.analysis.tripTime.ModalTravelTimeControlerListener;
+import playground.agarwalamit.analysis.tripTime.ModalTripTravelTimeHandler;
 import playground.agarwalamit.mixedTraffic.counts.MultiModeCountsControlerListener;
-import playground.agarwalamit.mixedTraffic.patnaIndia.input.others.PatnaVehiclesGenerator;
 import playground.agarwalamit.mixedTraffic.patnaIndia.router.FreeSpeedTravelTimeForBike;
 import playground.agarwalamit.mixedTraffic.patnaIndia.scoring.PtFareEventHandler;
 import playground.agarwalamit.mixedTraffic.patnaIndia.utils.PatnaPersonFilter;
 import playground.agarwalamit.mixedTraffic.patnaIndia.utils.PatnaPersonFilter.PatnaUserGroup;
 import playground.agarwalamit.mixedTraffic.patnaIndia.utils.PatnaUtils;
 import playground.agarwalamit.utils.FileUtils;
+import playground.agarwalamit.utils.VehicleUtils;
 
 /**
  * @author amit
@@ -132,7 +132,7 @@ public class PatnaPolicyControler {
 		if ( addBikeTrack ) {
 			// remove the connectors on which freespeed is only 0.01 m/s
 			scenario.getNetwork().getLinks().values().stream().filter(
-					link -> link.getId().toString().startsWith(PatnaUtils.BIKE_TRACK_CONNECTOR_PREFIX.toString()) && link.getFreespeed() == 0.01
+					link -> link.getId().toString().startsWith(PatnaUtils.BIKE_TRACK_CONNECTOR_PREFIX) && link.getFreespeed() == 0.01
 			).collect(Collectors.toList()).forEach(link -> scenario.getNetwork().removeLink(link.getId()));
 		}
 
@@ -146,9 +146,9 @@ public class PatnaPolicyControler {
 		}
 
 		String vehiclesFile = inputDir+"/output_vehicles.xml.gz"; // following is required to extract only vehicle types and not vehicle info. Amit Nov 2016
-		PatnaVehiclesGenerator.addVehiclesToScenarioFromVehicleFile(vehiclesFile, scenario);
+		VehicleUtils.addVehiclesToScenarioFromVehicleFile(vehiclesFile, scenario);
 
-		if ( scenario.getVehicles().getVehicles().size() != 0 ) throw new RuntimeException("Only vehicle types should be loaded if vehicle source "+
+		if (!scenario.getVehicles().getVehicles().isEmpty()) throw new RuntimeException("Only vehicle types should be loaded if vehicle source "+
 				QSimConfigGroup.VehiclesSource.modeVehicleTypesFromVehiclesData +" is assigned.");
 		scenario.getConfig().qsim().setVehiclesSource(QSimConfigGroup.VehiclesSource.modeVehicleTypesFromVehiclesData);
 
@@ -217,7 +217,7 @@ public class PatnaPolicyControler {
 	private static void addScoringFunction(final Controler controler){
 		// scoring function
 		controler.setScoringFunctionFactory(new ScoringFunctionFactory() {
-			final CharyparNagelScoringParametersForPerson parameters = new SubpopulationCharyparNagelScoringParameters( controler.getScenario() );
+			final ScoringParametersForPerson parameters = new SubpopulationScoringParameters( controler.getScenario() );
 			@Inject
              Network network;
 			@Inject
@@ -228,7 +228,7 @@ public class PatnaPolicyControler {
              ScenarioConfigGroup scenarioConfig;
 			@Override
 			public ScoringFunction createNewScoringFunction(Person person) {
-				final CharyparNagelScoringParameters params = parameters.getScoringParameters( person );
+				final ScoringParameters params = parameters.getScoringParameters( person );
 
 				SumScoringFunction sumScoringFunction = new SumScoringFunction();
 				sumScoringFunction.addScoringFunction(new CharyparNagelActivityScoring(params)) ;
@@ -246,9 +246,9 @@ public class PatnaPolicyControler {
 
 				ScoringParameterSet scoringParameterSet = planCalcScoreConfigGroup.getScoringParameters( null ); // parameters set is same for all subPopulations 
 
-				CharyparNagelScoringParameters.Builder builder = new CharyparNagelScoringParameters.Builder(
+				ScoringParameters.Builder builder = new ScoringParameters.Builder(
 						planCalcScoreConfigGroup, scoringParameterSet, scenarioConfig);
-				final CharyparNagelScoringParameters modifiedParams = builder.build();
+				final ScoringParameters modifiedParams = builder.build();
 
 				sumScoringFunction.addScoringFunction(new CharyparNagelLegScoring(modifiedParams, network));
 				sumScoringFunction.addScoringFunction(new CharyparNagelMoneyScoring(modifiedParams));

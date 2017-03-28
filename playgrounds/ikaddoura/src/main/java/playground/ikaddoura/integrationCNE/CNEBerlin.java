@@ -43,8 +43,9 @@ import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
 
-import playground.ikaddoura.analysis.detailedPersonTripAnalysis.PersonTripCongestionNoiseAnalysisMain;
+import playground.ikaddoura.analysis.detailedPersonTripAnalysis.PersonTripCongestionNoiseAnalysisRun;
 import playground.ikaddoura.integrationCNE.CNEIntegration.CongestionTollingApproach;
+import playground.ikaddoura.moneyTravelDisutility.data.BerlinAgentFilter;
 import playground.vsp.airPollution.exposure.GridTools;
 import playground.vsp.airPollution.exposure.ResponsibilityGridTools;
 
@@ -76,7 +77,7 @@ public class CNEBerlin {
 	
 	private static CongestionTollingApproach congestionTollingApproach;
 	private static double kP;
-	
+		
 	public static void main(String[] args) throws IOException {
 		
 		if (args.length > 0) {
@@ -118,7 +119,7 @@ public class CNEBerlin {
 		} else {
 			
 			outputDirectory = null;
-			configFile = "../../../runs-svn/berlin-an-time/input/config.xml";
+			configFile = "../../../runs-svn/berlin-an/input/config.xml";
 			
 			congestionPricing = true;
 			noisePricing = true;
@@ -127,7 +128,7 @@ public class CNEBerlin {
 			sigma = 0.;
 			
 			congestionTollingApproach = CongestionTollingApproach.DecongestionPID;
-			kP = 2 * ( 10 / 3600. );
+			kP = 2 * ( 10 / 3600. );			
 		}
 				
 		CNEBerlin cnControler = new CNEBerlin();
@@ -175,6 +176,7 @@ public class CNEBerlin {
 		noiseParameters.setNoiseAllocationApproach(NoiseAllocationApproach.MarginalCost);
 				
 		noiseParameters.setScaleFactor(10.);
+		noiseParameters.setComputeAvgNoiseCostPerLinkAndTime(false);
 		
 		Set<Id<Link>> tunnelLinkIDs = new HashSet<Id<Link>>();
 		tunnelLinkIDs.add(Id.create("108041", Link.class));
@@ -230,6 +232,8 @@ public class CNEBerlin {
 		cne.setSigma(sigma);
 		cne.setCongestionTollingApproach(congestionTollingApproach);
 		cne.setkP(kP);
+		cne.setAgentFilter(new BerlinAgentFilter());
+
 		controler = cne.prepareControler();
 				
 		controler.getConfig().controler().setOverwriteFileSetting(OutputDirectoryHierarchy.OverwriteFileSetting.deleteDirectoryIfExists);
@@ -237,7 +241,7 @@ public class CNEBerlin {
 		
 		// analysis
 		
-		PersonTripCongestionNoiseAnalysisMain analysis = new PersonTripCongestionNoiseAnalysisMain(controler.getConfig().controler().getOutputDirectory());
+		PersonTripCongestionNoiseAnalysisRun analysis = new PersonTripCongestionNoiseAnalysisRun(controler.getConfig().controler().getOutputDirectory());
 		analysis.run();
 		
 		String immissionsDir = controler.getConfig().controler().getOutputDirectory() + "/ITERS/it." + controler.getConfig().controler().getLastIteration() + "/immissions/";

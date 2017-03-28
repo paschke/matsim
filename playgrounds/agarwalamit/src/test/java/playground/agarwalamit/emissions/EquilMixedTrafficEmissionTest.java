@@ -72,6 +72,8 @@ public class EquilMixedTrafficEmissionTest {
 	public final MatsimTestUtils helper = new MatsimTestUtils();
 	private static final Logger logger = Logger.getLogger(EquilMixedTrafficEmissionTest.class);
 
+	private final String classOutputDir = "test/output/" + EquilMixedTrafficEmissionTest.class.getCanonicalName().replace('.', '/') + "/";
+
 	private final DecimalFormat df = new DecimalFormat("#.###");
 
 	private final boolean isConsideringCO2Costs ;
@@ -133,7 +135,7 @@ public class EquilMixedTrafficEmissionTest {
 		vehs.addVehicle(bikeVeh);
 
 		sc.getConfig().qsim().setMainModes(mainModes);
-		sc.getConfig().qsim().setLinkDynamics(QSimConfigGroup.LinkDynamics.PassingQ.name());
+		sc.getConfig().qsim().setLinkDynamics(QSimConfigGroup.LinkDynamics.PassingQ);
 		sc.getConfig().qsim().setVehiclesSource(QSimConfigGroup.VehiclesSource.fromVehiclesData); //TODO the test will fail for VehiclesSource.modeVehicleTypesFromVehiclesData; Amit Oct 2016
 		sc.getConfig().qsim().setUsePersonIdForMissingVehicleId(true);
 
@@ -147,7 +149,7 @@ public class EquilMixedTrafficEmissionTest {
 		emissionSettings(sc);
 
 		Controler controler = new Controler(sc);
-		String outputDirectory = helper.getOutputDirectory() + "/" + (isConsideringCO2Costs ? "considerCO2Costs/" : "notConsiderCO2Costs/");
+		String outputDirectory = classOutputDir + helper.getMethodName() + "/" + (isConsideringCO2Costs ? "considerCO2Costs/" : "notConsiderCO2Costs/");
 		sc.getConfig().controler().setOutputDirectory(outputDirectory);
 
 		EmissionModule emissionModule = new EmissionModule(sc);
@@ -156,12 +158,13 @@ public class EquilMixedTrafficEmissionTest {
 		emissionModule.createEmissionHandler();
 
 		EmissionCostModule emissionCostModule = new EmissionCostModule( 1.0, isConsideringCO2Costs );
-		final EmissionModalTravelDisutilityCalculatorFactory emissionTducf = new EmissionModalTravelDisutilityCalculatorFactory(emissionModule, emissionCostModule, sc.getConfig().planCalcScore());
 
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
-				bindCarTravelDisutilityFactory().toInstance(emissionTducf);
+				bind(EmissionModule.class).toInstance(emissionModule);
+				bind(EmissionCostModule.class).toInstance(emissionCostModule);
+				bindCarTravelDisutilityFactory().to(EmissionModalTravelDisutilityCalculatorFactory.class);
 			}
 		});
 		controler.addControlerListener(new InternalizeEmissionsControlerListener(emissionModule, emissionCostModule));

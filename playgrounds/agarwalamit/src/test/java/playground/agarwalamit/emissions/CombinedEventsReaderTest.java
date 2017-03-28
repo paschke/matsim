@@ -22,6 +22,7 @@ package playground.agarwalamit.emissions;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.api.core.v01.Id;
@@ -32,9 +33,11 @@ import org.matsim.contrib.emissions.events.EmissionEventsReader;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.MatsimEventsReader;
+import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.testcases.MatsimTestUtils;
 import org.matsim.vehicles.Vehicle;
 import playground.agarwalamit.analysis.emission.caused.CausedEmissionCostHandler;
+import playground.kai.usecases.combinedEventsReader.CombinedMatsimEventsReader;
 import playground.vsp.airPollution.flatEmissions.EmissionCostModule;
 
 /**
@@ -51,12 +54,59 @@ public class CombinedEventsReaderTest {
 
     private final String bicycleVehicleIdString = "567417.1#12425_bicycle";
 
-    @Test
+    @Test@Ignore//TODO yet to complete and fix this.
     public void readBothEventsFile() {
         String eventsFile = helper.getClassInputDirectory() + "0.events.xml.gz";
         String emissionEventsFile = helper.getClassInputDirectory() + "0.emission.events.xml.gz";
-    }
 
+        String combinedEventsFile = helper.getClassInputDirectory() + "0.combined.events.xml.gz";
+
+        // first merge the events file:
+        EventsManager events = EventsUtils.createEventsManager();
+        EventWriterXML eventsWriter = new EventWriterXML(combinedEventsFile);
+        events.addHandler(eventsWriter);
+        new MatsimEventsReader(events).readFile(eventsFile);
+        new EmissionEventsReader(events).readFile(emissionEventsFile);
+        eventsWriter.closeFile();
+
+        // now read the combinedEvents file
+        Map<Id<Vehicle>, Id<Person>> vehicle2driver = new HashMap<>();
+        events = EventsUtils.createEventsManager();
+        events.addHandler(new VehicleEntersTrafficEventHandler() {
+            @Override
+            public void handleEvent(VehicleEntersTrafficEvent event) {
+                vehicle2driver.put(event.getVehicleId(), event.getPersonId());
+            }
+
+            @Override
+            public void reset(int iteration) {
+
+            }
+        });
+
+        CausedEmissionCostHandler emissionHandler = new CausedEmissionCostHandler(new EmissionCostModule(1.0,true));
+        CombinedMatsimEventsReader reader = new CombinedMatsimEventsReader(events);
+        events.addHandler(emissionHandler);
+        reader.readFile(combinedEventsFile);
+
+        Map<Id<Person>, Double> personId2EmissionCosts = emissionHandler.getPersonId2TotalEmissionCosts();
+
+        System.out.println(personId2EmissionCosts.get(Id.createPersonId(carPersonIdString)));
+
+        Assert.assertFalse("For car, total emissions costs should be non-zero", personId2EmissionCosts.get(Id.createPersonId(carPersonIdString))==0.);
+        Assert.assertFalse("For bicycle, total emissions costs should be zero.", personId2EmissionCosts.get(Id.createPersonId(
+                bicycleVehicleIdString))!= 0.);
+
+        Assert.assertFalse("vehicle 2 driver map should not be empty", vehicle2driver.isEmpty());
+
+        Assert.assertEquals("car person is not found.",
+                Id.createPersonId(carPersonIdString),
+                vehicle2driver.get(Id.createVehicleId(carPersonIdString)));
+        Assert.assertEquals("bicycle person is not found.",
+                Id.createPersonId(bicyclePersonIdString),
+                vehicle2driver.get(Id.createVehicleId(bicycleVehicleIdString)));
+
+    }
 
     @Test
     public void readEventsFile() {
@@ -108,6 +158,6 @@ public class CombinedEventsReaderTest {
         Assert.assertFalse("For car, total emissions costs should be non-zero", personId2EmissionCosts.get(Id.createPersonId(carPersonIdString))==0.);
         Assert.assertFalse("For bicycle, total emissions costs should be zero.", personId2EmissionCosts.get(Id.createPersonId(
                 bicycleVehicleIdString))!= 0.);
-        //TODO : emission events provide vehicle id rather than person id, thus, this should be vehicle id.
+        //TODO : emission events provide vehicle id rather than person id, thus, the map keys should be vehicle ids.
     }
 }
