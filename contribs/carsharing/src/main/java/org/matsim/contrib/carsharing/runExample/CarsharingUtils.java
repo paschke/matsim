@@ -40,8 +40,8 @@ public class CarsharingUtils {
     	CarsharingConfigGroup configGroupAll = new CarsharingConfigGroup();
     	config.addModule(configGroupAll);
 
-    	CarsharingVehicleRelocationConfigGroup carsharingVehicleRelocationConfigGroup = new CarsharingVehicleRelocationConfigGroup();
-    	config.addModule(carsharingVehicleRelocationConfigGroup);
+		CarsharingVehicleRelocationConfigGroup carsharingVehicleRelocationConfigGroup = new CarsharingVehicleRelocationConfigGroup();
+		config.addModule(carsharingVehicleRelocationConfigGroup);
 
     	return config;
 		
