@@ -29,16 +29,16 @@ public class CarsharingUtils {
 	public static Config addConfigModules(Config config) {
 
 		OneWayCarsharingConfigGroup configGroup = new OneWayCarsharingConfigGroup();
-    	config.addModule(configGroup);
+		config.addModule(configGroup);
 
-    	FreeFloatingConfigGroup configGroupff = new FreeFloatingConfigGroup();
-    	config.addModule(configGroupff);
+		FreeFloatingConfigGroup configGroupff = new FreeFloatingConfigGroup();
+		config.addModule(configGroupff);
 
-    	TwoWayCarsharingConfigGroup configGrouptw = new TwoWayCarsharingConfigGroup();
-    	config.addModule(configGrouptw);
+		TwoWayCarsharingConfigGroup configGrouptw = new TwoWayCarsharingConfigGroup();
+		config.addModule(configGrouptw);
 
-    	CarsharingConfigGroup configGroupAll = new CarsharingConfigGroup();
-    	config.addModule(configGroupAll);
+		CarsharingConfigGroup configGroupAll = new CarsharingConfigGroup();
+		config.addModule(configGroupAll);
 
 		CarsharingVehicleRelocationConfigGroup carsharingVehicleRelocationConfigGroup = new CarsharingVehicleRelocationConfigGroup();
 		config.addModule(carsharingVehicleRelocationConfigGroup);
