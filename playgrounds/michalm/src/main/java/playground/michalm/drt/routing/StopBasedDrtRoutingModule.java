@@ -20,7 +20,7 @@
 /**
  * 
  */
-package playground.jbischoff.drt.routingModule;
+package playground.michalm.drt.routing;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -39,7 +39,6 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Route;
-import org.matsim.core.config.Config;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.router.RoutingModule;
@@ -52,7 +51,9 @@ import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
-import playground.jbischoff.drt.config.DRTConfigGroup;
+import playground.michalm.drt.run.DrtConfigGroup;
+
+
 
 /**
  * @author  jbischoff
@@ -61,12 +62,12 @@ import playground.jbischoff.drt.config.DRTConfigGroup;
 /**
  *
  */
-public class StopBasedDRTRoutingModule implements RoutingModule {
+public class StopBasedDrtRoutingModule implements RoutingModule {
 
-	private final StageActivityTypes drtStageActivityType = new DRTStageActivityType();
+	private final StageActivityTypes drtStageActivityType = new DrtStageActivityType();
 	private final RoutingModule walkRouter;
 	private final Map<Id<TransitStopFacility>,TransitStopFacility> stops;
-	private final DRTConfigGroup drtconfig;
+	private final DrtConfigGroup drtconfig;
 	private final double walkBeelineFactor;
 	private final Network network;
 	private final Scenario scenario;
@@ -74,11 +75,11 @@ public class StopBasedDRTRoutingModule implements RoutingModule {
 	 * 
 	 */
 	@Inject
-	public StopBasedDRTRoutingModule(@Named(TransportMode.walk) RoutingModule walkRouter, @Named(DRTConfigGroup.DRTMODE) TransitSchedule transitSchedule, Scenario scenario) {
+	public StopBasedDrtRoutingModule(@Named(TransportMode.walk) RoutingModule walkRouter, @Named(DrtConfigGroup.DRT_MODE) TransitSchedule transitSchedule, Scenario scenario) {
 			transitSchedule.getFacilities();
 			this.walkRouter = walkRouter;
 			this.stops = transitSchedule.getFacilities();
-			this.drtconfig = (DRTConfigGroup) scenario.getConfig().getModules().get(DRTConfigGroup.GROUPNAME);
+			this.drtconfig = (DrtConfigGroup) scenario.getConfig().getModules().get(DrtConfigGroup.GROUP_NAME);
 			this.walkBeelineFactor = scenario.getConfig().plansCalcRoute().getModeRoutingParams().get(TransportMode.walk).getBeelineDistanceFactor();
 			this.network = scenario.getNetwork();
 			this.scenario = scenario;
@@ -99,7 +100,7 @@ public class StopBasedDRTRoutingModule implements RoutingModule {
 		}
 		legList.addAll(walkRouter.calcRoute(fromFacility, accessFacility, departureTime, person));
 		Leg walkLeg = (Leg) legList.get(0);
-		Activity drtInt1 = scenario.getPopulation().getFactory().createActivityFromCoord(DRTStageActivityType.DRTSTAGEACTIVITY, accessFacility.getCoord());
+		Activity drtInt1 = scenario.getPopulation().getFactory().createActivityFromCoord(DrtStageActivityType.DRTSTAGEACTIVITY, accessFacility.getCoord());
 		drtInt1.setMaximumDuration(1);
 		drtInt1.setLinkId(accessFacility.getLinkId());
 		legList.add(drtInt1);
@@ -108,14 +109,14 @@ public class StopBasedDRTRoutingModule implements RoutingModule {
 	    drtRoute.setDistance(drtconfig.getEstimatedBeelineDistanceFactor()*CoordUtils.calcEuclideanDistance(accessFacility.getCoord(), egressFacility.getCoord()));
 	    drtRoute.setTravelTime(drtRoute.getDistance()/drtconfig.getEstimatedSpeed());
 
-	    Leg drtLeg = PopulationUtils.createLeg(DRTConfigGroup.DRTMODE);
+	    Leg drtLeg = PopulationUtils.createLeg(DrtConfigGroup.DRT_MODE);
         drtLeg.setDepartureTime(departureTime+walkLeg.getTravelTime()+1);
         drtLeg.setTravelTime(drtRoute.getTravelTime());
         drtLeg.setRoute(drtRoute);
 		
         legList.add(drtLeg);
         
-		Activity drtInt2 = scenario.getPopulation().getFactory().createActivityFromCoord(DRTStageActivityType.DRTSTAGEACTIVITY, egressFacility.getCoord());
+		Activity drtInt2 = scenario.getPopulation().getFactory().createActivityFromCoord(DrtStageActivityType.DRTSTAGEACTIVITY, egressFacility.getCoord());
 		drtInt2.setMaximumDuration(1);
 		drtInt2.setLinkId(egressFacility.getLinkId());
 		legList.add(drtInt2);
