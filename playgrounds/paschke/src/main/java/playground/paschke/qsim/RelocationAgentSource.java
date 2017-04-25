@@ -1,6 +1,5 @@
 package playground.paschke.qsim;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -38,23 +37,18 @@ public class RelocationAgentSource implements AgentSource {
 
 	@Override
 	public void insertAgentsIntoMobsim() {
-		Map<String, Map<Id<Person>, RelocationAgent>> relocationAgents = this.carsharingVehicleRelocation.getRelocationAgents();
-
-		Iterator<Entry<String, Map<Id<Person>, RelocationAgent>>> companiesIterator = relocationAgents.entrySet().iterator();
 		int counter = 0;
-		while (companiesIterator.hasNext()) {
-			Entry<String, Map<Id<Person>, RelocationAgent>> companyEntry = companiesIterator.next();
-			Iterator<Entry<Id<Person>, RelocationAgent>> agentIterator = companyEntry.getValue().entrySet().iterator();
 
-			while (agentIterator.hasNext()) {
-				Entry<Id<Person>, RelocationAgent> agentEntry = agentIterator.next();
+		for (Entry<String, Map<Id<Person>, RelocationAgent>> companyEntry : this.carsharingVehicleRelocation.getRelocationAgents().entrySet()) {
+			counter =+ companyEntry.getValue().size();
+
+			for (Entry<Id<Person>, RelocationAgent> agentEntry : companyEntry.getValue().entrySet()) {
 				RelocationAgent agent = agentEntry.getValue();
 				agent.setGuidance(new Guidance(this.routerProvider.get()));
 				agent.setMobsimTimer(this.qSim.getSimTimer());
 				agent.setCarsharingSupplyContainer(this.carsharingSupply);
 
 				this.qSim.insertAgentIntoMobsim(agent);
-				counter++;
 			}
 		}
 

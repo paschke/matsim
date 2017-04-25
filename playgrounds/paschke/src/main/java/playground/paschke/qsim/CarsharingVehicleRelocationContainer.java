@@ -4,10 +4,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.matsim.api.core.v01.Coord;
@@ -53,7 +53,7 @@ public class CarsharingVehicleRelocationContainer {
 				.setCrs(DefaultGeographicCRS.WGS84)
 				.create();
 
-		this.relocationAgents = new HashMap<String, Map<Id<Person>, RelocationAgent>>();
+		this.relocationAgents = new TreeMap<String, Map<Id<Person>, RelocationAgent>>();
 
 		this.relocations = new HashMap<String, List<RelocationInfo>>();
 
@@ -89,17 +89,12 @@ public class CarsharingVehicleRelocationContainer {
 		reader.readFile(confGroup.getRelocationAgents());
 
 		Network network = this.scenario.getNetwork();
-		Map<String, Map<String, Map<String, Double>>> relocationAgentBases = reader.getRelocationAgentBases();
 
-		Iterator<Entry<String, Map<String, Map<String, Double>>>> companiesIterator = relocationAgentBases.entrySet().iterator();
-		while (companiesIterator.hasNext()) {
-			Entry<String, Map<String, Map<String, Double>>> companyEntry = companiesIterator.next();
+		for (Entry<String, Map<String, Map<String, Double>>> companyEntry : reader.getRelocationAgentBases().entrySet()) {
 			String companyId = companyEntry.getKey();
-			this.relocationAgents.put(companyId, new HashMap<Id<Person>, RelocationAgent>());
-			Iterator<Entry<String, Map<String, Double>>> baseIterator = companyEntry.getValue().entrySet().iterator();
+			this.relocationAgents.put(companyId, new TreeMap<Id<Person>, RelocationAgent>());
 
-			while (baseIterator.hasNext()) {
-				Entry<String, Map<String, Double>> baseEntry = baseIterator.next();
+			for (Entry<String, Map<String, Double>> baseEntry : companyEntry.getValue().entrySet()) {
 				String baseId = baseEntry.getKey();
 				HashMap<String, Double> agentBaseData = (HashMap<String, Double>) baseEntry.getValue();
 
@@ -110,9 +105,6 @@ public class CarsharingVehicleRelocationContainer {
 				while (counter < agentBaseData.get("number")) {
 					Id<Person> id = Id.createPersonId("RelocationAgent" + "_" + companyId + "_" + baseId + "_"  + counter);
 					RelocationAgent agent = this.relocationAgentFactory.createRelocationAgent(id, companyId, link.getId());
-					//agent.setGuidance(new Guidance(this.routerProvider.get()));
-					//agent.setMobsimTimer(this.qSim.getSimTimer());
-					//agent.setCarsharingSupplyContainer(this.carsharingSupply);
 
 					this.relocationAgents.get(companyId).put(id, agent);
 					counter++;
@@ -233,6 +225,15 @@ public class CarsharingVehicleRelocationContainer {
 	public void reset() {
 		this.resetRelocationZones();
 		this.resetRelocations();
+	}
+
+	public void resetRelocationAgents() {
+		for (Entry<String, Map<Id<Person>, RelocationAgent>> companyEntry : this.getRelocationAgents().entrySet()) {
+			for (Entry<Id<Person>, RelocationAgent> agentEntry : companyEntry.getValue().entrySet()) {
+				RelocationAgent agent = agentEntry.getValue();
+				agent.reset();
+			}
+		}
 	}
 
 	public void storeStatus(String companyId, double now) {
