@@ -8,7 +8,6 @@ import org.matsim.contrib.carsharing.manager.demand.RentalInfo;
 import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.contrib.carsharing.manager.supply.CompanyContainer;
 import org.matsim.contrib.carsharing.manager.supply.FreeFloatingVehiclesContainer;
-import org.matsim.contrib.carsharing.manager.supply.VehiclesContainer;
 import org.matsim.contrib.carsharing.vehicles.CSVehicle;
 import org.matsim.core.controler.OutputDirectoryHierarchy;
 import org.matsim.core.controler.events.IterationEndsEvent;
