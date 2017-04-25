@@ -2,6 +2,7 @@ package playground.paschke.qsim;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,7 +79,8 @@ public class KmlWriterListener implements IterationStartsListener, IterationEnds
 						Double level = (numVehicles + numReturns - numRequests);
 						relocationZoneContent.put("level", level);
 
-						String content = "ID: " + relocationZoneId.toString() + " vehicles: " + numVehicles.toString() + " requests: " + numRequests.toString() + " (expected: " + numRequestsExpected.toString() + ")" + " returns: " + numReturns.toString() + " (expected: " + numReturnsExpected.toString() + ")";
+						DecimalFormat decimalFormat = new DecimalFormat( "#,###,###,##0.0" );
+						String content = "ID: " + relocationZoneId.toString() + " vehicles: " + decimalFormat.format(numVehicles) + " requests: " + decimalFormat.format(numRequests) + " (expected: " + decimalFormat.format(numRequestsExpected) + ")" + " returns: " + decimalFormat.format(numReturns) + " (expected: " + decimalFormat.format(numReturnsExpected) + ")";
 						relocationZoneContent.put("content", content);
 
 						relocationZoneStatiData.put(relocationZoneId, relocationZoneContent);

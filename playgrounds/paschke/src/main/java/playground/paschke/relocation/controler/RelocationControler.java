@@ -47,7 +47,6 @@ import playground.paschke.qsim.CarSharingDemandTracker;
 import playground.paschke.qsim.CarsharingVehicleRelocationContainer;
 import playground.paschke.qsim.FFVehiclesRentalsWriterListener;
 import playground.paschke.qsim.KmlWriterListener;
-import playground.paschke.qsim.SimpleRelocationListener;
 import playground.paschke.qsim.RelocationQsimFactory;
 import playground.paschke.utils.ExampleCarsharingUtils;
 

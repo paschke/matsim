@@ -48,7 +48,7 @@ public class FFVehiclesRentalsWriter extends MatsimXmlWriter {
 					this.writeStartTag("rental", Arrays.asList(
 							createTuple("start_time", Time.writeTime(info.getStartTime())),
 							createTuple("end_time", Time.writeTime(info.getEndTime())),
-							createTuple("start_link", info.getOriginLinkId().toString()),
+							createTuple("start_link", info.getPickupLinkId().toString()),
 							createTuple("end_link", info.getEndLinkId().toString())
 					), true);
 				}

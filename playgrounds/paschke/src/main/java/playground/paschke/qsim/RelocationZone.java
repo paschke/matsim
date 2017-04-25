@@ -79,13 +79,7 @@ public class RelocationZone implements Identifiable<RelocationZone> {
 	}
 
 	public double getNumberOfVehicles() {
-		double number = 0;
-
-		for (ArrayList<String> IDs : this.getVehicles().values()) {
-			number += IDs.size();
-		}
-
-		return number;
+		return (double) this.getVehicles().size();
 	}
 
 	public void setNumberOfExpectedRequests(Double numberOfExpectedRequests) {
@@ -122,10 +116,6 @@ public class RelocationZone implements Identifiable<RelocationZone> {
 
 	public double getNumberOfSurplusVehicles() {
 		return this.getNumberOfVehicles() + this.getNumberOfExpectedReturns() - this.getNumberOfExpectedRequests();
-	}
-
-	public double getNumberOfRequiredVehicles() {
-		return this.getNumberOfExpectedRequests() - this.getNumberOfExpectedReturns() - this.getNumberOfVehicles(); 
 	}
 
 	public void addVehicles(Link link, ArrayList<String> IDs) {

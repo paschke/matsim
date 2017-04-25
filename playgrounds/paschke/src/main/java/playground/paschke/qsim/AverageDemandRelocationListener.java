@@ -53,6 +53,7 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
 		if (this.iteration == this.carsharingVehicleRelocation.moduleEnableAfterIteration()) {
 			List<Map<String, Map<Double, Matrices>>> previousODMatricesList = new ArrayList<Map<String, Map<Double, Matrices>>>();
 
+			// TODO: make number of iteration configurable
 			for (int i = 1; i <= 20; i++) {
 				Map<String, Map<Double, Matrices>> previousODMatrices = this.demandTracker.getODMatrices(iteration - i);
 
@@ -137,38 +138,40 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
 	protected ArrayList<RelocationInfo> calculateRelocations(Double start, Double end, String companyId, List<RelocationZone> relocationZones) {
 		String timeSlot = Time.writeTime(start) + " - " + Time.writeTime(end);
 		ArrayList<RelocationInfo> relocations = new ArrayList<RelocationInfo>();
-		Map<Integer, Double> surplusVehicles = new HashMap<Integer, Double>();
-		Map<Integer, Double> requiredVehicles = new HashMap<Integer, Double>();
+		Map<Integer, Double> vehicleSurplusZones = new HashMap<Integer, Double>();
+		Map<Integer, Double> vehicleDemandZones = new HashMap<Integer, Double>();
 
 		for (RelocationZone relocationZone : relocationZones) {
-			if (relocationZone.getNumberOfSurplusVehicles() >= 1) {
-				surplusVehicles.put(new Integer(relocationZones.indexOf(relocationZone)), Math.floor(relocationZone.getNumberOfSurplusVehicles()));
-			} else if (relocationZone.getNumberOfRequiredVehicles() > 0) {
-				requiredVehicles.put(new Integer(relocationZones.indexOf(relocationZone)), Math.ceil(relocationZone.getNumberOfRequiredVehicles()));
+			double numberOfVehicles = relocationZone.getNumberOfSurplusVehicles();
+
+			if (numberOfVehicles >= 1) {
+				vehicleSurplusZones.put(new Integer(relocationZones.indexOf(relocationZone)), Math.floor(numberOfVehicles));
+			} else if (numberOfVehicles <= -1) {
+				vehicleDemandZones.put(new Integer(relocationZones.indexOf(relocationZone)), Math.floor(Math.abs(numberOfVehicles)));
 			}
 		}
 
-		List<Map.Entry<Integer, Double>> surplusVehiclesList = new LinkedList<Map.Entry<Integer, Double>>(surplusVehicles.entrySet());
-		List<Map.Entry<Integer, Double>> requiredVehiclesList = new LinkedList<Map.Entry<Integer, Double>>(requiredVehicles.entrySet());
+		List<Map.Entry<Integer, Double>> vehicleSurplusList = new LinkedList<Map.Entry<Integer, Double>>(vehicleSurplusZones.entrySet());
+		List<Map.Entry<Integer, Double>> vehicleDemandList = new LinkedList<Map.Entry<Integer, Double>>(vehicleDemandZones.entrySet());
 
-        Collections.sort(requiredVehiclesList, new Comparator<Map.Entry<Integer, Double>>()
+        Collections.sort(vehicleDemandList, new Comparator<Map.Entry<Integer, Double>>()
         {
             public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
                 return o2.getValue().compareTo(o1.getValue());
             }
         });
 
-        for (Map.Entry<Integer, Double> requiredVehiclesEntry : requiredVehiclesList) {
-            while (requiredVehiclesEntry.getValue() > 0) {
+        for (Map.Entry<Integer, Double> vehicleDemandEntry : vehicleDemandList) {
+            while (vehicleDemandEntry.getValue() > 0) {
                 RelocationZone originZone = null;
                 Link originLink = null;
 
-                RelocationZone destinationZone = relocationZones.get(requiredVehiclesEntry.getKey());
+                RelocationZone destinationZone = relocationZones.get(vehicleDemandEntry.getKey());
                 Link destinationLink = NetworkUtils.getNearestLink(this.carsharingVehicleRelocation.getNetwork(), destinationZone.getCenter());
 
                 String vehicleId = "";
 
-                Collections.sort(surplusVehiclesList, new Comparator<Map.Entry<Integer, Double>>()
+                Collections.sort(vehicleSurplusList, new Comparator<Map.Entry<Integer, Double>>()
                 {
                     public int compare(Map.Entry<Integer, Double> o1, Map.Entry<Integer, Double> o2) {
                         return o2.getValue().compareTo(o1.getValue());
@@ -176,7 +179,7 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
                 });
 
                 try {
-                    Map.Entry<Integer, Double> surplusVehiclesEntry = surplusVehiclesList.get(0);
+                    Map.Entry<Integer, Double> surplusVehiclesEntry = vehicleSurplusList.get(0);
                     originZone = relocationZones.get(surplusVehiclesEntry.getKey());
 
                     LinkedList<Map.Entry<Link,ArrayList<String>>> vehiclesList = new LinkedList<Map.Entry<Link, ArrayList<String>>>(originZone.getVehicles().entrySet());
@@ -191,7 +194,7 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
                 }
 
                 relocations.add(new RelocationInfo(timeSlot, companyId, vehicleId, originLink.getId(), destinationLink.getId(), originZone.getId().toString(), destinationZone.getId().toString()));
-                requiredVehiclesEntry.setValue(requiredVehiclesEntry.getValue() - 1);
+                vehicleDemandEntry.setValue(vehicleDemandEntry.getValue() - 1);
             }
         }
 
