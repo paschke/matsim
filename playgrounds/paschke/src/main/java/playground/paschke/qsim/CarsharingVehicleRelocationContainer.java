@@ -222,11 +222,6 @@ public class CarsharingVehicleRelocationContainer {
 		this.relocations = new HashMap<String, List<RelocationInfo>>();
 	}
 
-	public void reset() {
-		this.resetRelocationZones();
-		this.resetRelocations();
-	}
-
 	public void resetRelocationAgents() {
 		for (Entry<String, Map<Id<Person>, RelocationAgent>> companyEntry : this.getRelocationAgents().entrySet()) {
 			for (Entry<Id<Person>, RelocationAgent> agentEntry : companyEntry.getValue().entrySet()) {
@@ -234,6 +229,12 @@ public class CarsharingVehicleRelocationContainer {
 				agent.reset();
 			}
 		}
+	}
+
+	public void reset() {
+		this.resetRelocationZones();
+		this.resetRelocations();
+		this.resetRelocationAgents();
 	}
 
 	public void storeStatus(String companyId, double now) {
