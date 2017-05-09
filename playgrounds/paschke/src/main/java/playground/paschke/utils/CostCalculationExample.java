@@ -4,8 +4,6 @@ import org.matsim.contrib.carsharing.manager.demand.RentalInfo;
 import org.matsim.contrib.carsharing.manager.supply.costs.CostCalculation;
 
 public class CostCalculationExample implements CostCalculation {
-	private final static double betaTT = 1.0;
-	private final static double betaRentalTIme = 1.0;
 	private final static double scaleTOMatchCar = 1.0;
 
 	private final static double start = 3600.0 * 14.0;
