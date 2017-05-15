@@ -53,8 +53,8 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
 		if (this.iteration == this.carsharingVehicleRelocation.moduleEnableAfterIteration()) {
 			List<Map<String, Map<Double, Matrices>>> previousODMatricesList = new ArrayList<Map<String, Map<Double, Matrices>>>();
 
-			// TODO: make number of iteration configurable
-			for (int i = 1; i <= 20; i++) {
+			int demandEstimateIterations = this.carsharingVehicleRelocation.demandEstimateIterations();
+			for (int i = 1; i <= demandEstimateIterations; i++) {
 				Map<String, Map<Double, Matrices>> previousODMatrices = this.demandTracker.getODMatrices(iteration - i);
 
 				if (null != previousODMatrices) {
@@ -84,7 +84,6 @@ public class AverageDemandRelocationListener implements IterationStartsListener,
 		List<RelocationZone> companyRelocationZones = this.carsharingVehicleRelocation.getRelocationZones(companyId);
 
 		if (null != companyODMatrices) {
-			// TODO: doing this once would suffice
 			for (RelocationZone relocationZone : companyRelocationZones) {
 				Id<RelocationZone> relocationZoneId = relocationZone.getId();
 

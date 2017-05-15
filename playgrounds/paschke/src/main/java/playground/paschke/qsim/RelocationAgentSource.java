@@ -1,5 +1,6 @@
 package playground.paschke.qsim;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -40,6 +41,8 @@ public class RelocationAgentSource implements AgentSource {
 		int counter = 0;
 
 		for (Entry<String, Map<Id<Person>, RelocationAgent>> companyEntry : this.carsharingVehicleRelocation.getRelocationAgents().entrySet()) {
+			String companyId = companyEntry.getKey();
+			List<Double> relocationTimes = this.carsharingVehicleRelocation.getRelocationTimes(companyId);
 			counter =+ companyEntry.getValue().size();
 
 			for (Entry<Id<Person>, RelocationAgent> agentEntry : companyEntry.getValue().entrySet()) {
@@ -47,6 +50,7 @@ public class RelocationAgentSource implements AgentSource {
 				agent.setGuidance(new Guidance(this.routerProvider.get()));
 				agent.setMobsimTimer(this.qSim.getSimTimer());
 				agent.setCarsharingSupplyContainer(this.carsharingSupply);
+				agent.setRelocationTimes(relocationTimes);
 
 				this.qSim.insertAgentIntoMobsim(agent);
 			}

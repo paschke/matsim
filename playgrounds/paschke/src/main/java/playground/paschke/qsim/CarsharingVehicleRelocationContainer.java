@@ -45,6 +45,8 @@ public class CarsharingVehicleRelocationContainer {
 
 	private Integer moduleEnableAfterIteration = null;
 
+	private Integer demandEstimateIterations = null;
+
 	public CarsharingVehicleRelocationContainer(Scenario sc) {
 		this.scenario = sc;
 		this.relocationAgentFactory = new RelocationAgentFactory(this.scenario);
@@ -61,6 +63,7 @@ public class CarsharingVehicleRelocationContainer {
 				this.scenario.getConfig().getModule( CarsharingVehicleRelocationConfigGroup.GROUP_NAME );
 
 		this.moduleEnableAfterIteration = confGroup.moduleEnableAfterIteration();
+		this.demandEstimateIterations = confGroup.demandEstimateIterations();
 	}
 
 	public void readRelocationZones() throws IOException {
@@ -173,6 +176,10 @@ public class CarsharingVehicleRelocationContainer {
 		return this.moduleEnableAfterIteration;
 	}
 
+	public Integer demandEstimateIterations() {
+		return this.demandEstimateIterations;
+	}
+
 	public RelocationZone getRelocationZone(String companyId, Coord coord) {
 		if (this.getRelocationZones().keySet().contains(companyId)) {
 			SimpleFeature pointFeature = this.pointFeatureFactory.createPoint(coord, new Object[0], null);
@@ -277,5 +284,4 @@ public class CarsharingVehicleRelocationContainer {
 	public Network getNetwork() {
 		return this.scenario.getNetwork();
 	}
-
 }

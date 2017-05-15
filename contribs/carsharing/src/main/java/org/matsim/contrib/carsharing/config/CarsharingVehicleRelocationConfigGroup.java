@@ -14,6 +14,8 @@ public class CarsharingVehicleRelocationConfigGroup extends ReflectiveConfigGrou
 
 	private Integer moduleEnableAfterIteration = null;
 
+	private Integer demandEstimateIterations = null;
+
 	public CarsharingVehicleRelocationConfigGroup() {
 		super(GROUP_NAME);
 	}
@@ -56,5 +58,15 @@ public class CarsharingVehicleRelocationConfigGroup extends ReflectiveConfigGrou
 	@StringSetter( "moduleEnableAfterIteration" )
 	public void setModuleEnableAfterIteration(final String moduleEnableAfterIteration) {
 		this.moduleEnableAfterIteration = Integer.parseInt( moduleEnableAfterIteration );
+	}
+
+	@StringGetter( "demandEstimateIterations" )
+	public Integer demandEstimateIterations() {
+		return this.demandEstimateIterations;
+	}
+
+	@StringSetter( "demandEstimateIterations" )
+	public void setDemandEstimateIterations(final String demandEstimateIterations) {
+		this.demandEstimateIterations = Integer.parseInt( demandEstimateIterations );
 	}
 }

@@ -12,6 +12,7 @@ import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.contrib.carsharing.config.CarsharingConfigGroup;
 import org.matsim.contrib.carsharing.manager.supply.CarsharingSupplyInterface;
 import org.matsim.contrib.carsharing.manager.supply.CompanyContainer;
 import org.matsim.contrib.carsharing.vehicles.CSVehicle;
@@ -55,6 +56,8 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	private ArrayList<PlanElement> planElements = new ArrayList<PlanElement>();
 
+	private List<Double> relocationTimes = null;
+
 	public RelocationAgent(Id<Person> id, String companyId, Id<Link> homeLinkId, Scenario scenario) {
 		this.id = id;
 		this.companyId = companyId;
@@ -70,6 +73,10 @@ public class RelocationAgent implements MobsimDriverAgent {
 
 	public void setGuidance(Guidance guidance) {
 		this.guidance = guidance;
+	}
+
+	public void setRelocationTimes(List<Double> relocationTimes) {
+		this.relocationTimes = relocationTimes;
 	}
 
 	public ArrayList<RelocationInfo> getRelocations() {
@@ -198,17 +205,19 @@ public class RelocationAgent implements MobsimDriverAgent {
 	public double getActivityEndTime() {
 		double now = this.getTimeOfDay();
 
-		if (this.relocations.isEmpty() == false) {
-			return now;
-		} else if (now < (21600 + 1)) {
-			return (21600 + 1);
-		} else if (now < (64800 + 1)) {
-			// TODO: "before 6pm, check back in 3 hours", hard coded. Make this configurable.
-			double endTime = (now + 10800 - (now % 10800));
-			return endTime + 1;
-		} else {
-			return Double.POSITIVE_INFINITY;
+		if (this.relocationTimes != null) {
+			if (this.relocations.isEmpty() == false) {
+				return now;
+			} else {
+				for (Double relocationTime : this.relocationTimes) {
+					if (now < relocationTime + 1) {
+						return relocationTime + 1;
+					}
+				}
+			}
 		}
+
+		return Double.POSITIVE_INFINITY;
 	}
 
 	@Override
