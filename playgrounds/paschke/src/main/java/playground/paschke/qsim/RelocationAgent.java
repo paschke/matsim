@@ -253,30 +253,31 @@ public class RelocationAgent implements MobsimDriverAgent {
 			this.destinationLinkId = null;
 			this.startActivity();
 		} else {
-			if (this.getDestinationLinkId().equals(this.homeLinkId)) {
-				try {
-					this.prepareRelocation(this.relocations.get(0));
-				} catch (IndexOutOfBoundsException e) {
-					this.destinationLinkId = null;
-					this.startActivity();
-				}
-			} else if (this.getDestinationLinkId().equals(this.relocations.get(0).getStartLinkId())) {
-				RelocationInfo relocationInfo = this.relocations.get(0);
-				relocationInfo.setStartTime(now);
-				this.executeRelocation(relocationInfo);
-			} else if (this.getDestinationLinkId().equals(this.relocations.get(0).getEndLinkId())) {
-				this.deliverCarSharingVehicle();
+			try {
+				RelocationInfo relocation = this.relocations.get(0);
 
-				try {
-					RelocationInfo relocationInfo = this.relocations.get(0);
-					relocationInfo.setEndTime(now);
-					this.relocations.remove(0); 
-					this.prepareRelocation(this.relocations.get(0));
-				} catch (IndexOutOfBoundsException e) {
-					this.destinationLinkId = this.homeLinkId;
-					this.transportMode = TransportMode.bike;
-					this.startLeg(TransportMode.bike);
+				if (this.getDestinationLinkId().equals(relocation.getStartLinkId())) {
+					relocation.setStartTime(now);
+					this.executeRelocation(relocation);
+
+				} else if (this.getDestinationLinkId().equals(relocation.getEndLinkId())) {
+					this.deliverCarSharingVehicle();
+
+					try {
+						relocation.setEndTime(now);
+						this.relocations.remove(relocation);
+						this.prepareRelocation(this.relocations.get(0));
+					} catch (IndexOutOfBoundsException e) {
+						this.destinationLinkId = this.homeLinkId;
+						this.transportMode = TransportMode.bike;
+						this.startLeg(TransportMode.bike);
+					}
+				} else if (this.getDestinationLinkId().equals(this.homeLinkId)) {
+					this.prepareRelocation(relocation);
 				}
+			} catch (IndexOutOfBoundsException e) {
+				this.destinationLinkId = null;
+				this.startActivity();
 			}
 		}
 	}
