@@ -20,17 +20,23 @@
 package org.matsim.contrib.taxi.optimizer.assignment;
 
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.contrib.dvrp.path.*;
+import org.matsim.contrib.dvrp.path.OneToManyPathSearch;
 import org.matsim.contrib.dvrp.path.OneToManyPathSearch.PathData;
+import org.matsim.contrib.dvrp.path.VrpPathWithTravelData;
+import org.matsim.contrib.dvrp.path.VrpPaths;
 import org.matsim.contrib.locationchoice.router.BackwardMultiNodePathCalculator;
-import org.matsim.contrib.taxi.optimizer.*;
 import org.matsim.contrib.taxi.optimizer.BestDispatchFinder.Dispatch;
+import org.matsim.contrib.taxi.optimizer.LinkProviders;
+import org.matsim.contrib.taxi.optimizer.VehicleData;
 import org.matsim.contrib.taxi.optimizer.assignment.AssignmentDestinationData.DestEntry;
-import org.matsim.contrib.util.*;
-import org.matsim.core.router.*;
+import org.matsim.contrib.util.LinkProvider;
+import org.matsim.contrib.util.StraightLineKnnFinder;
+import org.matsim.core.router.MultiNodePathCalculator;
+import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelTime;
 
 import com.google.common.collect.Lists;
@@ -44,7 +50,7 @@ public class VehicleAssignmentProblem<D> {
 	}
 
 	private final TravelTime travelTime;
-	private final FastAStarEuclidean euclideanRouter;
+	private final LeastCostPathCalculator router;
 
 	private final OneToManyPathSearch forwardPathSearch;
 	private final OneToManyPathSearch backwardPathSearch;
@@ -64,14 +70,14 @@ public class VehicleAssignmentProblem<D> {
 		this(travelTime, router, backwardRouter, null, -1, -1);
 	}
 
-	public VehicleAssignmentProblem(TravelTime travelTime, MultiNodePathCalculator router,
-			BackwardMultiNodePathCalculator backwardRouter, FastAStarEuclidean euclideanRouter,
+	public VehicleAssignmentProblem(TravelTime travelTime, MultiNodePathCalculator multiNodeRouter,
+			BackwardMultiNodePathCalculator backwardMultiNodeRouter, LeastCostPathCalculator router,
 			int nearestDestinationLimit, int nearestVehicleLimit) {
 		this.travelTime = travelTime;
-		this.euclideanRouter = euclideanRouter;
+		this.router = router;
 
-		forwardPathSearch = OneToManyPathSearch.createForwardSearch(router);
-		backwardPathSearch = OneToManyPathSearch.createBackwardSearch(backwardRouter);
+		forwardPathSearch = OneToManyPathSearch.createForwardSearch(multiNodeRouter);
+		backwardPathSearch = OneToManyPathSearch.createBackwardSearch(backwardMultiNodeRouter);
 
 		// TODO this kNN is slow
 		LinkProvider<DestEntry<D>> linkProvider = LinkProviders.createDestEntryToLink();
@@ -179,7 +185,7 @@ public class VehicleAssignmentProblem<D> {
 
 			// TODO if null is frequent we may be more efficient by increasing the neighbourhood
 			VrpPathWithTravelData vrpPath = pathData == null ? //
-					VrpPaths.calcAndCreatePath(departure.link, dest.link, departure.time, euclideanRouter, travelTime)
+					VrpPaths.calcAndCreatePath(departure.link, dest.link, departure.time, router, travelTime)
 					: VrpPaths.createPath(departure.link, dest.link, departure.time, pathData.path, travelTime);
 
 			dispatches.add(new Dispatch<>(departure.vehicle, dest.destination, vrpPath));

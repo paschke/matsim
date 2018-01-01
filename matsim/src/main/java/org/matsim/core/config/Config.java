@@ -68,14 +68,14 @@ import org.matsim.run.CreateFullConfig;
  *
  * @author mrieser
  */
-public class Config implements MatsimExtensionPoint {
+public final class Config implements MatsimExtensionPoint {
 
 	// ////////////////////////////////////////////////////////////////////
 	// member variables
 	// ////////////////////////////////////////////////////////////////////
 
 	/** Map of all config-groups known to this instance. */
-	private final TreeMap<String, ConfigGroup> modules = new TreeMap<String, ConfigGroup>();
+	private final TreeMap<String, ConfigGroup> modules = new TreeMap<>();
 
 	/*
 	 * the following members are for the direct access to the core config
@@ -128,7 +128,6 @@ public class Config implements MatsimExtensionPoint {
 		} catch (MalformedURLException e) {
 			throw new RuntimeException(e);
 		}
-		log.info( "context=[" + context + "]" ) ;
 	}
 
 	/**
@@ -561,6 +560,7 @@ public class Config implements MatsimExtensionPoint {
 	}
 
 	public void setContext(URL context) {
+		log.info( "setting context to [" + context + "]" ) ;
 		this.context = context;
 	}
 

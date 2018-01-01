@@ -59,6 +59,7 @@ import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.contrib.drt.vrpagent.DrtActionCreator;
+import org.matsim.contrib.dvrp.data.Fleet;
 import org.matsim.contrib.dvrp.vrpagent.VrpAgentLogic;
 import org.matsim.contrib.util.chart.ChartSaveUtils;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -92,7 +93,7 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 	private Map<Id<Person>, Double> taxiDriversInStayTask = new HashMap<>();
 
 	@Inject
-	public DrtVehicleOccupancyEvaluator(Config config, EventsManager events) {
+	public DrtVehicleOccupancyEvaluator(Config config, EventsManager events, Fleet fleet) {
 		this.startTime = (int)config.qsim().getStartTime();
 		if (startTime < 0)
 			startTime = 0;
@@ -103,6 +104,21 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 			endTime = config.qsim().getEndTime();
 		this.bins = (int)(endTime - startTime);
 		events.addHandler(this);
+		maxcap = findMaxCap(fleet);
+	}
+
+	/**
+	 * @param fleet
+	 * @return
+	 */
+	private int findMaxCap(Fleet fleet) {
+		int maxCap = 0;
+		for (org.matsim.contrib.dvrp.data.Vehicle v : fleet.getVehicles().values()){
+			if (v.getCapacity()>maxCap){
+				maxCap = (int) v.getCapacity();
+			}
+		}
+		return maxCap;
 	}
 
 	public DrtVehicleOccupancyEvaluator(double start, double end, int maxCapacity) {
@@ -136,9 +152,25 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 			Id<Vehicle> vid = Id.createVehicleId(event.getPersonId().toString());
 			vehicleOccupancy.put(vid, new int[bins]);
 			taxiDrivers.add(event.getPersonId());
+			setVehicleOffline(vid,startTime,event.getTime());
 		}
 		if (event.getActType().equals(DrtActionCreator.DRT_STAY_NAME)) {
 			setTaxiToStay(event.getPersonId(), event.getTime());
+		}
+	}
+
+	/**
+	 * @param vid
+	 * @param offlinestartTime
+	 * @param endTime
+	 */
+	private void setVehicleOffline(Id<Vehicle> vid, double offlinestartTime, double endTime) {
+		int endbin = getBin(endTime);
+		int startbin = getBin(offlinestartTime);
+
+		int[] occ = this.vehicleOccupancy.get(vid);
+		for (int i = startbin; i < endbin; i++) {
+			occ[i] = -2;
 		}
 	}
 
@@ -243,7 +275,7 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 		}
 	}
 
-	public void calcAndWriteFleetStats(String statsFileName) {
+	public void calcAndWriteFleetStats(String statsFileName, boolean writeDetailedStats) {
 		if (!this.taxiDriversInStayTask.isEmpty()) {
 			Map<Id<Person>, Double> idleDrivers = new HashMap<>();
 			idleDrivers.putAll(taxiDriversInStayTask);
@@ -257,7 +289,7 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 		format.setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.US));
 		format.setMinimumIntegerDigits(1);
 		format.setMaximumFractionDigits(2);
-
+		
 		DescriptiveStatistics stats[] = new DescriptiveStatistics[bins];
 		for (int i = 0; i < bins; i++) {
 			stats[i] = new DescriptiveStatistics();
@@ -267,10 +299,18 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 					value = 0;
 					// for descriptive stats idle and empty driving vehicles are the same
 				}
+				//-2 == vehicle is offline
+				if (occ[i]!=-2){
+				if (writeDetailedStats){
+					
 				stats[i].addValue(value);
+				}
 				occupancyOverTime[i][occ[i] + 1]++;
+				}
 			}
 		}
+		if (writeDetailedStats){
+
 		BufferedWriter bw = IOUtils.getBufferedWriter(statsFileName + ".csv");
 		try {
 			bw.write("time;mean;median;min;max;idle;emptyDrive");
@@ -295,6 +335,7 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		}
 		double[][] occupancyOverTimeAverage = calcAverage(occupancyOverTime, smoothSeconds);
 
 		DefaultTableXYDataset dataset = new DefaultTableXYDataset();
@@ -317,6 +358,28 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 
 		ChartSaveUtils.saveAsPNG(chart, statsFileName, 1500, 1000);
 		ChartSaveUtils.saveAsPNG(chartl, statsFileName + "_lines", 1500, 1000);
+		
+		
+		BufferedWriter bw = IOUtils.getBufferedWriter(statsFileName + "_plotdata.csv");
+		try {
+			bw.write("time;idle;emptyride;min;max;idle;emptyDrive");
+			for (int i = 1; i <= maxcap; i++) {
+				bw.write(";" + i + "_pax");
+			}
+			for (int i = 0; i < occupancyOverTimeAverage.length; i++) {
+				bw.newLine();
+				int time = i*smoothSeconds + startTime;
+				bw.write(Integer.toString(time));
+				for (int ii = 0; ii <= maxcap + 1; ii++) {
+					bw.write(";" + occupancyOverTimeAverage[i][ii]);
+				}
+			}
+
+			bw.flush();
+			bw.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -393,6 +456,9 @@ public class DrtVehicleOccupancyEvaluator implements PersonEntersVehicleEventHan
 	public void handleEvent(ActivityStartEvent event) {
 		if (event.getActType().equals(DrtActionCreator.DRT_STAY_NAME)) {
 			taxiDriversInStayTask.put(event.getPersonId(), event.getTime());
+		} else if (event.getActType().equals(VrpAgentLogic.AFTER_SCHEDULE_ACTIVITY_TYPE)){
+			Id<Vehicle> vid = Id.createVehicleId(event.getPersonId().toString());
+			setVehicleOffline(vid, event.getTime(), startTime+bins);
 		}
 	}
 

@@ -22,6 +22,10 @@
  */
 package org.matsim.contrib.drt.analysis;
 
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
+
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
@@ -36,16 +40,19 @@ public class DynModeTrip implements Comparable<DynModeTrip> {
 	private final double waitTime;
 	private double travelTime = Double.NaN;
 	private double travelDistance_m = Double.NaN;
+	private double travelDistanceEstimate_m = Double.NaN;
 	private Id<Link> toLink = null;
 	private double arrivalTime = Double.NaN;
 	private final Coord fromCoord;
 	private Coord toCoord = null;
+	private final	DecimalFormat format;
+
 
 	static final String demitter = ";";
 	public static final String HEADER = "departureTime" + demitter + "personId" + demitter + "vehicleId" + demitter
 			+ "fromLinkId" + demitter + "fromX" + demitter + "fromY" + demitter + "toLinkId" + demitter + "toX"
 			+ demitter + "toY" + demitter + "waitTime" + demitter + "arrivalTime" + demitter + "travelTime" + demitter
-			+ "travelDistance_m";
+			+ "travelDistance_m"+demitter+"direcTravelDistance_m";
 
 	DynModeTrip(double departureTime, Id<Person> person, Id<Vehicle> vehicle, Id<Link> fromLinkId, Coord fromCoord,
 			double waitTime) {
@@ -55,6 +62,12 @@ public class DynModeTrip implements Comparable<DynModeTrip> {
 		this.fromLinkId = fromLinkId;
 		this.fromCoord = fromCoord;
 		this.waitTime = waitTime;
+		
+		this.format = new DecimalFormat();
+		format.setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.US));
+		format.setMinimumIntegerDigits(1);
+		format.setMaximumFractionDigits(2);
+		format.setGroupingUsed(false);
 	}
 
 	public Double getDepartureTime() {
@@ -63,6 +76,11 @@ public class DynModeTrip implements Comparable<DynModeTrip> {
 
 	public Id<Person> getPerson() {
 		return person;
+	}
+	
+
+	public void setTravelDistanceEstimate_m(double travelDistanceEstimate_m) {
+		this.travelDistanceEstimate_m = travelDistanceEstimate_m;
 	}
 
 	public Id<Vehicle> getVehicle() {
@@ -87,6 +105,11 @@ public class DynModeTrip implements Comparable<DynModeTrip> {
 
 	public double getTravelDistance() {
 		return travelDistance_m;
+	}
+	
+
+	public double getTravelDistanceEstimate_m() {
+		return travelDistanceEstimate_m;
 	}
 
 	public void setTravelDistance(double travelDistance_m) {
@@ -152,9 +175,9 @@ public class DynModeTrip implements Comparable<DynModeTrip> {
 			fromCoordY = fromCoord.getY();
 		}
 		return getDepartureTime() + demitter + getPerson() + demitter + getVehicle() + demitter + getFromLinkId()
-				+ demitter + fromCoordX + demitter + fromCoordY + demitter + getToLinkId() + demitter + toCoordX
-				+ demitter + toCoordY + demitter + getWaitTime() + demitter + getArrivalTime() + demitter
-				+ getInVehicleTravelTime() + demitter + getTravelDistance();
+				+ demitter + format.format(fromCoordX) + demitter + format.format(fromCoordY) + demitter + getToLinkId() + demitter + format.format(toCoordX)
+				+ demitter + format.format(toCoordY) + demitter + getWaitTime() + demitter + getArrivalTime() + demitter
+				+ getInVehicleTravelTime() + demitter + format.format(getTravelDistance())+ demitter+ format.format(travelDistanceEstimate_m);
 	}
 
 }

@@ -19,10 +19,14 @@
 
 package org.matsim.contrib.drt.optimizer;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.matsim.contrib.drt.data.DrtRequest;
-import org.matsim.contrib.drt.schedule.*;
+import org.matsim.contrib.drt.schedule.DrtDriveTask;
+import org.matsim.contrib.drt.schedule.DrtStayTask;
+import org.matsim.contrib.drt.schedule.DrtStopTask;
+import org.matsim.contrib.drt.schedule.DrtTask;
 import org.matsim.contrib.drt.schedule.DrtTask.DrtTaskType;
 import org.matsim.contrib.dvrp.data.Vehicle;
 import org.matsim.contrib.dvrp.schedule.Schedule;
@@ -85,10 +89,10 @@ public class VehicleData {
 	}
 
 	private final List<Entry> entries = new ArrayList<>();
-	private final double currTime;
+	private final double currentTime;
 
-	public VehicleData(DrtOptimizerContext optimContext, Iterable<? extends Vehicle> vehicles) {
-		currTime = optimContext.timer.getTimeOfDay();
+	public VehicleData(double currentTime, Iterable<? extends Vehicle> vehicles) {
+		this.currentTime = currentTime;
 
 		for (Vehicle v : vehicles) {
 			Entry e = createVehicleData(v);
@@ -100,13 +104,21 @@ public class VehicleData {
 
 	public void updateEntry(Entry vEntry) {
 		int idx = entries.indexOf(vEntry);// TODO inefficient! ==> use map instead of list for storing entries...
-		entries.set(idx, createVehicleData(vEntry.vehicle));
+		Entry e = createVehicleData(vEntry.vehicle);
+		if (e != null) {
+			entries.set(idx, e);
+		} else {
+			entries.remove(idx);
+		}
 	}
 
 	private Entry createVehicleData(Vehicle vehicle) {
 		Schedule schedule = vehicle.getSchedule();
 		ScheduleStatus status = schedule.getStatus();
-		if (currTime >= vehicle.getServiceEndTime() || status == ScheduleStatus.COMPLETED) {
+		if (currentTime <= vehicle.getServiceBeginTime()) {
+			return null;
+		}
+		if (currentTime >= vehicle.getServiceEndTime() || status == ScheduleStatus.COMPLETED) {
 			return null;
 		}
 
@@ -133,7 +145,7 @@ public class VehicleData {
 
 				case STAY:
 					DrtStayTask stayTask = (DrtStayTask)currentTask;
-					start = new LinkTimePair(stayTask.getLink(), currTime);
+					start = new LinkTimePair(stayTask.getLink(), currentTime);
 					break;
 
 				default:

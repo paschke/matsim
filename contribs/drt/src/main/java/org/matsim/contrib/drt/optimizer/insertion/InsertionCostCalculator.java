@@ -47,7 +47,7 @@ public class InsertionCostCalculator {
 	// the insertion is invalid if some maxTravel/Wait constraints are not fulfilled
 	// ==> checks if all the constraints are satisfied for all passengers/requests ==> if not ==>
 	// INFEASIBLE_SOLUTION_COST is returned
-	public double calculate(DrtRequest drtRequest, VehicleData.Entry vEntry, Insertion insertion) {
+	public double calculate(DrtRequest drtRequest, VehicleData.Entry vEntry, Insertion insertion, double currentTime) {
 		double pickupDetourTimeLoss = calculatePickupDetourTimeLoss(drtRequest, vEntry, insertion);
 		double dropoffDetourTimeLoss = calculateDropoffDetourTimeLoss(drtRequest, vEntry, insertion);
 
@@ -55,7 +55,7 @@ public class InsertionCostCalculator {
 		double totalTimeLoss = pickupDetourTimeLoss + dropoffDetourTimeLoss;
 
 		boolean constraintsSatisfied = areConstraintsSatisfied(drtRequest, vEntry, insertion, pickupDetourTimeLoss,
-				totalTimeLoss);
+				totalTimeLoss, currentTime);
 		return constraintsSatisfied ? totalTimeLoss : INFEASIBLE_SOLUTION_COST;
 	}
 
@@ -115,7 +115,7 @@ public class InsertionCostCalculator {
 	}
 
 	private boolean areConstraintsSatisfied(DrtRequest drtRequest, VehicleData.Entry vEntry, Insertion insertion,
-			double pickupDetourTimeLoss, double totalTimeLoss) {
+			double pickupDetourTimeLoss, double totalTimeLoss, double currentTime) {
 		// this is what we cannot violate
 		for (int s = insertion.pickupIdx; s < insertion.dropoffIdx; s++) {
 			Stop stop = vEntry.stops.get(s);
@@ -140,16 +140,26 @@ public class InsertionCostCalculator {
 		double driveToPickupStartTime = (insertion.pickupIdx == 0) ? vEntry.start.time //
 				: vEntry.stops.get(insertion.pickupIdx - 1).task.getEndTime();
 
-		double pickupTime = driveToPickupStartTime + insertion.pathToPickup.path.travelTime
-				+ insertion.pathToPickup.firstAndLastLinkTT;
+		double pickupEndTime = driveToPickupStartTime + insertion.pathToPickup.path.travelTime
+				+ insertion.pathToPickup.firstAndLastLinkTT + stopDuration;
 
-		if (pickupTime > drtRequest.getEarliestStartTime() + maxWaitTime) {
+		if (pickupEndTime > drtRequest.getEarliestStartTime() + maxWaitTime) {
+			return false;
+		}
+
+		// reject solutions when latestArrivalTime for the new request is violated
+		double dropoffStartTime = insertion.pickupIdx == insertion.dropoffIdx
+				? pickupEndTime + insertion.pathFromPickup.path.travelTime + insertion.pathFromPickup.firstAndLastLinkTT
+				: vEntry.stops.get(insertion.dropoffIdx - 1).task.getEndTime() + insertion.pathToDropoff.path.travelTime
+						+ insertion.pathToDropoff.firstAndLastLinkTT;
+
+		if (dropoffStartTime > drtRequest.getLatestArrivalTime()) {
 			return false;
 		}
 
 		// vehicle's time window cannot be violated
 		DrtStayTask lastTask = (DrtStayTask)Schedules.getLastTask(vEntry.vehicle.getSchedule());
-		double timeSlack = vEntry.vehicle.getServiceEndTime() - lastTask.getBeginTime();
+		double timeSlack = vEntry.vehicle.getServiceEndTime() - 600 - Math.max(lastTask.getBeginTime(), currentTime);
 		if (timeSlack < totalTimeLoss) {
 			return false;
 		}

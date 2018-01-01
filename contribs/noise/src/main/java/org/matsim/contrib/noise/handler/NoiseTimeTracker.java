@@ -52,6 +52,8 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.vehicles.Vehicle;
 
+import com.google.inject.Inject;
+
 /**
  * A handler which computes noise emissions, immisions, affected agent units and damages for each receiver point and time interval.
  * Throws noise damage events for each affected and causing agent.
@@ -65,9 +67,11 @@ public class NoiseTimeTracker implements PersonEntersVehicleEventHandler, LinkEn
 	private static final Logger log = Logger.getLogger(NoiseTimeTracker.class);
 	private static final boolean printLog = false;
 	
-	private final NoiseContext noiseContext;
-	private final String outputDirectoryBasic;
-	private final EventsManager events;
+	@Inject
+	private NoiseContext noiseContext;
+		
+	@Inject
+	private EventsManager events;
 
 	private String outputDirectory;
 	private int iteration;
@@ -79,13 +83,6 @@ public class NoiseTimeTracker implements PersonEntersVehicleEventHandler, LinkEn
 	private double totalAffectedNoiseCost = 0.;
 	
 	private boolean useCompression = false ;
-	
-	public NoiseTimeTracker(NoiseContext noiseContext, EventsManager events, String outputDirectory) {
-		this.noiseContext = noiseContext;
-		this.outputDirectoryBasic = outputDirectory;
-		this.outputDirectory = outputDirectory;
-		this.events = events;	
-	}
 	
 	private int cWarn1 = 0;
 	private int cWarn2 = 0;
@@ -130,7 +127,10 @@ public class NoiseTimeTracker implements PersonEntersVehicleEventHandler, LinkEn
 	@Override
 	public void reset(int iteration) {
 		
-		this.outputDirectory = this.outputDirectoryBasic + "it." + iteration + "/";
+		String outputDir = noiseContext.getScenario().getConfig().controler().getOutputDirectory();
+		if (!outputDir.endsWith("/")) outputDir = outputDir + "/";
+		
+		this.outputDirectory = outputDir + "ITERS/" + "it." + iteration + "/";
 		log.info("Setting the output directory to " + outputDirectory);
 		
 		this.iteration = iteration;
@@ -144,7 +144,8 @@ public class NoiseTimeTracker implements PersonEntersVehicleEventHandler, LinkEn
 		this.noiseContext.getTimeInterval2linkId2noiseLinks().clear();
 		this.noiseContext.getLinkId2vehicleId2lastEnterTime().clear();
 		this.noiseContext.setCurrentTimeBinEndTime(this.noiseContext.getNoiseParams().getTimeBinSizeNoiseComputation());
-		
+		this.noiseContext.getVehicleId2PersonId().clear();
+
 		for (NoiseReceiverPoint rp : this.noiseContext.getReceiverPoints().values()) {
 			rp.getLinkId2IsolatedImmission().clear();
 			rp.setFinalImmission(0.);
@@ -914,6 +915,18 @@ public class NoiseTimeTracker implements PersonEntersVehicleEventHandler, LinkEn
 	@Override
 	public void handleEvent(PersonEntersVehicleEvent event) {
 		this.noiseContext.getVehicleId2PersonId().put(event.getVehicleId(), event.getPersonId());
+	}
+
+	public void setNoiseContext(NoiseContext noiseContext) {
+		this.noiseContext = noiseContext;
+	}
+
+	public void setEvents(EventsManager events) {
+		this.events = events;
+	}
+
+	public void setOutputFilePath(String outputFilePath) {
+		this.outputDirectory = outputFilePath;
 	}
 	
 }

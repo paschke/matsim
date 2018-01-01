@@ -35,8 +35,8 @@ import java.util.*;
  */
 public final class NetworkChangeEvent {
 
-	public static enum ChangeType {
-		ABSOLUTE_IN_SI_UNITS, FACTOR
+	public enum ChangeType {
+		ABSOLUTE_IN_SI_UNITS, FACTOR, OFFSET_IN_SI_UNITS
 	}
 
 	public static class ChangeValue {
@@ -56,6 +56,27 @@ public final class NetworkChangeEvent {
 
 		public double getValue() {
 			return value;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+
+			ChangeValue that = (ChangeValue) o;
+
+			if (Double.compare(that.value, value) != 0) return false;
+			return type == that.type;
+		}
+
+		@Override
+		public int hashCode() {
+			int result;
+			long temp;
+			result = type.hashCode();
+			temp = Double.doubleToLongBits(value);
+			result = 31 * result + (int) (temp ^ (temp >>> 32));
+			return result;
 		}
 	}
 
@@ -195,5 +216,34 @@ public final class NetworkChangeEvent {
 		public int compare(NetworkChangeEvent o1, NetworkChangeEvent o2) {
 			return Double.compare(o1.getStartTime(), o2.getStartTime());
 		}
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+
+		NetworkChangeEvent that = (NetworkChangeEvent) o;
+
+		if (Double.compare(that.startTime, startTime) != 0) return false;
+		if (!links.equals(that.links)) return false;
+		if (flowCapacityChange != null ? !flowCapacityChange.equals(that.flowCapacityChange) : that.flowCapacityChange != null)
+			return false;
+		if (freespeedChange != null ? !freespeedChange.equals(that.freespeedChange) : that.freespeedChange != null)
+			return false;
+		return lanesChange != null ? lanesChange.equals(that.lanesChange) : that.lanesChange == null;
+	}
+
+	@Override
+	public int hashCode() {
+		int result;
+		long temp;
+		result = links.hashCode();
+		temp = Double.doubleToLongBits(startTime);
+		result = 31 * result + (int) (temp ^ (temp >>> 32));
+		result = 31 * result + (flowCapacityChange != null ? flowCapacityChange.hashCode() : 0);
+		result = 31 * result + (freespeedChange != null ? freespeedChange.hashCode() : 0);
+		result = 31 * result + (lanesChange != null ? lanesChange.hashCode() : 0);
+		return result;
 	}
 }

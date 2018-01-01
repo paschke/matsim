@@ -21,6 +21,7 @@ package org.matsim.contrib.emissions.utils;
 
 import java.net.URL;
 import java.util.Map;
+
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 
@@ -232,11 +233,11 @@ extends ReflectiveConfigGroup
 	}
 
 	/**
-	 * @param ignoringEmissionsFromEventsFile -- {@value #WRITING_EMISSIONS_EVENTS_CMT}
+	 * @param isWritingEmissionsEvents -- {@value #WRITING_EMISSIONS_EVENTS_CMT}
 	 */
 	@StringSetter(WRITING_EMISSIONS_EVENTS)
-	public void setIgnoringEmissionsFromEventsFile(boolean ignoringEmissionsFromEventsFile) {
-		isWritingEmissionsEvents = ignoringEmissionsFromEventsFile;
+	public void setWritingEmissionsEvents(boolean writingEmissionsEvents) {
+		isWritingEmissionsEvents = writingEmissionsEvents;
 	}
 
 	@StringGetter(EMISSION_EFFICIENCY_FACTOR)

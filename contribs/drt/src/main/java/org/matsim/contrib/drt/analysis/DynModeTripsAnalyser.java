@@ -100,6 +100,8 @@ public class DynModeTripsAnalyser {
 		DescriptiveStatistics waitStats = new DescriptiveStatistics();
 		DescriptiveStatistics rideStats = new DescriptiveStatistics();
 		DescriptiveStatistics distanceStats = new DescriptiveStatistics();
+		DescriptiveStatistics directDistanceStats = new DescriptiveStatistics();
+
 		DescriptiveStatistics traveltimes = new DescriptiveStatistics();
 
 		DecimalFormat format = new DecimalFormat();
@@ -115,15 +117,32 @@ public class DynModeTripsAnalyser {
 			waitStats.addValue(trip.getWaitTime());
 			rideStats.addValue(trip.getInVehicleTravelTime());
 			distanceStats.addValue(trip.getTravelDistance());
+			directDistanceStats.addValue(trip.getTravelDistanceEstimate_m());
 			traveltimes.addValue(trip.getInVehicleTravelTime() + trip.getWaitTime());
 		}
 		String value = format.format(waitStats.getValues().length) + delimiter + format.format(waitStats.getMean())
 				+ delimiter + format.format(waitStats.getMax()) + delimiter + format.format(waitStats.getPercentile(95)) 
 				+ delimiter+ format.format(waitStats.getPercentile(75))+ delimiter+ format.format(waitStats.getPercentile(50))
-				+ delimiter + format.format(rideStats.getMean()) + delimiter + format.format(distanceStats.getMean())
+				+ delimiter + format.format(rideStats.getMean()) + delimiter + format.format(distanceStats.getMean())+ delimiter + format.format(directDistanceStats.getMean())
 				+ delimiter + format.format(traveltimes.getMean());
 		return value;
 	}
+	
+	public static double getDirectDistanceMean(List<DynModeTrip> trips) {
+
+		DescriptiveStatistics directDistanceStats = new DescriptiveStatistics();
+
+		for (DynModeTrip trip : trips) {
+			if (trip.getToLinkId() == null) {
+				continue;
+			}
+			
+			directDistanceStats.addValue(trip.getTravelDistanceEstimate_m());
+		}
+		return directDistanceStats.getMean();
+	}
+	
+	
 
 	public static void analyseDetours(Network network, List<DynModeTrip> trips, double beelineDistanceFactor,
 			double freeSpeedModeFactor, String fileName) {
@@ -192,7 +211,7 @@ public class DynModeTripsAnalyser {
 		format.setMaximumFractionDigits(2);
 		format.setGroupingUsed(false);
 
-		SimpleDateFormat sdf2 = new SimpleDateFormat("hh:mm:ss");
+		SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm:ss");
 
 		BufferedWriter bw = IOUtils.getBufferedWriter(fileName + ".csv");
 		TimeSeriesCollection dataset = new TimeSeriesCollection();
@@ -237,7 +256,7 @@ public class DynModeTripsAnalyser {
 				averageWaitC.addOrUpdate(h, Double.valueOf(averageWait));
 				p_5Wait.addOrUpdate(h, Double.valueOf(p_5));
 				p_95Wait.addOrUpdate(h, Double.valueOf(p_95));
-				requests.addOrUpdate(h, rides);
+				requests.addOrUpdate(h, rides * 3600. / binsize_s);//normalised [req/h]
 				bw.newLine();
 				bw.write(Time.writeTime(e.getKey()) + ";" + rides + ";" + format.format(averageWait) + ";"
 						+ format.format(min) + ";" + format.format(p_5) + ";" + format.format(p_25) + ";"
@@ -253,7 +272,7 @@ public class DynModeTripsAnalyser {
 			dataset.addSeries(p_95Wait);
 			datasetrequ.addSeries(requests);
 			JFreeChart chart = chartProfile(splitTrips.size(), dataset, "Waiting times", "Wait time (s)");
-			JFreeChart chart2 = chartProfile(splitTrips.size(), datasetrequ, "Ride requests", "Requests");
+			JFreeChart chart2 = chartProfile(splitTrips.size(), datasetrequ, "Ride requests per hour", "Requests per hour (req/h)");
 			ChartSaveUtils.saveAsPNG(chart, fileName, 1500, 1000);
 			ChartSaveUtils.saveAsPNG(chart2, fileName + "_requests", 1500, 1000);
 
@@ -363,11 +382,20 @@ public class DynModeTripsAnalyser {
 			double emptyD = dist[0] - dist[2];
 			empty.addValue(emptyD);
 		}
+		double d_r_d_t = revenue.getSum()/driven.getSum();
 		// bw.write("iteration;vehicles;totalDistance;totalEmptyDistance;emptyRatio;totalRevenueDistance;averageDrivenDistance;averageEmptyDistance;averageRevenueDistance");
 		String result = vehicleDistances.size() + del + format.format(driven.getSum()) + del
 				+ format.format(empty.getSum()) + del + format.format(empty.getSum() / driven.getSum()) + del
 				+ format.format(revenue.getSum()) + del + format.format(driven.getMean()) + del
-				+ format.format(empty.getMean()) + del + format.format(revenue.getMean());
+				+ format.format(empty.getMean()) + del + format.format(revenue.getMean()) + del + format.format(d_r_d_t);
 		return result;
+	}
+	
+	public static double getTotalDistance(Map<Id<Vehicle>, double[]> vehicleDistances) {
+		DescriptiveStatistics driven = new DescriptiveStatistics();
+		for (double[] dist : vehicleDistances.values()) {
+			driven.addValue(dist[0]);
+		}
+		return driven.getSum();
 	}
 }

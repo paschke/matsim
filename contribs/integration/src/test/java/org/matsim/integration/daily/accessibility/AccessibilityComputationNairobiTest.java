@@ -28,7 +28,6 @@ import org.apache.log4j.Logger;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.accessibility.AccessibilityConfigGroup;
@@ -36,15 +35,14 @@ import org.matsim.contrib.accessibility.AccessibilityConfigGroup.AreaOfAccesssib
 import org.matsim.contrib.accessibility.AccessibilityModule;
 import org.matsim.contrib.accessibility.FacilityTypes;
 import org.matsim.contrib.accessibility.Modes4Accessibility;
+import org.matsim.contrib.accessibility.utils.AccessibilityOsmNetworkReader;
 import org.matsim.contrib.accessibility.utils.AccessibilityUtils;
 import org.matsim.contrib.accessibility.utils.VisualizationUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ModeParams;
-import org.matsim.core.config.groups.PlansCalcRouteConfigGroup.ModeRoutingParams;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
-import org.matsim.core.network.io.MatsimNetworkReader;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
@@ -63,33 +61,32 @@ public class AccessibilityComputationNairobiTest {
 	@Rule public MatsimTestUtils utils = new MatsimTestUtils() ;
 	
 	@Test
-	public void runAccessibilityComputation() throws IOException {
-		Double cellSize = 2000.;
-		boolean push2Geoserver = false; // set true for run on server
-		boolean createQGisOutput = true; // set false for run on server
+	public void runAccessibilityComputation() {
+		Double cellSize = 500.;
+		boolean push2Geoserver = true; // Set true for run on server
+		boolean createQGisOutput = true; // Set false for run on server
 
 		final Config config = ConfigUtils.createConfig(new AccessibilityConfigGroup());
 		// Notation: minX, maxX, minY, maxY
 		Envelope envelope = new  Envelope(240000, 280000, 9844000, 9874000); // whole Nairobi
 //		Envelope envelope = new  Envelope(246000, 271000, 9853000, 9863000); // whole Nairobi // central part
-//		final Envelope envelope = new Envelope(249000, 255000, 9854000, 9858000); // western Nairobi with Kibera
-//		final Envelope envelope = new Envelope(-70000, 800000, 9450000, 10500000); // whole Kenya
-//		final Envelope envelope = new Envelope(-70000, 420000, 9750000, 10100000); // Southwestern half of Kenya
+//		Envelope envelope = new Envelope(251800.0, 258300.0, 9854300.0, 9858700.0); // City center and Kibera for minibus caluclation
 		String scenarioCRS = "EPSG:21037"; // EPSG:21037 = Arc 1960 / UTM zone 37S, for Nairobi, Kenya
 		
 		// ---------- Input (if pre-downloaded)
 //		String folderStructure = "../../";
 //		String networkFile = "matsimExamples/countries/ke/nairobi/2015-10-15_network.xml";
+//		String networkFile = "../shared-svn/projects/maxess/data/nairobi/network/2015-10-15_network.xml";
+//		String networkFile = "../shared-svn/projects/maxess/data/nairobi/minibus/07/grid10min_0.output_network.xml.gz";
 //		String networkFile = "../shared-svn/projects/maxess/data/nairobi/network/2015-10-15_network_modified_policy.xml";
 //		String networkFile = "../shared-svn/projects/maxess/data/kenya/network/2016-10-19_network_detailed.xml";
 //		// Adapt folder structure that may be different on different machines, in particular on server
 //		folderStructure = PathUtils.tryANumberOfFolderStructures(folderStructure, networkFile);
 //		config.network().setInputFile(folderStructure + networkFile);
 //		
-//		config.facilities().setInputFile(folderStructure + "matsimExamples/countries/ke/nairobi/2016-07-09_facilities_airports.xml"); //airports
 //		final String facilitiesFile = folderStructure + "matsimExamples/countries/ke/nairobi/2015-10-15_facilities.xml";
 //		final String facilitiesFile = "../../../shared-svn/projects/maxess/data/nairobi/land_use/nairobi_LU_2010/facilities.xml";
-//		config.facilities().setInputFile("../../../shared-svn/projects/maxess/data/nairobi/kodi/schools/primary_public/facilities.xml");
+//		config.facilities().setInputFile("../../../shared-svn/projects/maxess/data/nairobi/facilities/2017-04-25_nairobi_central_and_kibera/2017-04-25_facilities_landuse_buildings.xml");
 //		final String facilitiesFile = "../../../shared-svn/projects/maxess/data/nairobi/kodi/health/hospitals/facilities.xml";
 //		final String facilitiesFile = "../../../shared-svn/projects/maxess/data/nairobi/facilities/04/facilities.xml"; //airports
 //
@@ -100,13 +97,22 @@ public class AccessibilityComputationNairobiTest {
 		CoordinateTransformation transformation = TransformationFactory.getCoordinateTransformation(scenarioCRS, "EPSG:4326");
 		Coord southwest = transformation.transform(new Coord(envelope.getMinX(), envelope.getMinY()));
 		Coord northeast = transformation.transform(new Coord(envelope.getMaxX(), envelope.getMaxY()));
-//		URL osm = new URL("http://api.openstreetmap.org/api/0.6/map?bbox=" + southwest.getX() + "," + southwest.getY() + "," + northeast.getX() + "," + northeast.getY());
-		URL osm = new URL("http://overpass.osm.rambler.ru/cgi/xapi_meta?*[bbox=" + southwest.getX() + "," + southwest.getY() + "," + northeast.getX() + "," + northeast.getY() +"]");
-		HttpURLConnection connection = (HttpURLConnection) osm.openConnection();
-		HttpURLConnection connection2 = (HttpURLConnection) osm.openConnection(); // TODO There might be more elegant option without creating this twice
-	    Network network = CreateNetwork.createNetwork(connection.getInputStream(), scenarioCRS);
-	    double buildingTypeFromVicinityRange = 0.;
-		ActivityFacilities facilities = RunCombinedOsmReaderKibera.createFacilites(connection2.getInputStream(), scenarioCRS, buildingTypeFromVicinityRange);
+		Network network = null;
+		ActivityFacilities facilities = null;
+		try {
+//			URL osm = new URL("http://api.openstreetmap.org/api/0.6/map?bbox=" + southwest.getX() + "," + southwest.getY() + "," + northeast.getX() + "," + northeast.getY());
+			URL osm = new URL("http://overpass.osm.rambler.ru/cgi/xapi_meta?*[bbox=" + southwest.getX() + "," + southwest.getY() + "," + northeast.getX() + "," + northeast.getY() +"]");
+			HttpURLConnection connection = (HttpURLConnection) osm.openConnection();
+			HttpURLConnection connection2 = (HttpURLConnection) osm.openConnection(); // TODO There might be more elegant option without creating this twice
+//		    network = AccessibilityNetworkUtils.createNetwork(connection.getInputStream(), scenarioCRS, true, true, false);
+			AccessibilityOsmNetworkReader networkReader = new AccessibilityOsmNetworkReader(connection.getInputStream(), scenarioCRS);
+			networkReader.createNetwork();
+			network = networkReader.getNetwork();
+			
+			facilities = CombinedOsmFacilityReaderKenya.createFacilites(connection2.getInputStream(), scenarioCRS, 0.);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		// ---------- 
 		
 		config.controler().setOverwriteFileSetting(OverwriteFileSetting.deleteDirectoryIfExists);
@@ -116,38 +122,15 @@ public class AccessibilityComputationNairobiTest {
 		
 		config.global().setCoordinateSystem(scenarioCRS);
 		
-		// ---------- Matrix-based pt
-//		String travelTimeMatrix = "../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/gtfs/matrix/temp/tt.csv";
-//		String travelDistanceMatrix = "../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/gtfs/matrix/temp/td.csv";
-//		String ptStops = "../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/gtfs/matrix/temp/IDs.csv";
-		// ----------
-		
 		AccessibilityConfigGroup acg = ConfigUtils.addOrGetModule(config, AccessibilityConfigGroup.class);
 		acg.setAreaOfAccessibilityComputation(AreaOfAccesssibilityComputation.fromBoundingBox);
 		acg.setEnvelope(envelope);
 		acg.setCellSizeCellBasedAccessibility(cellSize.intValue());
-//		acg.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, false);
+		acg.setComputingAccessibilityForMode(Modes4Accessibility.freespeed, true);
 		acg.setComputingAccessibilityForMode(Modes4Accessibility.walk, true);
-		acg.setComputingAccessibilityForMode(Modes4Accessibility.bike, false);
-		acg.setComputingAccessibilityForMode(Modes4Accessibility.matrixBasedPt, false);
-//		acg.setComputingAccessibilityForMode(Modes4Accessibility.pt, true );
-		acg.setOutputCrs(scenarioCRS); // = Arc 1960 / UTM zone 37S, for Nairobi, Kenya
-		
-		// ---------- Matrix-based pt
-//		MatrixBasedPtRouterConfigGroup mbConfig = new MatrixBasedPtRouterConfigGroup();
-////		mbConfig.setPtStopsInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/gtfs/matrix/temp/IDs.csv");
-////		mbConfig.setPtTravelDistancesInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/gtfs/matrix/temp/td.csv");
-////		mbConfig.setPtTravelTimesInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/gtfs/matrix/temp/tt.csv");
-//		mbConfig.setPtStopsInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/otp_2015-06-16/fromIDs.csv");
-//		mbConfig.setPtTravelDistancesInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/otp_2015-06-16/td.csv");
-//		mbConfig.setPtTravelTimesInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/otp_2015-06-16/tt.csv");
-////		mbConfig.setPtStopsInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/example/ptStops.csv");
-////		mbConfig.setPtTravelDistancesInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/example/ptTravelInfo.csv");
-////		mbConfig.setPtTravelTimesInputFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/example/ptTravelInfo.csv");
-//		mbConfig.setUsingPtStops(true);
-//		mbConfig.setUsingTravelTimesAndDistances(true);
-//		config.addModule(mbConfig);
-		// ----------
+		acg.setComputingAccessibilityForMode(Modes4Accessibility.bike, true);
+		acg.setComputingAccessibilityForMode(Modes4Accessibility.pt, false );
+		acg.setOutputCrs(scenarioCRS);
 		
 		ConfigUtils.setVspDefaults(config);
 		
@@ -158,6 +141,12 @@ public class AccessibilityComputationNairobiTest {
 //		config.transit().setInputScheduleCRS("EPSG:4326");
 //		config.transit().setTransitScheduleFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/matsim_2015-06-16_2/schedule2.xml");
 //		config.transit().setVehiclesFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/matsim_2015-06-16_2/vehicles.xml");
+//		config.transit().setInputScheduleCRS("EPSG:21037");
+//		config.transit().setTransitScheduleFile("../../../shared-svn/projects/maxess/data/nairobi/minibus/07/grid10min_0.output_transitSchedule.xml.gz");
+//		config.transit().setVehiclesFile("../../../shared-svn/projects/maxess/data/nairobi/minibus/07/grid10min_0.output_transitVehicles.xml.gz");
+//		config.qsim().setEndTime(100*3600.);
+//		config.transit().setTransitScheduleFile("../../../shared-svn/projects/maxess/data/nairobi/minibus/07/ITERS/it.100/grid10min_0.100.transitScheduleScored.xml.gz");
+//		config.transit().setVehiclesFile("../../../shared-svn/projects/maxess/data/nairobi/minibus/07/ITERS/it.100/grid10min_0.100.vehicles.xml.gz");
 //		Scenario scenario2 = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 //		new MatsimNetworkReader(TransformationFactory.getCoordinateTransformation("EPSG:4326", scenarioCRS), 
 //		scenario2.getNetwork()).readFile("../../../shared-svn/projects/maxess/data/nairobi/digital_matatus/matsim_2015-06-16_2/network.xml");
@@ -166,25 +155,12 @@ public class AccessibilityComputationNairobiTest {
 		config.planCalcScore().addModeParams(ptParams);
 
 		// ... trying to alter settings to drive down the number of "35527609 transfer links to be added".
-//		config.transitRouter().setAdditionalTransferTime(additionalTransferTime);
-//		config.transitRouter().setDirectWalkFactor(directWalkFactor);
-		config.transitRouter().setMaxBeelineWalkConnectionDistance(0.);
-		config.transitRouter().setExtensionRadius(0.);
-		config.transitRouter().setSearchRadius(0.);
-		// defaults
-//		additionalTransferTime = 0.0;
-//		directWalkFactor = 1. ;
-//		maxBeelineWalkConnectionDistance = 100.0;
-//		extensionRadius = 200.0;
-//		searchRadius = 1000.0;
+//		config.transitRouter().setAdditionalTransferTime(additionalTransferTime); // default: 0.0
+//		config.transitRouter().setDirectWalkFactor(directWalkFactor); // default: 1.0
+//		config.transitRouter().setMaxBeelineWalkConnectionDistance(0.); // default: 100.0
+//		config.transitRouter().setExtensionRadius(0.); // default: 200.0
+//		config.transitRouter().setSearchRadius(0.); // default: 1000.0
 		// ----------
-		
-		{
-			ModeRoutingParams walkPars = new ModeRoutingParams( TransportMode.walk ) ;
-			walkPars.setBeelineDistanceFactor(1.3);
-			walkPars.setTeleportedModeSpeed(4.);
-			config.plansCalcRoute().addModeRoutingParams(walkPars);
-		}
 		
 		MutableScenario scenario = (MutableScenario) ScenarioUtils.loadScenario(config);
 		
@@ -195,24 +171,9 @@ public class AccessibilityComputationNairobiTest {
 //		scenario.setTransitSchedule(schedule);
 //		scenario.setTransitVehicles(vehicles);
 		
-		// ---------- Matrix-based pt
-//		BoundingBox bb = new BoundingBox(envelope);
-////		final PtMatrix ptMatrix = PtMatrix.createPtMatrix(config.plansCalcRoute(), BoundingBox.createBoundingBox(scenario.getNetwork()), mbConfig);
-//		final PtMatrix ptMatrix = PtMatrix.createPtMatrix(config.plansCalcRoute(), bb, mbConfig);
-//		scenario.addScenarioElement(PtMatrix.NAME, ptMatrix);
-		// ----------
-		
 		// Activity types
-//		final List<String> activityTypes = Arrays.asList(new String[]{"airport"});
-//		final List<String> activityTypes = Arrays.asList(new String[]{FacilityTypes.SHOPPING, FacilityTypes.EDUCATION});
-		final List<String> activityTypes = Arrays.asList(new String[]{FacilityTypes.SHOPPING});
-//		activityTypes.add("Commercial"); // land-use file version
-//		activityTypes.add("Industrial"); // land-use file version
-//		activityTypes.add("Public Purpose"); // land-use file version
-//		activityTypes.add("Recreational"); // land-use file version
-//		activityTypes.add("Hospital"); // kodi file version
-		log.info("Using activity types: " + activityTypes);
-
+		final List<String> activityTypes = Arrays.asList(new String[]{FacilityTypes.SHOPPING, FacilityTypes.EDUCATION, FacilityTypes.LEISURE});
+		
 		// Network density points (as proxy for population density)
 		final ActivityFacilities densityFacilities = AccessibilityUtils.createFacilityForEachLink(scenario.getNetwork());
 		// will be aggregated in downstream code!
@@ -226,15 +187,6 @@ public class AccessibilityComputationNairobiTest {
 			module.setPushing2Geoserver(push2Geoserver);
 			controler.addOverridingModule(module);
 		}
-
-		// ---------- Matrix-based pt
-//		controler.addOverridingModule(new AbstractModule() {
-//			@Override
-//			public void install() {
-//				bind(PtMatrix.class).toInstance(ptMatrix);
-//			}
-//		});
-		// ----------
 
 		controler.run();
 
@@ -251,7 +203,7 @@ public class AccessibilityComputationNairobiTest {
 			for (String actType : activityTypes) {
 				String actSpecificWorkingDirectory = workingDirectory + actType + "/";
 				for (Modes4Accessibility mode : acg.getIsComputingMode()) {
-					VisualizationUtils.createQGisOutput(actType, mode.toString(), envelope, workingDirectory,
+					VisualizationUtils.createQGisOutputGraduatedStandardColorRange(actType, mode.toString(), envelope, workingDirectory,
 							scenarioCRS, includeDensityLayer, lowerBound, upperBound, range, cellSize.intValue(),
 							populationThreshold);
 					VisualizationUtils.createSnapshot(actSpecificWorkingDirectory, mode.toString(), osName);

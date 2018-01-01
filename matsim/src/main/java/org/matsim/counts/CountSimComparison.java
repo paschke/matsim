@@ -27,16 +27,22 @@ import org.matsim.api.core.v01.network.Link;
  * Classes implementing this interface can be used to access the data
  * needed to compare traffic counts and simulation traffic at a specific
  * link for a one hour time step.
+ * 
  * @author dgrether
- *
  */
-public interface CountSimComparison {
+public interface CountSimComparison<T> {
 
 	/**
 	 * @return The Id of the link
 	 */
-	public Id<Link> getId();
+	public Id<T> getId();
 
+	/**
+	 * 
+	 * @return The Id of the count station
+	 */
+	public String getCsId();
+	
 	/**
 	 * The time at which the data was measured.
 	 * @return A value in 1..24, 1 means 0 - 1 am, 2 means 1 - 2 am and so on
@@ -59,5 +65,15 @@ public interface CountSimComparison {
 	 */
 	public double calculateRelativeError();
 
-
+	/**
+	 * Calculates the normalized relative error.
+	 * @return the normalized relative error
+	 */
+	public double calculateNormalizedRelativeError();
+	
+	/**
+	 * Calculates the GEH value
+	 * @return the GEH value
+	 */
+	public double calculateGEHValue();	
 }

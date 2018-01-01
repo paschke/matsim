@@ -20,6 +20,8 @@
 
 package org.matsim.integration;
 
+import java.util.Arrays;
+
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -28,19 +30,26 @@ import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.*;
+import org.matsim.api.core.v01.population.Activity;
+import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Plan;
+import org.matsim.api.core.v01.population.PopulationFactory;
+import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Injector;
+import org.matsim.core.controler.PrepareForSimUtils;
 import org.matsim.core.events.EventsManagerModule;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.mobsim.qsim.QSimUtils;
 import org.matsim.core.mobsim.qsim.interfaces.Netsim;
 import org.matsim.core.population.algorithms.PlanAlgorithm;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
+import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.router.PlanRouter;
 import org.matsim.core.router.TripRouter;
 import org.matsim.core.router.TripRouterModule;
@@ -52,15 +61,18 @@ import org.matsim.core.scoring.functions.CharyparNagelScoringFunctionFactory;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculatorModule;
 import org.matsim.pt.PtConstants;
 import org.matsim.pt.transitSchedule.TransitScheduleFactoryImpl;
-import org.matsim.pt.transitSchedule.api.*;
+import org.matsim.pt.transitSchedule.api.Departure;
+import org.matsim.pt.transitSchedule.api.TransitLine;
+import org.matsim.pt.transitSchedule.api.TransitRoute;
+import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.pt.transitSchedule.api.TransitScheduleFactory;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import org.matsim.testcases.MatsimTestCase;
 import org.matsim.testcases.utils.EventsCollector;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleCapacity;
 import org.matsim.vehicles.VehicleType;
 import org.matsim.vehicles.Vehicles;
-
-import java.util.Arrays;
 
 public class SimulateAndScoreTest extends MatsimTestCase {
 
@@ -128,7 +140,7 @@ public class SimulateAndScoreTest extends MatsimTestCase {
 
 
 		TransitLine line1 = builder.createTransitLine(Id.create("L1", TransitLine.class));
-		LinkNetworkRouteImpl route = new LinkNetworkRouteImpl(link1.getId(), link3.getId());
+		NetworkRoute route = RouteUtils.createLinkNetworkRouteImpl(link1.getId(), link3.getId());
 		route.setLinkIds(link1.getId(), Arrays.asList(link2.getId()), link3.getId());
 		TransitRoute route1 = builder.createTransitRoute(Id.create("R1", TransitRoute.class), route, Arrays.asList( builder.createTransitRouteStop(stop1,0,10), builder.createTransitRouteStop(stop2,0,20), builder.createTransitRouteStop(stop3,0,30)), TransportMode.car);
 		line1.addRoute(route1);
@@ -191,6 +203,7 @@ public class SimulateAndScoreTest extends MatsimTestCase {
 		// ---
 		
 		EventsManager events = EventsUtils.createEventsManager();
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
 		Netsim sim = QSimUtils.createDefaultQSim(scenario, events);
 		EventsToScore scorer =
 				EventsToScore.createWithScoreUpdating(
@@ -248,6 +261,7 @@ public class SimulateAndScoreTest extends MatsimTestCase {
 		scenario.getPopulation().addPerson(person);
 
 		EventsManager events = EventsUtils.createEventsManager();
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
 		Netsim sim = QSimUtils.createDefaultQSim(scenario, events);
 		PlanCalcScoreConfigGroup.ActivityParams h = new PlanCalcScoreConfigGroup.ActivityParams("h");
 		h.setTypicalDuration(16 * 3600);

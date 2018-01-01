@@ -130,7 +130,7 @@ public class EventsManagerImpl implements EventsManager {
 	public void processEvent(final Event event) {
 		this.counter++;
 		if (this.counter == this.nextCounterMsg) {
-			this.nextCounterMsg *= 2;
+			this.nextCounterMsg *= 4;
 			log.info(" event # " + this.counter);
 		}
 		computeEvent(event);
@@ -224,12 +224,10 @@ public class EventsManagerImpl implements EventsManager {
 				}
 				try {
 					info.method.invoke(info.eventHandler, event);
-				} catch (IllegalArgumentException e) {
-					throw new RuntimeException("problem invoking EventHandler " + info.eventHandler.getClass().getCanonicalName() + " for event-class " + info.eventClass.getCanonicalName(), e);
-				} catch (IllegalAccessException e) {
+				} catch (IllegalArgumentException | IllegalAccessException e) {
 					throw new RuntimeException("problem invoking EventHandler " + info.eventHandler.getClass().getCanonicalName() + " for event-class " + info.eventClass.getCanonicalName(), e);
 				} catch (InvocationTargetException e) {
-					throw new RuntimeException("problem invoking EventHandler " + info.eventHandler.getClass().getCanonicalName() + " for event-class " + info.eventClass.getCanonicalName(), e);
+					throw new RuntimeException("problem invoking EventHandler " + info.eventHandler.getClass().getCanonicalName() + " for event-class " + info.eventClass.getCanonicalName(), e.getCause());
 				}
 			}
 		}

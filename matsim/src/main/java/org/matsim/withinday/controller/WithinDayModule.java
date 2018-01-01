@@ -35,7 +35,7 @@ import org.matsim.withinday.mobsim.WithinDayQSimFactory;
 import org.matsim.withinday.replanning.identifiers.tools.ActivityReplanningMap;
 import org.matsim.withinday.replanning.identifiers.tools.LinkReplanningMap;
 import org.matsim.withinday.trafficmonitoring.EarliestLinkExitTimeProvider;
-import org.matsim.withinday.trafficmonitoring.TravelTimeCollectorModule;
+import org.matsim.withinday.trafficmonitoring.WithinDayTravelTimeModule;
 
 import javax.inject.Named;
 import java.util.HashMap;
@@ -44,11 +44,10 @@ import java.util.Map;
 public class WithinDayModule extends AbstractModule {
     @Override
     public void install() {
-        install(new TravelTimeCollectorModule());
+        install(new WithinDayTravelTimeModule());
         bind(WithinDayEngine.class);
         bind(Mobsim.class).toProvider(WithinDayQSimFactory.class);
         bind(FixedOrderSimulationListener.class).asEagerSingleton();
-        addMobsimListenerBinding().to(FixedOrderSimulationListener.class);
         bind(WithinDayControlerListener.class).asEagerSingleton();
         addControlerListenerBinding().to(WithinDayControlerListener.class);
         bind(MobsimDataProvider.class).asEagerSingleton();

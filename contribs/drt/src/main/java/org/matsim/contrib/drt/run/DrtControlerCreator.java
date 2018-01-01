@@ -24,97 +24,65 @@ package org.matsim.contrib.drt.run;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.drt.analysis.DrtAnalysisModule;
-import org.matsim.contrib.drt.optimizer.*;
+import org.matsim.contrib.drt.optimizer.DefaultDrtOptimizer;
+import org.matsim.contrib.drt.optimizer.DrtOptimizer;
+import org.matsim.contrib.drt.optimizer.insertion.DefaultUnplannedRequestInserter;
+import org.matsim.contrib.drt.optimizer.insertion.UnplannedRequestInserter;
+import org.matsim.contrib.drt.optimizer.insertion.filter.DrtVehicleFilter;
+import org.matsim.contrib.drt.optimizer.insertion.filter.KNearestVehicleFilter;
+import org.matsim.contrib.drt.optimizer.insertion.filter.NoFilter;
 import org.matsim.contrib.drt.passenger.DrtRequestCreator;
-import org.matsim.contrib.drt.routing.*;
+import org.matsim.contrib.drt.routing.DrtStageActivityType;
+import org.matsim.contrib.drt.scheduler.DrtScheduler;
+import org.matsim.contrib.drt.scheduler.EmptyVehicleRelocator;
 import org.matsim.contrib.drt.vrpagent.DrtActionCreator;
-import org.matsim.contrib.dvrp.data.*;
-import org.matsim.contrib.dvrp.data.file.VehicleReader;
 import org.matsim.contrib.dvrp.optimizer.VrpOptimizer;
 import org.matsim.contrib.dvrp.passenger.PassengerRequestCreator;
-import org.matsim.contrib.dvrp.run.*;
+import org.matsim.contrib.dvrp.run.DvrpConfigConsistencyChecker;
+import org.matsim.contrib.dvrp.run.DvrpModule;
+import org.matsim.contrib.dvrp.trafficmonitoring.DvrpTravelTimeModule;
 import org.matsim.contrib.dvrp.vrpagent.VrpAgentLogic.DynActionCreator;
 import org.matsim.contrib.otfvis.OTFVisLiveModule;
-import org.matsim.core.config.*;
+import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
-import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.mobsim.framework.MobsimTimer;
+import org.matsim.core.mobsim.qsim.QSim;
+import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
+import org.matsim.core.router.util.TravelDisutility;
+import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.pt.transitSchedule.api.*;
 
-import com.google.inject.*;
-import com.google.inject.name.*;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 
 /**
  * @author jbischoff
  *
  */
-public class DrtControlerCreator {
+public final class DrtControlerCreator {
 
 	public static Controler createControler(Config config, boolean otfvis) {
-		DrtConfigGroup drtCfg = DrtConfigGroup.get(config);
-		config.addConfigConsistencyChecker(new DvrpConfigConsistencyChecker());
-		config.checkConsistency();
-		if (drtCfg.getOperationalScheme().equals(DrtConfigGroup.OperationalScheme.stationbased)){
-			ActivityParams params = config.planCalcScore().getActivityParams(DrtStageActivityType.DRTSTAGEACTIVITY);
-			if (params == null)
-			{
-				params = new ActivityParams(DrtStageActivityType.DRTSTAGEACTIVITY);
-				params.setTypicalDuration(1);
-				params.setScoringThisActivityAtAll(false);
-				config.planCalcScore().addActivityParams(params);
-				Logger.getLogger(DrtControlerCreator.class).info("drt interaction scoring parameters not set. Adding default values (activity will not be scored).");
-			}
-		}
+		adjustConfig(config);
 		Scenario scenario = ScenarioUtils.loadScenario(config);
+		return adjustControler(otfvis, scenario);
+	}
 
+	public static Controler createControler(Scenario scenario, boolean otfvis) {
+		// yy I know that this one breaks the sequential loading of the building blocks, but I would like to be able
+		// to modify the scenario before I pass it to the controler.  kai, oct'17
+		adjustConfig(scenario.getConfig());
+		return adjustControler(otfvis, scenario);
+	}
+
+	private static Controler adjustControler(boolean otfvis, Scenario scenario) {
 		Controler controler = new Controler(scenario);
-		controler.addOverridingModule(
-				new DvrpModule(createModuleForQSimPlugin(DefaultDrtOptimizerProvider.class), DrtOptimizer.class) {
-					@Provides
-					@Singleton
-					private Fleet provideVehicles(@Named(DvrpModule.DVRP_ROUTING) Network network, Config config,
-							DrtConfigGroup drtCfg) {
-						FleetImpl fleet = new FleetImpl();
-						new VehicleReader(network, fleet).parse(drtCfg.getVehiclesFileUrl(config.getContext()));
-						return fleet;
-					}
-
-				});
+		controler.addOverridingModule(new DvrpModule(DrtControlerCreator.createModuleForQSimPlugin(),
+				DrtOptimizer.class, DefaultUnplannedRequestInserter.class));
+		controler.addOverridingModule(new DrtModule());
 		controler.addOverridingModule(new DrtAnalysisModule());
-
-		switch (drtCfg.getOperationalScheme()) {
-			case door2door: {
-				controler.addOverridingModule(new AbstractModule() {
-					@Override
-					public void install() {
-						addRoutingModuleBinding(DrtConfigGroup.DRT_MODE).to(DrtRoutingModule.class).asEagerSingleton();
-					}
-				});
-				break;
-			}
-			case stationbased: {
-				final Scenario scenario2 = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-				new TransitScheduleReader(scenario2)
-						.readFile(drtCfg.getTransitStopsFileUrl(config.getContext()).getFile());
-				controler.addOverridingModule(new AbstractModule() {
-					@Override
-					public void install() {
-						bind(TransitSchedule.class).annotatedWith(Names.named(DrtConfigGroup.DRT_MODE))
-								.toInstance(scenario2.getTransitSchedule());;
-						addRoutingModuleBinding(DrtConfigGroup.DRT_MODE).to(StopBasedDrtRoutingModule.class)
-								.asEagerSingleton();
-
-					}
-				});
-				break;
-
-			}
-			default:
-				throw new IllegalStateException();
-		}
 		if (otfvis) {
 			controler.addOverridingModule(new OTFVisLiveModule());
 		}
@@ -122,15 +90,56 @@ public class DrtControlerCreator {
 		return controler;
 	}
 
-	private static com.google.inject.AbstractModule createModuleForQSimPlugin(
-			final Class<? extends Provider<? extends DrtOptimizer>> providerClass) {
+	private static void adjustConfig(Config config) {
+		DrtConfigGroup drtCfg = DrtConfigGroup.get(config);
+		config.addConfigConsistencyChecker(new DvrpConfigConsistencyChecker());
+		config.checkConsistency();
+		if (drtCfg.getOperationalScheme().equals(DrtConfigGroup.OperationalScheme.stationbased)) {
+			ActivityParams params = config.planCalcScore().getActivityParams(DrtStageActivityType.DRT_STAGE_ACTIVITY);
+			if (params == null) {
+				params = new ActivityParams(DrtStageActivityType.DRT_STAGE_ACTIVITY);
+				params.setTypicalDuration(1);
+				params.setScoringThisActivityAtAll(false);
+				config.planCalcScore().addActivityParams(params);
+				Logger.getLogger(DrtControlerCreator.class).info(
+						"drt interaction scoring parameters not set. Adding default values (activity will not be scored).");
+			}
+		}
+	}
+
+	public static com.google.inject.AbstractModule createModuleForQSimPlugin() {
 		return new com.google.inject.AbstractModule() {
 			@Override
 			protected void configure() {
-				bind(DrtOptimizer.class).toProvider(providerClass).asEagerSingleton();
+				bind(DrtOptimizer.class).to(DefaultDrtOptimizer.class).asEagerSingleton();
 				bind(VrpOptimizer.class).to(DrtOptimizer.class);
+				bind(DefaultUnplannedRequestInserter.class).asEagerSingleton();
+				bind(UnplannedRequestInserter.class).to(DefaultUnplannedRequestInserter.class);
+				bind(EmptyVehicleRelocator.class).asEagerSingleton();
+				bind(DrtScheduler.class).asEagerSingleton();
 				bind(DynActionCreator.class).to(DrtActionCreator.class).asEagerSingleton();
 				bind(PassengerRequestCreator.class).to(DrtRequestCreator.class).asEagerSingleton();
+			}
+
+			@Provides
+			@Singleton
+			private DrtVehicleFilter provideFilter(DrtConfigGroup drtCfg) {
+				return drtCfg.getKNearestVehicles() > 0 ? new KNearestVehicleFilter(drtCfg.getKNearestVehicles())
+						: new NoFilter();
+			}
+
+			@Provides
+			@Singleton
+			private MobsimTimer provideTimer(QSim qSim) {
+				return qSim.getSimTimer();
+			}
+
+			@Provides
+			@Named(DefaultDrtOptimizer.DRT_OPTIMIZER)
+			private TravelDisutility provideTravelDisutility(
+					@Named(DvrpTravelTimeModule.DVRP_ESTIMATED) TravelTime travelTime,
+					@Named(DefaultDrtOptimizer.DRT_OPTIMIZER) TravelDisutilityFactory travelDisutilityFactory) {
+				return travelDisutilityFactory.createTravelDisutility(travelTime);
 			}
 		};
 	}

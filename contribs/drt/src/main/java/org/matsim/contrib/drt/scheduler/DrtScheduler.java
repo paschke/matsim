@@ -34,24 +34,29 @@ import org.matsim.contrib.dvrp.path.*;
 import org.matsim.contrib.dvrp.schedule.*;
 import org.matsim.contrib.dvrp.schedule.Schedule.ScheduleStatus;
 import org.matsim.contrib.dvrp.tracker.*;
+import org.matsim.contrib.dvrp.trafficmonitoring.DvrpTravelTimeModule;
 import org.matsim.contrib.dvrp.util.LinkTimePair;
 import org.matsim.core.mobsim.framework.MobsimTimer;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.utils.misc.Time;
+
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 /**
  * @author michalm
  */
 public class DrtScheduler implements ScheduleInquiry {
 	private final Fleet fleet;
-	protected final DrtSchedulerParams params;
+	private final double stopDuration;
 	private final MobsimTimer timer;
 	private final TravelTime travelTime;
 
-	public DrtScheduler(DrtConfigGroup drtCfg, Fleet fleet, MobsimTimer timer, DrtSchedulerParams params,
-			TravelTime travelTime) {
+	@Inject
+	public DrtScheduler(DrtConfigGroup drtCfg, Fleet fleet, MobsimTimer timer,
+			@Named(DvrpTravelTimeModule.DVRP_ESTIMATED) TravelTime travelTime) {
 		this.fleet = fleet;
-		this.params = params;
+		this.stopDuration = drtCfg.getStopDuration();
 		this.timer = timer;
 		this.travelTime = travelTime;
 
@@ -70,10 +75,6 @@ public class DrtScheduler implements ScheduleInquiry {
 			veh.getSchedule()
 					.addTask(new DrtStayTask(veh.getServiceBeginTime(), veh.getServiceEndTime(), veh.getStartLink()));
 		}
-	}
-
-	public DrtSchedulerParams getParams() {
-		return params;
 	}
 
 	@Override
@@ -169,7 +170,7 @@ public class DrtScheduler implements ScheduleInquiry {
 
 			case STOP: {
 				// TODO does not consider prebooking!!!
-				double duration = params.stopDuration;
+				double duration = stopDuration;
 				return newBeginTime + duration;
 			}
 
@@ -299,7 +300,7 @@ public class DrtScheduler implements ScheduleInquiry {
 		// insert pickup stop task
 		double startTime = beforePickupTask.getEndTime();
 		int taskIdx = beforePickupTask.getTaskIdx() + 1;
-		DrtStopTask pickupStopTask = new DrtStopTask(startTime, startTime + params.stopDuration, request.getFromLink());
+		DrtStopTask pickupStopTask = new DrtStopTask(startTime, startTime + stopDuration, request.getFromLink());
 		schedule.addTask(taskIdx, pickupStopTask);
 		pickupStopTask.addPickupRequest(request);
 		request.setPickupTask(pickupStopTask);
@@ -308,8 +309,8 @@ public class DrtScheduler implements ScheduleInquiry {
 		Link toLink = insertion.pickupIdx == insertion.dropoffIdx ? request.getToLink() // pickup->dropoff
 				: stops.get(insertion.pickupIdx).task.getLink(); // pickup->i+1
 
-		VrpPathWithTravelData vrpPath = VrpPaths.createPath(request.getFromLink(), toLink,
-				startTime + params.stopDuration, insertion.pathFromPickup.path, travelTime);
+		VrpPathWithTravelData vrpPath = VrpPaths.createPath(request.getFromLink(), toLink, startTime + stopDuration,
+				insertion.pathFromPickup.path, travelTime);
 		Task driveFromPickupTask = new DrtDriveTask(vrpPath);
 		schedule.addTask(taskIdx + 1, driveFromPickupTask);
 
@@ -356,7 +357,7 @@ public class DrtScheduler implements ScheduleInquiry {
 		// insert dropoff stop task
 		double startTime = driveToDropoffTask.getEndTime();
 		int taskIdx = driveToDropoffTask.getTaskIdx() + 1;
-		DrtStopTask dropoffStopTask = new DrtStopTask(startTime, startTime + params.stopDuration, request.getToLink());
+		DrtStopTask dropoffStopTask = new DrtStopTask(startTime, startTime + stopDuration, request.getToLink());
 		schedule.addTask(taskIdx, dropoffStopTask);
 		dropoffStopTask.addDropoffRequest(request);
 		request.setDropoffTask(dropoffStopTask);
@@ -377,8 +378,8 @@ public class DrtScheduler implements ScheduleInquiry {
 		} else {
 			Link toLink = stops.get(insertion.dropoffIdx).task.getLink(); // dropoff->j+1
 
-			VrpPathWithTravelData vrpPath = VrpPaths.createPath(request.getToLink(), toLink,
-					startTime + params.stopDuration, insertion.pathFromDropoff.path, travelTime);
+			VrpPathWithTravelData vrpPath = VrpPaths.createPath(request.getToLink(), toLink, startTime + stopDuration,
+					insertion.pathFromDropoff.path, travelTime);
 			Task driveFromDropoffTask = new DrtDriveTask(vrpPath);
 			schedule.addTask(taskIdx + 1, driveFromDropoffTask);
 

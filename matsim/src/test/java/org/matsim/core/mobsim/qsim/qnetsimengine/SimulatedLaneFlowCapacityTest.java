@@ -24,7 +24,6 @@ package org.matsim.core.mobsim.qsim.qnetsimengine;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -34,21 +33,18 @@ import org.matsim.api.core.v01.events.handler.LinkLeaveEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.api.experimental.events.LaneLeaveEvent;
 import org.matsim.core.api.experimental.events.handler.LaneLeaveEventHandler;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
+import org.matsim.core.controler.PrepareForSimUtils;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.mobsim.qsim.QSim;
 import org.matsim.core.mobsim.qsim.QSimUtils;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
+import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.lanes.data.Lane;
@@ -185,8 +181,7 @@ public class SimulatedLaneFlowCapacityTest extends MatsimTestCase{
 					"dummy", Id.createLinkId("2"));
 			// create a dummy leg
 			Leg leg = population.getFactory().createLeg(TransportMode.car);
-			leg.setRoute(new LinkNetworkRouteImpl(Id.createLinkId("0"), 
-					Collections.singletonList(Id.createLinkId("1")), Id.createLinkId("2")));
+			leg.setRoute(RouteUtils.createLinkNetworkRouteImpl(Id.createLinkId("0"), Collections.singletonList(Id.createLinkId("1")), Id.createLinkId("2")));
 			// create a plan for the person that contains all this information
 			Plan plan = population.getFactory().createPlan();
 			plan.addActivity(startAct);
@@ -215,6 +210,7 @@ public class SimulatedLaneFlowCapacityTest extends MatsimTestCase{
 		EventsManager events = EventsUtils.createEventsManager();
 		SimulatedCapacityHandler simulatedCapacity = new SimulatedCapacityHandler();
 		events.addHandler(simulatedCapacity);
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
 		QSim queueSim = QSimUtils.createDefaultQSim(scenario, events);
 		queueSim.run();
 		
@@ -240,6 +236,8 @@ public class SimulatedLaneFlowCapacityTest extends MatsimTestCase{
 		EventsManager events = EventsUtils.createEventsManager();
 		SimulatedCapacityHandler simulatedCapacity = new SimulatedCapacityHandler();
 		events.addHandler(simulatedCapacity);
+
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
 		QSim queueSim = QSimUtils.createDefaultQSim(scenario, events);
 		queueSim.run();
 				
@@ -267,6 +265,7 @@ public class SimulatedLaneFlowCapacityTest extends MatsimTestCase{
 		EventsManager events = EventsUtils.createEventsManager();
 		SimulatedCapacityHandler simulatedCapacity = new SimulatedCapacityHandler();
 		events.addHandler(simulatedCapacity);
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
 		QSim queueSim = QSimUtils.createDefaultQSim(scenario, events);
 		queueSim.run();
 		
@@ -296,6 +295,7 @@ public class SimulatedLaneFlowCapacityTest extends MatsimTestCase{
 		EventsManager events = EventsUtils.createEventsManager();
 		SimulatedCapacityHandler simulatedCapacity = new SimulatedCapacityHandler();
 		events.addHandler(simulatedCapacity);
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
 		QSim queueSim = QSimUtils.createDefaultQSim(scenario, events);
 		queueSim.run();
 		

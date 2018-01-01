@@ -21,8 +21,14 @@
 package org.matsim.core.scoring.functions;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+import org.junit.runner.RunWith;
 
 import java.util.Arrays;
+import java.util.Collection;
 
 import org.junit.Test;
 import org.matsim.api.core.v01.Coord;
@@ -43,15 +49,16 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
+import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.TypicalDurationScoreComputation;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.population.routes.GenericRouteImpl;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
+import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.scoring.ScoringFunction;
+import org.matsim.core.scoring.functions.ActivityUtilityParameters.ZeroUtilityComputation;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.vehicles.Vehicle;
 
@@ -67,10 +74,21 @@ import org.matsim.vehicles.Vehicle;
  * TODO [MR] split this into multiple test classes for the specific parts, according to the newer, more modular scoring function
  * @author mrieser
  */
+
+@RunWith(Parameterized.class)
 public class CharyparNagelScoringFunctionTest {
 
 	private static final double EPSILON =1e-9;
-
+	
+	@Parameter
+	public TypicalDurationScoreComputation typicalDurationComputation;
+	
+	 @Parameterized.Parameters
+	 public static Object[] testParameters() {
+	      return new Object[] {TypicalDurationScoreComputation.relative,TypicalDurationScoreComputation.uniform};
+	  }
+	 
+	 
 	private ScoringFunction getScoringFunctionInstance(final Fixture f, final Person person) {
 		CharyparNagelScoringFunctionFactory charyparNagelScoringFunctionFactory =
 				new CharyparNagelScoringFunctionFactory( f.scenario );
@@ -103,7 +121,12 @@ public class CharyparNagelScoringFunctionTest {
 	 */
 	private double getZeroUtilDuration_hrs(final double typicalDuration_hrs, final double priority) {
 		// yy could/should use static function from CharyparNagelScoringUtils. kai, nov'13
-		return typicalDuration_hrs * Math.exp(-10.0 / typicalDuration_hrs / priority);
+		
+		if(typicalDurationComputation.equals(TypicalDurationScoreComputation.uniform)){
+			return typicalDuration_hrs * Math.exp(-10.0 / typicalDuration_hrs / priority);
+		} else {
+			return typicalDuration_hrs * Math.exp( -1.0 / priority );
+		}
 	}
 
 	/**
@@ -115,12 +138,20 @@ public class CharyparNagelScoringFunctionTest {
 		double zeroUtilDurH = getZeroUtilDuration_hrs(16.0, 1.0);
 		double zeroUtilDurW2 = getZeroUtilDuration_hrs(8.0, 2.0);
 
+		ZeroUtilityComputation computation;
+		if(this.typicalDurationComputation.equals(TypicalDurationScoreComputation.uniform)){
+			computation = new ActivityUtilityParameters.SameAbsoluteScore();	
+		} else {
+			computation = new ActivityUtilityParameters.SameRelativeScore();
+		}
+		
+		
 		{
 			ActivityUtilityParameters.Builder factory = new ActivityUtilityParameters.Builder();
 			factory.setType("w");
 			factory.setPriority(1.0);
 			factory.setTypicalDuration_s(8.0 * 3600);
-			factory.setZeroUtilityComputation( new ActivityUtilityParameters.SameAbsoluteScore() );
+			factory.setZeroUtilityComputation(computation);	
 			ActivityUtilityParameters params = factory.build();
 			assertEquals(zeroUtilDurW, params.getZeroUtilityDuration_h(), EPSILON);
 
@@ -131,7 +162,7 @@ public class CharyparNagelScoringFunctionTest {
 			factory.setType("h");
 			factory.setPriority(1.0);
 			factory.setTypicalDuration_s(16.0 * 3600);
-			factory.setZeroUtilityComputation( new ActivityUtilityParameters.SameAbsoluteScore() );
+			factory.setZeroUtilityComputation(computation);
 			ActivityUtilityParameters params = factory.build();
 			assertEquals(zeroUtilDurH, params.getZeroUtilityDuration_h(), EPSILON);
 		}
@@ -142,7 +173,7 @@ public class CharyparNagelScoringFunctionTest {
 			// test that the priority is respected as well
 			factory.setPriority(2.0);
 			factory.setTypicalDuration_s(8.0 * 3600);
-			factory.setZeroUtilityComputation( new ActivityUtilityParameters.SameAbsoluteScore() );
+			factory.setZeroUtilityComputation(computation);
 			ActivityUtilityParameters params = factory.build();
 			assertEquals(zeroUtilDurW2, params.getZeroUtilityDuration_h(), EPSILON);
 		}
@@ -213,6 +244,13 @@ public class CharyparNagelScoringFunctionTest {
 		double zeroUtilDurH = getZeroUtilDuration_hrs(15.0, 1.0);
 
 		f.config.planCalcScore().setPerforming_utils_hr(perf);
+		
+		if(typicalDurationComputation.equals(TypicalDurationScoreComputation.uniform)){
+			for(ActivityParams p : f.config.planCalcScore().getActivityParams()){
+				p.setTypicalDurationScoreComputation(TypicalDurationScoreComputation.uniform);
+			}
+		}	
+		
 		assertEquals(perf * 3.0 * Math.log(2.5 / zeroUtilDurW)
 				+ perf * 3.0 * Math.log(2.75/zeroUtilDurW)
 				+ perf * 3.0 * Math.log(2.5/zeroUtilDurW)
@@ -270,6 +308,13 @@ public class CharyparNagelScoringFunctionTest {
 		Fixture f = new Fixture();
 		double perf_hrs = +6.0;
 		f.config.planCalcScore().setPerforming_utils_hr(perf_hrs);
+		
+		if(typicalDurationComputation.equals(TypicalDurationScoreComputation.uniform)){
+			for(ActivityParams p : f.config.planCalcScore().getActivityParams()){
+				p.setTypicalDurationScoreComputation(TypicalDurationScoreComputation.uniform);
+			}
+		}	
+		
 		double initialScore = calcScore(f);
 
 		// test1: agents has to wait before and after
@@ -474,9 +519,16 @@ public class CharyparNagelScoringFunctionTest {
 
 		PlanCalcScoreConfigGroup.ActivityParams params = new PlanCalcScoreConfigGroup.ActivityParams("h2");
 		params.setTypicalDuration(8*3600);
+		
 		f.config.planCalcScore().addActivityParams(params);
 		f.config.planCalcScore().getActivityParams("h").setTypicalDuration(6.0 * 3600);
-
+		
+		if(typicalDurationComputation.equals(TypicalDurationScoreComputation.uniform)){
+			for(ActivityParams p : f.config.planCalcScore().getActivityParams()){
+				p.setTypicalDurationScoreComputation(TypicalDurationScoreComputation.uniform);
+			}
+		}	
+		
 		double perf = +6.0;
 		f.config.planCalcScore().setPerforming_utils_hr(perf);
 		double zeroUtilDurW = getZeroUtilDuration_hrs(3.0, 1.0);
@@ -511,6 +563,12 @@ public class CharyparNagelScoringFunctionTest {
 		f.config.planCalcScore().getActivityParams("h").setTypicalDuration(7.0 * 3600);
 		f.config.planCalcScore().setPerforming_utils_hr(perf);
 
+		if(typicalDurationComputation.equals(TypicalDurationScoreComputation.uniform)){
+			for(ActivityParams p : f.config.planCalcScore().getActivityParams()){
+				p.setTypicalDurationScoreComputation(TypicalDurationScoreComputation.uniform);
+			}
+		}	
+		
 		ScoringFunction testee = getScoringFunctionInstance(f, f.person);
 		testee.handleActivity((Activity) f.plan.getPlanElements().get(0));
 		testee.handleLeg((Leg) f.plan.getPlanElements().get(1));
@@ -542,7 +600,7 @@ public class CharyparNagelScoringFunctionTest {
 		Leg leg1 = PopulationUtils.createAndAddLeg( plan1, TransportMode.car );//, 7*3600, 100, 7*3600+100);
 		leg1.setDepartureTime(f.secondLegStartTime);
 		leg1.setTravelTime(f.secondLegTravelTime);
-		Route route2 = new GenericRouteImpl(null, null);
+		Route route2 = RouteUtils.createGenericRouteImpl(null, null);
 		leg1.setRoute(route2);
 		route2.setDistance(20000.0);
 		Activity act1b = PopulationUtils.createAndAddActivityFromLinkId(plan1, "work", (Id<Link>)null);//, 7.0*3600+100, Time.UNDEFINED_TIME, Time.UNDEFINED_TIME, false);
@@ -574,7 +632,15 @@ public class CharyparNagelScoringFunctionTest {
 		Fixture f = new Fixture();
 		Leg leg = (Leg) f.plan.getPlanElements().get(1);
 		leg.setMode("sackhuepfen");
-		assertEquals(-3.0, calcScore(f), EPSILON); // default for unknown modes
+		boolean exception = false ;
+		try {
+			assertEquals(-3.0, calcScore(f), EPSILON); // default for unknown modes
+			// no longer allowed.  kai, may'17
+		} catch ( Exception ee ) {
+			// this is expected
+			exception = true ;
+		}
+		assertTrue( exception ) ;
 		f.config.planCalcScore().addParam("traveling_sackhuepfen", "-30.0");
 		assertEquals(-15.0, calcScore(f), EPSILON);
 	}
@@ -693,7 +759,7 @@ public class CharyparNagelScoringFunctionTest {
 			Leg leg = PopulationUtils.createAndAddLeg( this.plan, TransportMode.car );
 			leg.setDepartureTime(firstLegStartTime);
 			leg.setTravelTime(firstLegTravelTime);
-			NetworkRoute route1 = new LinkNetworkRouteImpl(link1.getId(), link3.getId());
+			NetworkRoute route1 = RouteUtils.createLinkNetworkRouteImpl(link1.getId(), link3.getId());
 			route1.setLinkIds(link1.getId(), Arrays.asList(link2.getId()), link3.getId());
 			route1.setTravelTime(firstLegTravelTime);
 			route1.setDistance(RouteUtils.calcDistanceExcludingStartEndLink(route1, this.network));
@@ -706,7 +772,7 @@ public class CharyparNagelScoringFunctionTest {
 			leg = PopulationUtils.createAndAddLeg( this.plan, TransportMode.pt );
 			leg.setDepartureTime(secondLegStartTime);
 			leg.setTravelTime(secondLegTravelTime);
-			Route route2 = new GenericRouteImpl(link3.getId(), link5.getId());
+			Route route2 = RouteUtils.createGenericRouteImpl(link3.getId(), link5.getId());
 			route2.setTravelTime(secondLegTravelTime);
 			route2.setDistance(20000.0);
 			leg.setRoute(route2);
@@ -717,7 +783,7 @@ public class CharyparNagelScoringFunctionTest {
 			leg = PopulationUtils.createAndAddLeg( this.plan, TransportMode.walk );
 			leg.setDepartureTime(thirdLegStartTime);
 			leg.setTravelTime(thirdLegTravelTime);
-			Route route3 = new GenericRouteImpl(link5.getId(), link7.getId());
+			Route route3 = RouteUtils.createGenericRouteImpl(link5.getId(), link7.getId());
 			route3.setTravelTime(thirdLegTravelTime);
 			route3.setDistance(CoordUtils.calcEuclideanDistance(link5.getCoord(), link7.getCoord()));
 			leg.setRoute(route3);
@@ -728,7 +794,7 @@ public class CharyparNagelScoringFunctionTest {
 			leg = PopulationUtils.createAndAddLeg( this.plan, TransportMode.bike );
 			leg.setDepartureTime(fourthLegStartTime);
 			leg.setTravelTime(fourthLegTravelTime);
-			Route route4 = new GenericRouteImpl(link7.getId(), link9.getId());
+			Route route4 = RouteUtils.createGenericRouteImpl(link7.getId(), link9.getId());
 			route4.setTravelTime(fourthLegTravelTime);
 			route4.setDistance(CoordUtils.calcEuclideanDistance(link7.getCoord(), link9.getCoord()));
 			leg.setRoute(route4);

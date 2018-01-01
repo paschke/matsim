@@ -25,13 +25,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
 import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.network.Link;
 import org.matsim.counts.CountSimComparison;
 
 /**
@@ -41,36 +38,39 @@ import org.matsim.counts.CountSimComparison;
  * anhorni 31.03.2008: Writing the 'average weekday traffic volume' (german: DWV) per link
  * to another table.
  * Future work: Use parameter in the config file to choose which table to be printed.
+ * 
+ * Added normalized relative errors and geh values to output file. cdobler jun'17
  */
 public class CountSimComparisonTableWriter extends CountSimComparisonWriter {
+	
 	/**
-   * the separator used
-   */
+	 * the separator used
+	 */
 	private static final String SEPARATOR = "\t";
 
 	/**
-   * newline
-   */
+	 * newline
+	 */
 	private static final String NEWLINE = "\n";
 
 	/**
-   * the column headers of the table
-   */
-	private static final String[] COLUMNHEADERS = { "Link Id", "Hour",
-			"MATSIM volumes", "Count volumes", "Relative Error"};
+	 * the column headers of the table
+	 */
+	private static final String[] COLUMNHEADERS = { "Link Id", "Count Station Id", "Hour",
+			"MATSIM volumes", "Count volumes", "Relative Error", "Normalized Relative Error", "GEH"};
 
 	/**
-   * the formatter for numbers
-   */
+	 * the formatter for numbers
+	 */
 	private final NumberFormat numberFormat;
 
 	private static final Logger log = Logger.getLogger(CountSimComparisonTableWriter.class);
 
 	/**
-   *
-   * @param countSimComparisons
+	 *
+	 * @param countSimComparisons
 	 * @param l the Locale used, if null then DecimalFormat("#.############") is used
-   */
+	 */
 	public CountSimComparisonTableWriter(
 			final List<CountSimComparison> countSimComparisons, final Locale l) {
 		super(countSimComparisons);
@@ -92,15 +92,19 @@ public class CountSimComparisonTableWriter extends CountSimComparisonWriter {
 	public void writeFile(final String filename) {
 		log.info("Writing CountsSimComparison to " + filename);
 		try (BufferedWriter out = new BufferedWriter(new FileWriter(filename))) {
-			for (int i = 0; i < COLUMNHEADERS.length; i++) {
-				out.write(COLUMNHEADERS[i]);
+			
+			out.write(COLUMNHEADERS[0]);
+			for (int i = 1; i < COLUMNHEADERS.length; i++) {
 				out.write(SEPARATOR);
+				out.write(COLUMNHEADERS[i]);
 			}
 			out.write(NEWLINE);
 
 			for (CountSimComparison csc : this.countComparisonFilter.getCountsForHour(null)) {
-
+				
 				out.write(csc.getId().toString());
+				out.write(SEPARATOR);
+				out.write(csc.getCsId());
 				out.write(SEPARATOR);
 				out.write(Integer.toString(csc.getHour()));
 				out.write(SEPARATOR);
@@ -109,6 +113,10 @@ public class CountSimComparisonTableWriter extends CountSimComparisonWriter {
 				out.write(this.numberFormat.format(csc.getCountValue()));
 				out.write(SEPARATOR);
 				out.write(this.numberFormat.format(csc.calculateRelativeError()));
+				out.write(SEPARATOR);
+				out.write(this.numberFormat.format(csc.calculateNormalizedRelativeError()));
+				out.write(SEPARATOR);
+				out.write(this.numberFormat.format(csc.calculateGEHValue()));
 				out.write(NEWLINE);
 			}
 		} catch (IOException e) {
@@ -117,32 +125,48 @@ public class CountSimComparisonTableWriter extends CountSimComparisonWriter {
 
 		// writing the 'average weekday traffic volume' table:
 		this.writeAWTVTable(filename);
-
 	}
 
 	private void writeAWTVTable(final String file) {
 		// output file always ends with ".txt"
-		String filename=file.substring(0,file.length()-4)+"AWTV.txt";
+		String filename = file.substring(0, file.length() - 4) + "AWTV.txt";
 
 		log.info("Writing 'average weekday traffic volume' to " + filename);
 
-		CountSimComparisonLinkFilter linkFilter=new CountSimComparisonLinkFilter(
+		CountSimComparisonLinkFilter linkFilter = new CountSimComparisonLinkFilter(
 				this.countComparisonFilter.getCountsForHour(null));
 
 		try (BufferedWriter out = new BufferedWriter(new FileWriter(filename))) {
-			out.write("Link Id\tMATSIM volumes\tCount volumes");
+			out.write("Link Id");
+			out.write(SEPARATOR);
+			out.write("Count Station Id");
+			out.write(SEPARATOR);
+			out.write("MATSIM volumes");
+			out.write(SEPARATOR);
+			out.write("Count volumes");
+			out.write(SEPARATOR);
+			out.write("Normalized Relative Error");
 			out.write(NEWLINE);
 
-			Iterator<Id<Link>> id_it = new CountSimComparisonLinkFilter(
-					this.countComparisonFilter.getCountsForHour(null)).getLinkIds().iterator();
+			for (CountSimComparison csc : this.countComparisonFilter.getCountsForHour(null)) {
 
-			while (id_it.hasNext()) {
-				Id<Link> id= id_it.next();
-				out.write(id.toString());
+				final double simValue = linkFilter.getAggregatedSimValue(csc.getId());
+				final double countValue = linkFilter.getAggregatedCountValue(csc.getId());
+				final double nomRelError;
+				
+				final double max = Math.max(simValue, countValue);
+				if (max == 0.0) nomRelError = 0;
+				else nomRelError = Math.abs(simValue - countValue) / max;
+				
+				out.write(csc.getId().toString());
 				out.write(SEPARATOR);
-				out.write(this.numberFormat.format(linkFilter.getAggregatedSimValue(id)));
+				out.write(csc.getCsId());
 				out.write(SEPARATOR);
-				out.write(this.numberFormat.format(linkFilter.getAggregatedCountValue(id)));
+				out.write(this.numberFormat.format(simValue));
+				out.write(SEPARATOR);
+				out.write(this.numberFormat.format(countValue));
+				out.write(SEPARATOR);
+				out.write(this.numberFormat.format(nomRelError));
 				out.write(NEWLINE);
 			}
 		} catch (IOException e) {

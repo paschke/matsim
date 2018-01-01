@@ -126,10 +126,14 @@ public class RaptorWalker {
 
 		// init first stops
 		for (TransitStopFacility fromTransitStop : fromTransitStops.keySet()) {
+			// (these are all the transit stops initialized by the Multi-Node router)
+
 			double departureTime = fromTransitStops.get(fromTransitStop).initialTime;
+			// (get dp time from node (since they vary by multi-node))
 
 			int indexOfFromTransitStop = this.getIndexForTransitStop(fromTransitStop);
 			TransitStopEntry transitStopEntry = this.raptorSearchData.stops[indexOfFromTransitStop];
+			// (look up index and size of corresponding transit stop entry (fortran))
 
 			for (int indexOfTransferToCheck = transitStopEntry.indexOfFirstTransfer; indexOfTransferToCheck < transitStopEntry.indexOfFirstTransfer + transitStopEntry.numberOfTransfers; indexOfTransferToCheck++) {
 				// check all route stops that can be reached from this transit stop
@@ -150,13 +154,11 @@ public class RaptorWalker {
 
 		int graceTransfersLeft = this.graceTransfers;
 
+		// MAIN LOOP:
 		for (int nTransfers = 0; nTransfers <= this.maxTransfers; nTransfers++) {
 			Arrays.fill(transferTransitStopsToCheck, false);
 
-			this.checkRouteStops(earliestArrivalTimeAtRouteStop,
-					sourcePointerRouteStop, earliestArrivalTimeAtTransitStop,
-					sourcePointerTransitStops, routeStopsToCheck,
-					transferTransitStopsToCheck);
+			this.checkRouteStops();
 
 			RaptorRoute bestRouteOfThisRound = this.getBestRouteFoundSoFar(fromTransitStops, toTransitStops, sourcePointerTransitStops);
 			if (bestRouteOfThisRound != null) {
@@ -188,29 +190,24 @@ public class RaptorWalker {
 			if(nTransfers < this.maxTransfers){
 				nTransfers++;
 
-				this.checkTransferTransitStops(earliestArrivalTimeAtRouteStop, 
-						sourcePointerRouteStop,
-						earliestArrivalTimeAtTransitStop,
-						sourcePointerTransitStops, routeStopsToCheck,
-						transferTransitStopsToCheck);
+				// yyyy to me, this looks like in the end we are now going 0, 2, 4, 6, since we are incrementing both here and in
+				// the for loop.  ????  kai, jun'16
+
+				this.checkTransferTransitStops();
 			}
 		}
 
 		return bestRoute;
 	}
 
-	private void checkRouteStops(double[] earliestArrivalTimeAtRouteStop,
-			SourcePointer[] sourcePointerRouteStop,
-			double[] earliestArrivalTimeAtTransitStop,
-			SourcePointer[] sourcePointerTransitStops,
-			boolean[] routeStopsToCheck,
-			boolean[] transferTransitStopsToCheck) {
+	private void checkRouteStops() {
 
 		boolean atLeastOneRouteStopImproved = false;
 		int indexOfLastRouteProcessed = -1;
 
 		// process all start stops
 		for (int indexOfStartRouteStop = 0; indexOfStartRouteStop < routeStopsToCheck.length; indexOfStartRouteStop++) {
+			// I think that these are all route stops, and the "check" refers to the boolean
 
 			if (routeStopsToCheck[indexOfStartRouteStop] == true) {
 				RouteStopEntry startStop = this.raptorSearchData.routeStops[indexOfStartRouteStop];
@@ -219,6 +216,11 @@ public class RaptorWalker {
 				// TODO do not proceed if this stop's best arrival time has just got updated in this round
 				// updates at this part of the round can only occur by parsing the same route but from one of the upstream stops
 				// thus all following downstream stops were already updated as well and have all a better arrival time as possibly this stop's departure would yield
+
+				// this is not entirely true because if one of the intermediate stop get a better arrival time (by transfer).
+				// This means, if any of the intermediate stop is not improved, let it run if the same route is encounterd again.
+				// doing this by setting "atLeastOneRouteStopImproved = false;" and breaking the process of updating arrival times of rest of the stops of the route. Amit Sep'17
+
 				if (indexOfLastRouteProcessed == startStop.indexOfRoute && atLeastOneRouteStopImproved) {
 					// we process the same route again
 					// since route stops have increasing indices we only need to process all downstream stops again if the last try could not improve the arrival times
@@ -230,8 +232,21 @@ public class RaptorWalker {
 					atLeastOneRouteStopImproved = false;
 
 					double earliestArrivalTimeAtStartRouteStop = sourcePointerRouteStop[indexOfStartRouteStop].earliestArrivalTime;
+
 					int indexOfRouteStopWithinRouteSequence = routeToCheck.numberOfRouteStops - startStop.numberOfRemainingStopsInThisRoute - 1;
 					int indexOfEarliestDepartureTime = this.getIndexOfEarliestDepartureTime(earliestArrivalTimeAtStartRouteStop, routeToCheck, indexOfRouteStopWithinRouteSequence);
+
+					// It appears that if departure time is after midnight, it needs to be updated here
+					// so that an earliest connection for next day can be looked.
+					// However, the arrival time in the array is actual time. Amit Aug'17
+					double adjustedEarliestArrivalTimeAtStartRouteStop  = earliestArrivalTimeAtStartRouteStop;
+
+					// transit router may have departures after midnight, so if there is no available departure for rest of the day, take earliest departure next day.
+					if (indexOfEarliestDepartureTime <= -1 && adjustedEarliestArrivalTimeAtStartRouteStop >= RaptorDisutility.MIDNIGHT ) {
+						adjustedEarliestArrivalTimeAtStartRouteStop = adjustedEarliestArrivalTimeAtStartRouteStop % RaptorDisutility.MIDNIGHT;
+					}
+
+					indexOfEarliestDepartureTime = this.getIndexOfEarliestDepartureTime(adjustedEarliestArrivalTimeAtStartRouteStop, routeToCheck, indexOfRouteStopWithinRouteSequence);
 
 					if(indexOfEarliestDepartureTime > -1) {
 						// we have found a valid departure time - process all upcoming stops of the route
@@ -242,6 +257,11 @@ public class RaptorWalker {
 							RouteStopEntry routeStopToCheck =  this.raptorSearchData.routeStops[indexOfRouteStopToCheck];
 
 							double arrivalTimeAtTheFollowingRouteStop = this.raptorSearchData.arrivalTimes[indexOfEarliestDepartureTime];
+
+							while (arrivalTimeAtTheFollowingRouteStop < earliestArrivalTimeAtStartRouteStop ) {
+								arrivalTimeAtTheFollowingRouteStop += RaptorDisutility.MIDNIGHT;
+								// (add enough "MIDNIGHT"s until we are _after_ the desired departure time)
+							}
 
 							if (arrivalTimeAtTheFollowingRouteStop < earliestArrivalTimeAtRouteStop[routeStopToCheck.indexOfRouteStop]) {
 								// this really is better than anything before - set arrival and source and mark the stop to be checked for transfers
@@ -257,11 +277,19 @@ public class RaptorWalker {
 									sourcePointerTransitStops[routeStopToCheck.indexOfStopFacility] = source;
 									transferTransitStopsToCheck[routeStopToCheck.indexOfStopFacility] = true;
 								}
+							} else {
+								atLeastOneRouteStopImproved = false;
+								break;
 							}
 						}
 					} else {
 						// there is no further departure
 						// TODO search for the earliest departure and add 24h
+						// implemented above by adjusting the time; still keeping the comment until all tests are happy. Amit Aug'17
+
+						// another possibility, there is no futher departures on this stop for this route (routeToCheck), but let's say agent is here and now make another transfer.
+						// this will increase the effective "maxBeelineWalkConnectionDistance"... Amit Aug'17
+						transferTransitStopsToCheck[startStop.indexOfStopFacility] = true;
 					}
 				}
 
@@ -270,13 +298,7 @@ public class RaptorWalker {
 		}
 	}
 
-	private void checkTransferTransitStops(
-			double[] earliestArrivalTimeAtRouteStop,
-			SourcePointer[] sourcePointerRouteStop,
-			double[] earliestArrivalTimeAtTransitStop,
-			SourcePointer[] sourcePointerTransitStops,
-			boolean[] routeStopsToCheck,
-			boolean[] transferTransitStopsToCheck) {
+	private void checkTransferTransitStops() {
 
 		// check all transfer stops
 		for (int indexOfTransitStopToCheck = 0; indexOfTransitStopToCheck < transferTransitStopsToCheck.length; indexOfTransitStopToCheck++) {

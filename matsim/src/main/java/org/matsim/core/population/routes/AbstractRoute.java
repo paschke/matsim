@@ -31,6 +31,11 @@ import org.matsim.core.utils.misc.Time;
  * @author mrieser
  */
 public abstract class AbstractRoute implements Route, Cloneable {
+	// This has a public non-final non-empty method, which is "clone".  But in the end this is how it is designed.
+	// So we leave it as is; if we ever want to re-design it in the core, we will have to copy it and start
+	// from the copy.  kai, may'17
+	
+	private boolean locked = false ;
 
 	private double dist = Double.NaN;
 
@@ -65,14 +70,14 @@ public abstract class AbstractRoute implements Route, Cloneable {
 	}
 
 	@Override
-	public void setEndLinkId(final Id<Link> linkId) {
-		// overridden in Compressed...
+	public final void setEndLinkId(final Id<Link> linkId) {
+		testForLocked();
 		this.endLinkId = linkId;
 	}
 
 	@Override
-	public void setStartLinkId(final Id<Link> linkId) {
-		// overridden in Compressed...
+	public final void setStartLinkId(final Id<Link> linkId) {
+		testForLocked();
 		this.startLinkId = linkId;
 	}
 
@@ -84,6 +89,10 @@ public abstract class AbstractRoute implements Route, Cloneable {
 	@Override
 	public final Id<Link> getEndLinkId() {
 		return this.endLinkId;
+	}
+	
+	public final void setLocked() {
+		locked = true ;
 	}
 
 	@Override
@@ -102,7 +111,9 @@ public abstract class AbstractRoute implements Route, Cloneable {
 		// The method can only be called if a class implements "Cloneable"; otherwise, it leads to a runtime exception (!).
 		// It is, however, sufficient to have clone available as protected.
 		try {
-			return (AbstractRoute) super.clone();
+			final AbstractRoute clone = (AbstractRoute) super.clone();
+			clone.locked = false ; // not obvious that this is the right way to go.
+			return clone;
 		} catch (CloneNotSupportedException e) {
 			throw new AssertionError(e);
 		}
@@ -118,4 +129,11 @@ public abstract class AbstractRoute implements Route, Cloneable {
 		return str ;
 	}
 	
+	@SuppressWarnings("unused")
+	private void testForLocked() {
+		if ( locked ) {
+			throw new RuntimeException( "Route is locked; too late to do this.  See comments in code.") ;
+		}
+	}
+
 }

@@ -20,7 +20,7 @@
 
 package org.matsim.contrib.signals;
 
-import java.util.Collection;
+import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -32,24 +32,15 @@ import org.matsim.contrib.signals.data.SignalsDataLoader;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.controler.ControlerDefaultsModule;
-import org.matsim.core.controler.Injector;
-import org.matsim.core.controler.NewControlerModule;
+import org.matsim.core.controler.*;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
 import org.matsim.core.controler.corelisteners.ControlerDefaultCoreListenersModule;
 import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.mobsim.framework.Mobsim;
-import org.matsim.core.mobsim.framework.ObservableMobsim;
-import org.matsim.core.mobsim.framework.listeners.MobsimListener;
 import org.matsim.core.scenario.ScenarioByInstanceModule;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.testcases.MatsimTestUtils;
 import org.matsim.utils.eventsfilecomparison.EventsFileComparator;
-
-import com.google.inject.Key;
-import com.google.inject.Provider;
-import com.google.inject.util.Types;
 
 /**
  * @author aneumann
@@ -103,7 +94,7 @@ public class TravelTimeFourWaysTest {
 	}
 
 	private void runQSimWithSignals(final Scenario scenario) {
-		com.google.inject.Injector injector = Injector.createInjector(scenario.getConfig(), new AbstractModule() {
+		com.google.inject.Injector injector = Injector.createInjector(scenario.getConfig(), AbstractModule.override(Collections.singleton(new AbstractModule() {
 			@Override
 			public void install() {
 				// defaults
@@ -111,27 +102,21 @@ public class TravelTimeFourWaysTest {
 				install(new ControlerDefaultCoreListenersModule());
 				install(new ControlerDefaultsModule());
 				install(new ScenarioByInstanceModule(scenario));
-				// signal specific module
-				install(new SignalsModule());
 			}
-		});
+		}), new SignalsModule()));
 	
 		EventsManager events = injector.getInstance(EventsManager.class);
 		events.initProcessing();
 		String eventsOut = this.testUtils.getOutputDirectory() + EVENTSFILE;
 		EventWriterXML eventsXmlWriter = new EventWriterXML(eventsOut);
 		events.addHandler(eventsXmlWriter);
-		
+
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
 		Mobsim mobsim = injector.getInstance(Mobsim.class);
-		Collection<Provider<MobsimListener>> mobsimListeners = (Collection<Provider<MobsimListener>>) 
-				injector.getInstance(Key.get(Types.collectionOf(Types.providerOf(MobsimListener.class))));
-		for (Provider<MobsimListener> provider : mobsimListeners){
-			((ObservableMobsim) mobsim).addQueueSimulationListeners(provider.get());
-		}
 		mobsim.run();
 		
 		eventsXmlWriter.closeFile();
-	    Assert.assertEquals("different events files", EventsFileComparator.compare(this.testUtils.getInputDirectory() + EVENTSFILE, eventsOut), 0);
+	    Assert.assertEquals("different events files", EventsFileComparator.compareAndReturnInt(this.testUtils.getInputDirectory() + EVENTSFILE, eventsOut), 0);
 	}
 	
 }

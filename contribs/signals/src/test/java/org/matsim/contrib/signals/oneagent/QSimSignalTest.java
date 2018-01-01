@@ -19,7 +19,7 @@
  * *********************************************************************** */
 package org.matsim.contrib.signals.oneagent;
 
-import java.util.Collection;
+import java.util.Collections;
 
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -40,20 +40,11 @@ import org.matsim.core.api.experimental.events.LaneEnterEvent;
 import org.matsim.core.api.experimental.events.LaneLeaveEvent;
 import org.matsim.core.api.experimental.events.handler.LaneEnterEventHandler;
 import org.matsim.core.api.experimental.events.handler.LaneLeaveEventHandler;
-import org.matsim.core.controler.AbstractModule;
-import org.matsim.core.controler.ControlerDefaultsModule;
-import org.matsim.core.controler.Injector;
-import org.matsim.core.controler.NewControlerModule;
+import org.matsim.core.controler.*;
 import org.matsim.core.controler.corelisteners.ControlerDefaultCoreListenersModule;
 import org.matsim.core.mobsim.framework.Mobsim;
-import org.matsim.core.mobsim.framework.ObservableMobsim;
-import org.matsim.core.mobsim.framework.listeners.MobsimListener;
 import org.matsim.core.scenario.ScenarioByInstanceModule;
 import org.matsim.testcases.MatsimTestUtils;
-
-import com.google.inject.Key;
-import com.google.inject.Provider;
-import com.google.inject.util.Types;
 
 /**
  * Simple test case for the Controler and or QSim and the default signal system implementation.
@@ -82,7 +73,7 @@ public class QSimSignalTest implements
 		Scenario scenario = new Fixture().createAndLoadTestScenario(true);
 		
 		this.link2EnterTime = 38.0;
-		runQSimWithSignals(scenario, false);
+		runQSimWithSignals(scenario, true);
 	}
 
 
@@ -105,14 +96,14 @@ public class QSimSignalTest implements
 		groupData.setOnset(100);
 
 		this.link2EnterTime = 100.0;
-		runQSimWithSignals(scenario, false);
+		runQSimWithSignals(scenario, true);
 	}
 	
 	/**
 	 * Tests the setup with a traffic light that shows red less than the specified intergreen time of five seconds.
 	 */
-	@Test
-	public void testIntergreensAbortOneAgentDriving() {
+	@Test(expected = RuntimeException.class)
+	public void testIntergreensAbortOneAgentDriving() { // throws RuntimeException {
 		//configure and load standard scenario
 		Scenario scenario = new Fixture().createAndLoadTestScenario(true);
 		// modify scenario
@@ -125,8 +116,11 @@ public class QSimSignalTest implements
 		SignalGroupSettingsData groupData = planData.getSignalGroupSettingsDataByGroupId().get(Fixture.signalGroupId100);
 		groupData.setOnset(0);
 		groupData.setDropping(59);	
+
+		runQSimWithSignals(scenario, false);
 		
-		runQSimWithSignals(scenario, true);
+		// if this code is reached, no exception has been thrown
+		Assert.fail("The simulation should abort because of intergreens violation.");
 	}
 	
 	/**
@@ -148,13 +142,13 @@ public class QSimSignalTest implements
 		groupData.setDropping(25);	
 		
 		this.link2EnterTime = 38.0;
-		runQSimWithSignals(scenario, false);
+		runQSimWithSignals(scenario, true);
 	}
 
 	
 	
-	private void runQSimWithSignals(final Scenario scenario, boolean abort){
-		com.google.inject.Injector injector = Injector.createInjector(scenario.getConfig(), new AbstractModule() {
+	private void runQSimWithSignals(final Scenario scenario, boolean handleEvents) throws RuntimeException{
+		com.google.inject.Injector injector = Injector.createInjector(scenario.getConfig(), AbstractModule.override(Collections.singleton(new AbstractModule() {
 			@Override
 			public void install() {
 				// defaults
@@ -162,38 +156,18 @@ public class QSimSignalTest implements
 				install(new ControlerDefaultCoreListenersModule());
 				install(new ControlerDefaultsModule());
 				install(new ScenarioByInstanceModule(scenario));
-				// signal specific module
-				install(new SignalsModule());
 			}
-		});
+		}), new SignalsModule()));
 	
 		EventsManager events = injector.getInstance(EventsManager.class);
-		events.initProcessing();
-		if (!abort){
+		if (handleEvents){
 			events.addHandler(this);
 		}
-		
+
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
+
 		Mobsim mobsim = injector.getInstance(Mobsim.class);
-		Collection<Provider<MobsimListener>> mobsimListeners = (Collection<Provider<MobsimListener>>) 
-				injector.getInstance(Key.get(Types.collectionOf(Types.providerOf(MobsimListener.class))));
-		for (Provider<MobsimListener> provider : mobsimListeners){
-			((ObservableMobsim) mobsim).addQueueSimulationListeners(provider.get());
-		}
-		
-		boolean catched = false;
-		try{
-			mobsim.run();
-		} catch (Exception e){
-//			log.info(e.getMessage());
-			catched = true;
-		} 
-		finally { // 'finally' to be executed when all threads of mobsim.run() are done.
-			if (abort) {
-				Assert.assertTrue("The simulation should abort because of intergreens violation.", catched);
-			} else {
-				Assert.assertFalse("There was an unexpected exception.", catched);
-			}
-		}
+		mobsim.run();
 	}
 
 

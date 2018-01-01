@@ -30,9 +30,6 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.io.MatsimNetworkReader;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.router.util.FastAStarEuclideanFactory;
-import org.matsim.core.router.util.FastAStarLandmarksFactory;
-import org.matsim.core.router.util.FastDijkstraFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.LeastCostPathCalculatorFactory;
 import org.matsim.core.router.util.PreProcessEuclidean;
@@ -109,7 +106,7 @@ public class PersonalizableDisutilityIntegrationTest {
 	@Test
 	public void testPersonAvailableForDisutility_AStarLandmarks() {
 		Fixture f = new Fixture();
-		LeastCostPathCalculatorFactory routerFactory = new FastAStarEuclideanFactory(f.network, f.costFunction);
+		LeastCostPathCalculatorFactory routerFactory = new FastAStarEuclideanFactory();
 		LeastCostPathCalculator router = routerFactory.createPathCalculator(f.network, f.costFunction, new FreeSpeedTravelTime());
 		router.calcLeastCostPath(
 				f.network.getNodes().get(Id.create("2", Node.class)), 
@@ -123,7 +120,7 @@ public class PersonalizableDisutilityIntegrationTest {
 	@Test
 	public void testPersonAvailableForDisutility_FastAStarLandmarks() {
 		Fixture f = new Fixture();
-		LeastCostPathCalculatorFactory routerFactory = new FastAStarLandmarksFactory(f.network, f.costFunction);
+		LeastCostPathCalculatorFactory routerFactory = new FastAStarLandmarksFactory();
 		LeastCostPathCalculator router = routerFactory.createPathCalculator(f.network, f.costFunction, new FreeSpeedTravelTime());
 		router.calcLeastCostPath(
 				f.network.getNodes().get(Id.create("2", Node.class)), 
@@ -181,7 +178,5 @@ public class PersonalizableDisutilityIntegrationTest {
 		public double getLinkMinimumTravelDisutility(Link link) {
 			return 1.0;
 		}
-		
 	}
-
 }

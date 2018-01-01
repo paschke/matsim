@@ -29,6 +29,7 @@ import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.mobsim.framework.MobsimTimer;
 import org.matsim.core.mobsim.qsim.interfaces.AgentCounter;
 import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngine.NetsimInternalInterface;
+import org.matsim.core.mobsim.qsim.qnetsimengine.linkspeedcalculator.DefaultLinkSpeedCalculator;
 import org.matsim.core.mobsim.qsim.qnetsimengine.linkspeedcalculator.LinkSpeedCalculator;
 import org.matsim.vis.snapshotwriters.SnapshotLinkWidthCalculator;
 
@@ -46,7 +47,8 @@ public final class ConfigurableQNetworkFactory extends QNetworkFactory {
 	private Scenario scenario ;
 	private NetsimEngineContext context;
 	private NetsimInternalInterface netsimEngine ;
-	private LinkSpeedCalculator linkSpeedCalculator;
+	private LinkSpeedCalculator linkSpeedCalculator = new DefaultLinkSpeedCalculator() ;
+	private TurnAcceptanceLogic turnAcceptanceLogic = new DefaultTurnAcceptanceLogic() ;
 
 	public ConfigurableQNetworkFactory( EventsManager events, Scenario scenario ) {
 		this.events = events;
@@ -67,7 +69,7 @@ public final class ConfigurableQNetworkFactory extends QNetworkFactory {
 		context = new NetsimEngineContext( events, effectiveCellSize, agentCounter, agentSnapshotInfoBuilder, qsimConfig, mobsimTimer, linkWidthCalculator );
 	}
 	@Override
-	QLinkI createNetsimLink(final Link link, final QNode toQueueNode) {
+	QLinkI createNetsimLink(final Link link, final QNodeI toQueueNode) {
 		QueueWithBuffer.Builder laneFactory = new QueueWithBuffer.Builder(context) ;
 		laneFactory.setLinkSpeedCalculator( linkSpeedCalculator );
 
@@ -77,11 +79,17 @@ public final class ConfigurableQNetworkFactory extends QNetworkFactory {
 		return linkBuilder.build(link, toQueueNode) ;
 	}
 	@Override
-	QNode createNetsimNode(final Node node) {
-		QNode.Builder builder = new QNode.Builder( netsimEngine, context ) ;
+	QNodeI createNetsimNode(final Node node) {
+		QNodeImpl.Builder builder = new QNodeImpl.Builder( netsimEngine, context ) ;
+
+		builder.setTurnAcceptanceLogic( this.turnAcceptanceLogic ) ;
+
 		return builder.build( node ) ;
 	}
 	public final void setLinkSpeedCalculator(LinkSpeedCalculator linkSpeedCalculator) {
 		this.linkSpeedCalculator = linkSpeedCalculator;
+	}
+	public final void setTurnAcceptanceLogic( TurnAcceptanceLogic turnAcceptanceLogic ) {
+		this.turnAcceptanceLogic = turnAcceptanceLogic;
 	}
 }

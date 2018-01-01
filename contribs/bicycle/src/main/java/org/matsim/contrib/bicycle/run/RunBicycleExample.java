@@ -18,30 +18,56 @@
  * *********************************************************************** */
 package org.matsim.contrib.bicycle.run;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.vehicles.VehicleType;
+import org.matsim.vehicles.VehicleUtils;
 
+/**
+ * @author dziemke
+ */
 public class RunBicycleExample {
 
 	public static void main(String[] args) {
+		// This works when the data is stored under "/matsim/contribs/bicycle/src/main/resurces/bicycle_example"
 		Config config = ConfigUtils.loadConfig("bicycle_example/config.xml", new BicycleConfigGroup());
 		new RunBicycleExample().run(config);
 	}
 
 	public void run(Config config) {
-		config.plansCalcRoute().setInsertingAccessEgressWalk(true);
+//		config.plansCalcRoute().setInsertingAccessEgressWalk(true);
 		config.global().setNumberOfThreads(1);
 		config.controler().setOverwriteFileSetting(OverwriteFileSetting.deleteDirectoryIfExists);
 		config.controler().setLastIteration(0);
+		
+		// New, yet to be applied
+		config.plansCalcRoute().setRoutingRandomness(0.2);
+		//
 				
 		Scenario scenario = ScenarioUtils.loadScenario(config);
-		
+
+		VehicleType car = VehicleUtils.getFactory().createVehicleType(Id.create(TransportMode.car, VehicleType.class));
+		car.setMaximumVelocity(60.0/3.6);
+		car.setPcuEquivalents(1.0);
+		scenario.getVehicles().addVehicleType(car);
+
+		VehicleType bicycle = VehicleUtils.getFactory().createVehicleType(Id.create("bicycle", VehicleType.class));
+		bicycle.setMaximumVelocity(30.0/3.6);
+		bicycle.setPcuEquivalents(0.0);
+		scenario.getVehicles().addVehicleType(bicycle);
+
+		scenario.getConfig().qsim().setVehiclesSource(QSimConfigGroup.VehiclesSource.modeVehicleTypesFromVehiclesData);
+
 		Controler controler = new Controler(scenario);
 		controler.addOverridingModule(new BicycleModule());
+		
 		controler.run();
 	}
 }

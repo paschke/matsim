@@ -47,6 +47,7 @@ public class RunTaxiBenchmark {
 
 	public static Controler createControler(Config config, int runs) {
 		config.controler().setLastIteration(runs - 1);
+		DvrpConfigGroup.get(config).setNetworkMode(null);//to switch off network filtering
 		config.addConfigConsistencyChecker(new TaxiBenchmarkConfigConsistencyChecker());
 		config.checkConsistency();
 
@@ -55,12 +56,13 @@ public class RunTaxiBenchmark {
 		Controler controler = new Controler(scenario);
 		controler.setModules(new DvrpBenchmarkControlerModule());
 		controler.addOverridingModule(new TaxiOutputModule());
-		controler.addOverridingModule(new TaxiBenchmarkModule());
 
+		controler.addOverridingModule(new TaxiModule());
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
 				addControlerListenerBinding().to(TaxiBenchmarkStats.class).asEagerSingleton();
+				install(new DvrpBenchmarkTravelTimeModule());
 			};
 		});
 

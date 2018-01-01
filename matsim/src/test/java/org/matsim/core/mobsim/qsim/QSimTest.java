@@ -20,12 +20,7 @@
 
 package org.matsim.core.mobsim.qsim;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
+import java.util.*;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -38,36 +33,18 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
-import org.matsim.api.core.v01.events.ActivityEndEvent;
-import org.matsim.api.core.v01.events.ActivityStartEvent;
-import org.matsim.api.core.v01.events.Event;
-import org.matsim.api.core.v01.events.LinkEnterEvent;
-import org.matsim.api.core.v01.events.LinkLeaveEvent;
-import org.matsim.api.core.v01.events.PersonArrivalEvent;
-import org.matsim.api.core.v01.events.PersonDepartureEvent;
-import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
-import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
-import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
-import org.matsim.api.core.v01.events.VehicleLeavesTrafficEvent;
+import org.matsim.api.core.v01.events.*;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.Population;
-import org.matsim.api.core.v01.population.PopulationFactory;
-import org.matsim.api.core.v01.population.PopulationFactory;
-import org.matsim.api.core.v01.population.Route;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.api.experimental.events.TeleportationArrivalEvent;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.QSimConfigGroup;
+import org.matsim.core.controler.PrepareForSimUtils;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.mobsim.qsim.agents.AgentFactory;
@@ -82,10 +59,9 @@ import org.matsim.core.mobsim.qsim.qnetsimengine.QVehicle;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.population.routes.LinkNetworkRouteFactory;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.misc.Time;
@@ -103,24 +79,27 @@ public class QSimTest {
 	private final static Logger log = Logger.getLogger(QSimTest.class);
 
 	private final boolean isUsingFastCapacityUpdate;
-	
+
 	public QSimTest(boolean isUsingFastCapacityUpdate) {
 		this.isUsingFastCapacityUpdate = isUsingFastCapacityUpdate;
 	}
-	
+
 	@Parameters(name = "{index}: isUsingfastCapacityUpdate == {0}")
 	public static Collection<Object> parameterObjects () {
 		Object [] capacityUpdates = new Object [] { false, true };
 		return Arrays.asList(capacityUpdates);
 	}
-	
-	private QSim createQSim(MutableScenario scenario, EventsManager events) {
+
+	private static QSim createQSim(MutableScenario scenario, EventsManager events) {
+		// vehicles are moved to prepareForSim, thus, this must be explicitly called before qsim. Amit May'17
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
+
 		QSim qSim1 = new QSim(scenario, events);
 		ActivityEngine activityEngine = new ActivityEngine(events, qSim1.getAgentCounter());
 		qSim1.addMobsimEngine(activityEngine);
 		qSim1.addActivityHandler(activityEngine);
-        QNetsimEngineModule.configure(qSim1);
-		TeleportationEngine teleportationEngine = new TeleportationEngine(scenario, events);
+		QNetsimEngineModule.configure(qSim1);
+		DefaultTeleportationEngine teleportationEngine = new DefaultTeleportationEngine(scenario, events);
 		qSim1.addMobsimEngine(teleportationEngine);
 		QSim qSim = qSim1;
 		AgentFactory agentFactory = new DefaultAgentFactory(qSim);
@@ -129,14 +108,17 @@ public class QSimTest {
 		return qSim;
 	}
 
-	private QSim createQSim(Fixture f, EventsManager events) {
+	private static QSim createQSim(Fixture f, EventsManager events) {
+		// vehicles are moved to prepareForSim, thus, this must be explicitly called before qsim. Amit May'17
+		PrepareForSimUtils.createDefaultPrepareForSim(f.scenario).run();
+
 		Scenario sc = f.scenario;
 		QSim qSim1 = new QSim(sc, events);
 		ActivityEngine activityEngine = new ActivityEngine(events, qSim1.getAgentCounter());
 		qSim1.addMobsimEngine(activityEngine);
 		qSim1.addActivityHandler(activityEngine);
-        QNetsimEngineModule.configure(qSim1);
-		TeleportationEngine teleportationEngine = new TeleportationEngine(sc, events);
+		QNetsimEngineModule.configure(qSim1);
+		DefaultTeleportationEngine teleportationEngine = new DefaultTeleportationEngine(sc, events);
 		qSim1.addMobsimEngine(teleportationEngine);
 		QSim qSim = qSim1;
 		AgentFactory agentFactory = new DefaultAgentFactory(qSim);
@@ -161,7 +143,7 @@ public class QSimTest {
 		Activity a1 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 		a1.setEndTime(6*3600);
 		Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
+		NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
 		route.setLinkIds(f.link1.getId(), f.linkIds2, f.link3.getId());
 		leg.setRoute(route);
 		PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
@@ -182,6 +164,65 @@ public class QSimTest {
 		Assert.assertEquals("wrong time in second event.", 6.0*3600 + 12, collector.events.get(1).getTime(), MatsimTestCase.EPSILON);
 	}
 
+
+	/**
+	 * This test is mostly useful for manual debugging, because only a single agent is simulated
+	 * on a very simple network.
+	 *
+	 * @author mrieser
+	 * @author Kai Nagel
+	 */
+	@Test
+	public void testSingleAgentWithEndOnLeg() {
+		Fixture f = new Fixture(isUsingFastCapacityUpdate);
+
+		// add a single person with leg from link1 to link3
+		final PopulationFactory pf = f.scenario.getPopulation().getFactory();
+		Person person = pf.createPerson(Id.create(0, Person.class));
+		Plan plan = PersonUtils.createAndAddPlan(person, true);
+		{
+			Activity a1 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
+			a1.setEndTime(6*3600);
+		}
+		{
+			Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
+		}
+		{
+			Activity act = PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
+			act.setEndTime(6*3600);
+		}
+		{
+			Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
+		}
+		f.plans.addPerson(person);
+		
+		/* build events */
+		EventsManager events = EventsUtils.createEventsManager();
+		LinkEnterEventCollector collector = new LinkEnterEventCollector();
+		events.addHandler(collector);
+
+		/* run sim */
+		QSim sim = null ;
+		try {
+			sim = createQSim(f, events);
+			Assert.fail("should not get to here");
+		} catch( Exception ee ) {
+			// this is the expected behavior, so stop here
+		}
+		
+		 /* What happens is the following: The last leg is not routed ... it would not be 
+		  * possible even if desired since we do not know where to go. It does fail,
+		  * however, in the vehicle generation part of PrepareForSim, since when there
+		  * is no route, it does not know where to put the vehicle. */      
+
+//		sim.run();
+//
+//		/* finish */
+//		Assert.assertEquals("wrong number of link enter events.", 2, collector.events.size());
+//		Assert.assertEquals("wrong time in first event.", 6.0*3600 + 1, collector.events.get(0).getTime(), MatsimTestCase.EPSILON);
+//		Assert.assertEquals("wrong time in second event.", 6.0*3600 + 12, collector.events.get(1).getTime(), MatsimTestCase.EPSILON);
+	}
+
 	/**
 	 * This test is mostly useful for manual debugging, because only two single agents are simulated
 	 * on a very simple network.
@@ -199,7 +240,7 @@ public class QSimTest {
 			Activity a1 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 			a1.setEndTime((6+i)*3600);
 			Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-			NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
+			NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
 			route.setLinkIds(f.link1.getId(), f.linkIds2, f.link3.getId());
 			leg.setRoute(route);
 			PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
@@ -239,8 +280,8 @@ public class QSimTest {
 		a1.setEndTime(6*3600);
 		Leg leg = PopulationUtils.createAndAddLeg( plan, "other" );
 		Route route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(Route.class, f.link1.getId(), f.link3.getId()); // TODO [MR] use different factory/mode here
-        route.setTravelTime(15.0);
-        leg.setRoute(route);
+		route.setTravelTime(15.0);
+		leg.setRoute(route);
 		PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
 		f.plans.addPerson(person);
 
@@ -257,7 +298,7 @@ public class QSimTest {
 		Assert.assertEquals("wrong number of events.", 5, collector.getEvents().size());
 		Assert.assertEquals("wrong type of event.", ActivityEndEvent.class, allEvents.get(0).getClass());
 		Assert.assertEquals("wrong type of event.", PersonDepartureEvent.class, allEvents.get(1).getClass());
-        Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(2).getClass());
+		Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(2).getClass());
 		Assert.assertEquals("wrong type of event.", PersonArrivalEvent.class, allEvents.get(3).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityStartEvent.class, allEvents.get(4).getClass());
 		Assert.assertEquals("wrong time in event.", 6.0*3600 + 0, allEvents.get(0).getTime(), MatsimTestCase.EPSILON);
@@ -284,7 +325,7 @@ public class QSimTest {
 		Activity a1 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 		a1.setEndTime(0);
 		Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
+		NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
 		route.setLinkIds(f.link1.getId(), f.linkIds2, f.link3.getId());
 		leg.setRoute(route);
 		PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
@@ -305,7 +346,7 @@ public class QSimTest {
 		Assert.assertEquals("wrong time in first event.", 0.0*3600 + 1, collector.events.get(0).getTime(), MatsimTestCase.EPSILON);
 		Assert.assertEquals("wrong time in second event.", 0.0*3600 + 12, collector.events.get(1).getTime(), MatsimTestCase.EPSILON);
 	}
-	
+
 	/**
 	 * Simulates a single agent that has two activities on the same link.
 	 * Tests if the simulation correctly handles such cases.
@@ -328,7 +369,7 @@ public class QSimTest {
 		Activity a1 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 		a1.setEndTime(6*3600);
 		Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link1.getId());
+		NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link1.getId());
 		route.setLinkIds(f.link1.getId(), new ArrayList<Id<Link>>(0), f.link1.getId());
 		leg.setRoute(route);
 		PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link1.getId());
@@ -389,7 +430,7 @@ public class QSimTest {
 	@Test
 	public void testSingleAgent_LastLinkIsLoop() {
 		Fixture f = new Fixture(isUsingFastCapacityUpdate);
-		Link loopLink = NetworkUtils.createAndAddLink(f.network,Id.create("loop", Link.class), f.node4, f.node4, 100.0, 10.0, (double) 500, (double) 1 );
+		Link loopLink = NetworkUtils.createAndAddLink(f.network,Id.create("loop", Link.class), f.node4, f.node4, 100.0, 10.0, 500, 1 );
 
 		// add a single person with leg from link1 to loop-link
 		Person person = PopulationUtils.getFactory().createPerson(Id.create(0, Person.class));
@@ -397,7 +438,7 @@ public class QSimTest {
 		Activity a1 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 		a1.setEndTime(6*3600);
 		Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), loopLink.getId());
+		NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), loopLink.getId());
 		ArrayList<Id<Link>> links = new ArrayList<Id<Link>>();
 		links.add(f.link2.getId());
 		links.add(f.link3.getId());
@@ -519,7 +560,7 @@ public class QSimTest {
 		Activity act = PopulationUtils.createAndAddActivityFromLinkId(plan, "home", f.link1.getId());
 		act.setEndTime(6.0 * 3600);
 		Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.walk );
-		leg.setRoute(new GenericRouteImpl(f.link1.getId(), f.link2.getId()));
+		leg.setRoute(RouteUtils.createGenericRouteImpl(f.link1.getId(), f.link2.getId()));
 		leg.getRoute().setTravelTime(0.); // retrofitting to repair failing test.  kai, apr'15
 		act = PopulationUtils.createAndAddActivityFromLinkId(plan, "work", f.link2.getId());
 		act.setEndTime(6.0 * 3600 + 60);
@@ -565,7 +606,7 @@ public class QSimTest {
 			Activity a = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 			a.setEndTime(7*3600 - 1812);
 			Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-			NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
+			NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
 			route.setLinkIds(f.link1.getId(), f.linkIds2, f.link3.getId());
 			leg.setRoute(route);
 			PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
@@ -587,18 +628,18 @@ public class QSimTest {
 		System.out.println("#vehicles 7-8: " + Integer.toString(volume[7]));
 		System.out.println("#vehicles 8-9: " + Integer.toString(volume[8]));
 
-//		if(this.isUsingFastCapacityUpdate) {
-			Assert.assertEquals(3001, volume[6]); // we should have half of the maximum flow in this hour
-			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
-			Assert.assertEquals(999, volume[8]); // all the rest
-//		} else {
-//			Assert.assertEquals(3000, volume[6]); // we should have half of the maximum flow in this hour
-//			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
-//			Assert.assertEquals(1000, volume[8]); // all the rest
-//		}
+		//		if(this.isUsingFastCapacityUpdate) {
+		Assert.assertEquals(3001, volume[6]); // we should have half of the maximum flow in this hour
+		Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
+		Assert.assertEquals(999, volume[8]); // all the rest
+		//		} else {
+		//			Assert.assertEquals(3000, volume[6]); // we should have half of the maximum flow in this hour
+		//			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
+		//			Assert.assertEquals(1000, volume[8]); // all the rest
+		//		}
 	}
 
-	
+
 	/**
 	 * Tests that on a link with a flow capacity of 0.25 vehicles per time step, after the first vehicle
 	 * at time step t, the second vehicle may pass in time step t + 4 and the third in time step t+8.
@@ -609,7 +650,7 @@ public class QSimTest {
 	public void testFlowCapacityDrivingFraction() {
 		Fixture f = new Fixture(isUsingFastCapacityUpdate);
 		f.link2.setCapacity(900.0); // One vehicle every 4 seconds
-		
+
 		// add a lot of persons with legs from link1 to link3, starting at 6:30
 		for (int i = 1; i <= 3; i++) {
 			Person person = PopulationUtils.getFactory().createPerson(Id.create(i, Person.class));
@@ -627,7 +668,7 @@ public class QSimTest {
 			Activity a = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 			a.setEndTime(7*3600 - 1812);
 			Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-			NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
+			NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
 			route.setLinkIds(f.link1.getId(), f.linkIds2, f.link3.getId());
 			leg.setRoute(route);
 			PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
@@ -650,7 +691,7 @@ public class QSimTest {
 		Assert.assertEquals(1, volume[7*3600 - 1800 + 4]); // Second vehicle
 		Assert.assertEquals(1, volume[7*3600 - 1800 + 8]); // Third vehicle
 	}
-	
+
 	/**
 	 * Tests that the flow capacity can be reached (but not exceeded) by
 	 * agents starting on a link. Due to the different handling of these
@@ -670,7 +711,7 @@ public class QSimTest {
 			Activity a2 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link2.getId());
 			a2.setEndTime(7*3600 - 1801);
 			Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-			NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
+			NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
 			route.setLinkIds(f.link2.getId(), f.linkIdsNone, f.link3.getId());
 			leg.setRoute(route);
 			PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
@@ -692,15 +733,15 @@ public class QSimTest {
 		System.out.println("#vehicles 7-8: " + Integer.toString(volume[7]));
 		System.out.println("#vehicles 8-9: " + Integer.toString(volume[8]));
 
-//		if(this.isUsingFastCapacityUpdate) {
-			Assert.assertEquals(3001, volume[6]); // we should have half of the maximum flow in this hour
-			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
-			Assert.assertEquals(999, volume[8]); // all the rest
-//		} else {
-//			Assert.assertEquals(3000, volume[6]); // we should have half of the maximum flow in this hour
-//			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
-//			Assert.assertEquals(1000, volume[8]); // all the rest
-//		}
+		//		if(this.isUsingFastCapacityUpdate) {
+		Assert.assertEquals(3001, volume[6]); // we should have half of the maximum flow in this hour
+		Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
+		Assert.assertEquals(999, volume[8]); // all the rest
+		//		} else {
+		//			Assert.assertEquals(3000, volume[6]); // we should have half of the maximum flow in this hour
+		//			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
+		//			Assert.assertEquals(1000, volume[8]); // all the rest
+		//		}
 	}
 
 	/**
@@ -721,7 +762,7 @@ public class QSimTest {
 			Activity a2 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link2.getId());
 			a2.setEndTime(7*3600 - 1801);
 			Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-			NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
+			NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
 			route.setLinkIds(f.link2.getId(), f.linkIdsNone, f.link3.getId());
 			leg.setRoute(route);
 			PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
@@ -734,7 +775,7 @@ public class QSimTest {
 			Activity a2 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 			a2.setEndTime(7*3600 - 1812);
 			Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-			NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
+			NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
 			route.setLinkIds(f.link1.getId(), f.linkIds2, f.link3.getId());
 			leg.setRoute(route);
 			PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link3.getId());
@@ -756,16 +797,16 @@ public class QSimTest {
 		System.out.println("#vehicles 7-8: " + Integer.toString(volume[7]));
 		System.out.println("#vehicles 8-9: " + Integer.toString(volume[8]));
 
-//		if(this.isUsingFastCapacityUpdate) {
-			Assert.assertEquals(3001, volume[6]); // we should have half of the maximum flow in this hour
-			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
-			Assert.assertEquals(999, volume[8]); // all the rest
-//		} else {
-//			Assert.assertEquals(3000, volume[6]); // we should have half of the maximum flow in this hour
-//			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
-//			Assert.assertEquals(1000, volume[8]); // all the rest	
-//		}
-		
+		//		if(this.isUsingFastCapacityUpdate) {
+		Assert.assertEquals(3001, volume[6]); // we should have half of the maximum flow in this hour
+		Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
+		Assert.assertEquals(999, volume[8]); // all the rest
+		//		} else {
+		//			Assert.assertEquals(3000, volume[6]); // we should have half of the maximum flow in this hour
+		//			Assert.assertEquals(6000, volume[7]); // we should have maximum flow in this hour
+		//			Assert.assertEquals(1000, volume[8]); // all the rest	
+		//		}
+
 	}
 
 	/**
@@ -782,11 +823,11 @@ public class QSimTest {
 		a1.setEndTime(7.0*3600);
 		Leg l1 = PopulationUtils.createAndAddLeg( plan, "other" );
 		l1.setTravelTime(10);
-		l1.setRoute(((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link2.getId()));
+		l1.setRoute(f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link2.getId()));
 		Activity a2 = PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link2.getId());
 		a2.setEndTime(7.0*3600 + 20);
 		Leg l2 = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route2 = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
+		NetworkRoute route2 = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
 		route2.setLinkIds(f.link2.getId(), f.linkIdsNone, f.link3.getId());
 		l2.setRoute(route2);
 		PopulationUtils.createAndAddActivityFromLinkId(plan, "l", f.link3.getId());
@@ -805,7 +846,7 @@ public class QSimTest {
 		Assert.assertEquals("wrong number of events.", 15, allEvents.size());
 		Assert.assertEquals("wrong type of event.", ActivityEndEvent.class, allEvents.get(0).getClass());
 		Assert.assertEquals("wrong type of event.", PersonDepartureEvent.class, allEvents.get(1).getClass());
-        Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(2).getClass());
+		Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(2).getClass());
 		Assert.assertEquals("wrong type of event.", PersonArrivalEvent.class, allEvents.get(3).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityStartEvent.class, allEvents.get(4).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityEndEvent.class, allEvents.get(5).getClass());
@@ -820,7 +861,7 @@ public class QSimTest {
 		Assert.assertEquals("wrong type of event.", ActivityStartEvent.class, allEvents.get(14).getClass());
 	}
 
-	
+
 	/**
 	 * Tests that an agent whose car isn't available waits for it to become available.
 	 *
@@ -837,11 +878,11 @@ public class QSimTest {
 		a1.setEndTime(7.0*3600);
 		Leg l1 = PopulationUtils.createAndAddLeg( plan, "other" );
 		l1.setTravelTime(10);
-		l1.setRoute(((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link2.getId()));
+		l1.setRoute(f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link2.getId()));
 		Activity a2 = PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link2.getId());
 		a2.setEndTime(7.0*3600 + 20);
 		Leg l2 = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route2 = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
+		NetworkRoute route2 = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
 		route2.setLinkIds(f.link2.getId(), f.linkIdsNone, f.link3.getId());
 		l2.setRoute(route2);
 		PopulationUtils.createAndAddActivityFromLinkId(plan, "l", f.link3.getId());
@@ -852,7 +893,7 @@ public class QSimTest {
 		Activity aa1 = PopulationUtils.createAndAddActivityFromLinkId(planWhichBringsTheCar, "h", f.link1.getId());
 		aa1.setEndTime(7.0*3600 + 30);
 		Leg ll1 = PopulationUtils.createAndAddLeg( planWhichBringsTheCar, TransportMode.car );
-		NetworkRoute route3 = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link2.getId());
+		NetworkRoute route3 = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link2.getId());
 		route3.setLinkIds(f.link1.getId(), f.linkIdsNone, f.link2.getId());
 		route3.setVehicleId(Id.create(1, Vehicle.class)); // We drive the car that person 1 needs.
 		ll1.setRoute(route3);
@@ -860,11 +901,11 @@ public class QSimTest {
 		aa2.setEndTime(7.0*3600 + 60);
 		Leg ll2 = PopulationUtils.createAndAddLeg( planWhichBringsTheCar, "other" );
 		ll2.setTravelTime(10);
-		ll2.setRoute(((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId()));
+		ll2.setRoute(f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId()));
 		PopulationUtils.createAndAddActivityFromLinkId(planWhichBringsTheCar, "l", f.link3.getId());
 		f.plans.addPerson(personWhoBringsTheCar);
-		
-		
+
+
 		/* build events */
 		EventsManager events = EventsUtils.createEventsManager();
 		EventsCollector collector = new EventsCollector();
@@ -882,7 +923,7 @@ public class QSimTest {
 		Assert.assertEquals("wrong number of events.", 30, allEvents.size());
 		Assert.assertEquals("wrong type of event.", ActivityEndEvent.class, allEvents.get(0).getClass());
 		Assert.assertEquals("wrong type of event.", PersonDepartureEvent.class, allEvents.get(1).getClass());
-        Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(2).getClass());
+		Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(2).getClass());
 		Assert.assertEquals("wrong type of event.", PersonArrivalEvent.class, allEvents.get(3).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityStartEvent.class, allEvents.get(4).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityEndEvent.class, allEvents.get(5).getClass());
@@ -907,11 +948,11 @@ public class QSimTest {
 		Assert.assertEquals("wrong type of event.", ActivityStartEvent.class, allEvents.get(24).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityEndEvent.class, allEvents.get(25).getClass());
 		Assert.assertEquals("wrong type of event.", PersonDepartureEvent.class, allEvents.get(26).getClass());
-        Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(27).getClass());
+		Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(27).getClass());
 		Assert.assertEquals("wrong type of event.", PersonArrivalEvent.class, allEvents.get(28).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityStartEvent.class, allEvents.get(29).getClass());
 	}
-	
+
 	/**
 	 * Tests that vehicles are not teleported if they are missing, but that an Exception is thrown instead.
 	 *
@@ -927,11 +968,11 @@ public class QSimTest {
 		a1.setEndTime(7.0*3600);
 		Leg l1 = PopulationUtils.createAndAddLeg( plan, "other" );
 		l1.setTravelTime(10);
-		l1.setRoute(((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link2.getId())); // TODO [MR] use different factory / TransportationMode
+		l1.setRoute(f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link2.getId())); // TODO [MR] use different factory / TransportationMode
 		Activity a2 = PopulationUtils.createAndAddActivityFromLinkId(plan, "w", f.link2.getId());
 		a2.setEndTime(7.0*3600 + 20);
 		Leg l2 = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route2 = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
+		NetworkRoute route2 = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
 		route2.setLinkIds(f.link2.getId(), f.linkIdsNone, f.link3.getId());
 		l2.setRoute(route2);
 		PopulationUtils.createAndAddActivityFromLinkId(plan, "l", f.link3.getId());
@@ -955,7 +996,7 @@ public class QSimTest {
 		Assert.assertEquals("wrong number of events.", 7, allEvents.size());
 		Assert.assertEquals("wrong type of event.", ActivityEndEvent.class, allEvents.get(0).getClass());
 		Assert.assertEquals("wrong type of event.", PersonDepartureEvent.class, allEvents.get(1).getClass());
-        Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(2).getClass());
+		Assert.assertEquals("wrong type of event.", TeleportationArrivalEvent.class, allEvents.get(2).getClass());
 		Assert.assertEquals("wrong type of event.", PersonArrivalEvent.class, allEvents.get(3).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityStartEvent.class, allEvents.get(4).getClass());
 		Assert.assertEquals("wrong type of event.", ActivityEndEvent.class, allEvents.get(5).getClass());
@@ -976,7 +1017,7 @@ public class QSimTest {
 		Activity a1 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link2.getId());
 		a1.setEndTime(7.0*3600);
 		Leg l1 = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route1 = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
+		NetworkRoute route1 = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link2.getId(), f.link3.getId());
 		route1.setLinkIds(f.link2.getId(), f.linkIdsNone, f.link3.getId());
 		route1.setVehicleId(Id.create(2, Vehicle.class));
 		l1.setRoute(route1);
@@ -1025,7 +1066,7 @@ public class QSimTest {
 	@Test
 	public void testCircleAsRoute() {
 		Fixture f = new Fixture(isUsingFastCapacityUpdate);
-		Link link4 = NetworkUtils.createAndAddLink(f.network,Id.create(4, Link.class), f.node4, f.node1, 1000.0, 100.0, (double) 6000, 1.0 ); // close the network
+		Link link4 = NetworkUtils.createAndAddLink(f.network,Id.create(4, Link.class), f.node4, f.node1, 1000.0, 100.0, 6000, 1.0 ); // close the network
 
 		Person person = PopulationUtils.getFactory().createPerson(Id.create(1, Person.class));
 		Plan plan = PersonUtils.createAndAddPlan(person, true);
@@ -1033,7 +1074,7 @@ public class QSimTest {
 		a1.setEndTime(7.0*3600);
 		Leg l1 = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
 		l1.setTravelTime(10);
-		NetworkRoute netRoute = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link1.getId());
+		NetworkRoute netRoute = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link1.getId());
 		List<Id<Link>> routeLinks = new ArrayList<Id<Link>>();
 		Collections.addAll(routeLinks, f.link2.getId(), f.link3.getId(), link4.getId());
 		netRoute.setLinkIds(f.link1.getId(), routeLinks, f.link1.getId());
@@ -1082,7 +1123,7 @@ public class QSimTest {
 	@Test
 	public void testRouteWithEndLinkTwice() {
 		Fixture f = new Fixture(isUsingFastCapacityUpdate);
-		Link link4 = NetworkUtils.createAndAddLink(f.network,Id.create(4, Link.class), f.node4, f.node1, 1000.0, 100.0, (double) 6000, 1.0 ); // close the network
+		Link link4 = NetworkUtils.createAndAddLink(f.network,Id.create(4, Link.class), f.node4, f.node1, 1000.0, 100.0, 6000, 1.0 ); // close the network
 
 		Person person = PopulationUtils.getFactory().createPerson(Id.create(1, Person.class));
 		Plan plan = PersonUtils.createAndAddPlan(person, true);
@@ -1090,7 +1131,7 @@ public class QSimTest {
 		a1.setEndTime(7.0*3600);
 		Leg l1 = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
 		l1.setTravelTime(10);
-		NetworkRoute netRoute = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
+		NetworkRoute netRoute = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), f.link3.getId());
 		List<Id<Link>> routeLinks = new ArrayList<Id<Link>>();
 		Collections.addAll(routeLinks, f.link2.getId(), f.link3.getId(), link4.getId(), f.link1.getId(), f.link2.getId());
 		netRoute.setLinkIds(f.link1.getId(), routeLinks, f.link3.getId());
@@ -1234,15 +1275,15 @@ public class QSimTest {
 		Node node6 = NetworkUtils.createAndAddNode(f.network, Id.create("6", Node.class), new Coord(3200, 0));
 		Node node7 = NetworkUtils.createAndAddNode(f.network, Id.create("7", Node.class), new Coord(3300, 0));
 		final Node toNode = node5;
-		NetworkUtils.createAndAddLink(f.network,Id.create("4", Link.class), f.node4, toNode, (double) 1000, (double) 10, (double) 6000, (double) 2 );
+		NetworkUtils.createAndAddLink(f.network,Id.create("4", Link.class), f.node4, toNode, 1000, 10, 6000, 2 );
 		final Node fromNode = node5;
 		final Node toNode1 = node6;
-		Link link5 = NetworkUtils.createAndAddLink(f.network,Id.create("5", Link.class), fromNode, toNode1, (double) 100, (double) 10, (double) 60000, (double) 9 );
+		Link link5 = NetworkUtils.createAndAddLink(f.network,Id.create("5", Link.class), fromNode, toNode1, 100, 10, 60000, 9 );
 		final Node fromNode1 = node6;
 		final Node toNode2 = node7;
-		Link link6 = NetworkUtils.createAndAddLink(f.network,Id.create("6", Link.class), fromNode1, toNode2, (double) 100, (double) 10, (double) 60000, (double) 9 );
+		Link link6 = NetworkUtils.createAndAddLink(f.network,Id.create("6", Link.class), fromNode1, toNode2, 100, 10, 60000, 9 );
 
-		((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().setRouteFactory(NetworkRoute.class, new LinkNetworkRouteFactory());
+		f.scenario.getPopulation().getFactory().getRouteFactories().setRouteFactory(NetworkRoute.class, new LinkNetworkRouteFactory());
 
 		// create a person with a car-leg from link1 to link5, but an incomplete route
 		Person person = PopulationUtils.getFactory().createPerson(Id.create(0, Person.class));
@@ -1250,13 +1291,13 @@ public class QSimTest {
 		Activity a1 = PopulationUtils.createAndAddActivityFromLinkId(plan, "h", f.link1.getId());
 		a1.setEndTime(8*3600);
 		Leg leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		NetworkRoute route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), link5.getId());
+		NetworkRoute route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, f.link1.getId(), link5.getId());
 		route.setLinkIds(Id.create(startLinkId, Link.class), NetworkUtils.getLinkIds(linkIds), Id.create(endLinkId, Link.class));
 		leg.setRoute(route);
 		Activity a2 = PopulationUtils.createAndAddActivityFromLinkId(plan, "w", link5.getId());
 		a2.setEndTime(9*3600);
 		leg = PopulationUtils.createAndAddLeg( plan, TransportMode.car );
-		route = ((PopulationFactory) f.scenario.getPopulation().getFactory()).getRouteFactories().createRoute(NetworkRoute.class, link5.getId(), link6.getId());
+		route = f.scenario.getPopulation().getFactory().getRouteFactories().createRoute(NetworkRoute.class, link5.getId(), link6.getId());
 		route.setLinkIds(link5.getId(), null, link6.getId());
 		leg.setRoute(route);
 		PopulationUtils.createAndAddActivityFromLinkId(plan, "h", link6.getId());
@@ -1277,7 +1318,7 @@ public class QSimTest {
 		Config config = scenario.getConfig();
 
 		config.qsim().setUsingFastCapacityUpdate(isUsingFastCapacityUpdate);
-		
+
 		// build simple network with 1 link
 		Network network = scenario.getNetwork();
 		Node node1 = network.getFactory().createNode(Id.create("1", Node.class), new Coord(0.0, 0.0));
@@ -1297,9 +1338,9 @@ public class QSimTest {
 		Activity act1 = pb.createActivityFromLinkId("h", link.getId());
 		act1.setEndTime(7.0*3600);
 		Leg leg = pb.createLeg(TransportMode.walk);
-		Route route = new GenericRouteImpl(link.getId(), link.getId());
-        route.setTravelTime(5.0*3600);
-        leg.setRoute(route);
+		Route route = RouteUtils.createGenericRouteImpl(link.getId(), link.getId());
+		route.setTravelTime(5.0*3600);
+		leg.setRoute(route);
 		Activity act2 = pb.createActivityFromLinkId("w", link.getId());
 		plan.addActivity(act1);
 		plan.addLeg(leg);
@@ -1337,9 +1378,9 @@ public class QSimTest {
 	public void testCleanupSim_EarlyEnd() {
 		MutableScenario scenario = (MutableScenario) ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		Config config = scenario.getConfig();
-		
+
 		config.qsim().setUsingFastCapacityUpdate(isUsingFastCapacityUpdate);
-		
+
 		double simEndTime = 8.0*3600;
 
 		// build simple network with 2 links
@@ -1368,7 +1409,7 @@ public class QSimTest {
 		Activity act1_1 = pb.createActivityFromLinkId("h", link1.getId());
 		act1_1.setEndTime(simEndTime - 20);
 		Leg leg1 = pb.createLeg(TransportMode.car);
-		NetworkRoute route1 = new LinkNetworkRouteImpl(link1.getId(), link2.getId());
+		NetworkRoute route1 = RouteUtils.createLinkNetworkRouteImpl(link1.getId(), link2.getId());
 		leg1.setRoute(route1);
 		leg1.setTravelTime(5.0*3600);
 		Activity act1_2 = pb.createActivityFromLinkId("w", link2.getId());
@@ -1383,7 +1424,7 @@ public class QSimTest {
 		Activity act2_1 = pb.createActivityFromLinkId("h", link1.getId());
 		act2_1.setEndTime(simEndTime - 1000);
 		Leg leg2 = pb.createLeg(TransportMode.walk);
-		Route route2 = new GenericRouteImpl(link1.getId(), link2.getId());
+		Route route2 = RouteUtils.createGenericRouteImpl(link1.getId(), link2.getId());
 		leg2.setRoute(route2);
 		leg2.setTravelTime(2000);
 		Activity act2_2 = pb.createActivityFromLinkId("w", link2.getId());
@@ -1398,7 +1439,7 @@ public class QSimTest {
 		Activity act3_1 = pb.createActivityFromLinkId("h", link1.getId());
 		act3_1.setEndTime(simEndTime + 1000);
 		Leg leg3 = pb.createLeg(TransportMode.walk);
-		Route route3 = new GenericRouteImpl(link1.getId(), link2.getId());
+		Route route3 = RouteUtils.createGenericRouteImpl(link1.getId(), link2.getId());
 		leg3.setRoute(route3);
 		leg3.setTravelTime(1000);
 		Activity act3_2 = pb.createActivityFromLinkId("w", link2.getId());
@@ -1492,19 +1533,19 @@ public class QSimTest {
 			this.config = scenario.getConfig();
 			this.config.qsim().setFlowCapFactor(1.0);
 			this.config.qsim().setStorageCapFactor(1.0);
-			
+
 			this.config.qsim().setUsingFastCapacityUpdate(isUsingFastCapacityUpdate);
 
 			/* build network */
-			this.network = (Network) this.scenario.getNetwork();
+			this.network = this.scenario.getNetwork();
 			this.network.setCapacityPeriod(Time.parseTime("1:00:00"));
 			this.node1 = NetworkUtils.createAndAddNode(this.network, Id.create("1", Node.class), new Coord(0, 0));
 			this.node2 = NetworkUtils.createAndAddNode(this.network, Id.create("2", Node.class), new Coord(100, 0));
 			this.node3 = NetworkUtils.createAndAddNode(this.network, Id.create("3", Node.class), new Coord(1100, 0));
 			this.node4 = NetworkUtils.createAndAddNode(this.network, Id.create("4", Node.class), new Coord(1200, 0));
-			this.link1 = NetworkUtils.createAndAddLink(this.network,Id.create("1", Link.class), this.node1, this.node2, (double) 100, (double) 100, (double) 60000, (double) 9 );
-			this.link2 = NetworkUtils.createAndAddLink(this.network,Id.create("2", Link.class), this.node2, this.node3, (double) 1000, (double) 100, (double) 6000, (double) 2 );
-			this.link3 = NetworkUtils.createAndAddLink(this.network,Id.create("3", Link.class), this.node3, this.node4, (double) 100, (double) 100, (double) 60000, (double) 9 );
+			this.link1 = NetworkUtils.createAndAddLink(this.network,Id.create("1", Link.class), this.node1, this.node2, 100, 100, 60000, 9 );
+			this.link2 = NetworkUtils.createAndAddLink(this.network,Id.create("2", Link.class), this.node2, this.node3, 1000, 100, 6000, 2 );
+			this.link3 = NetworkUtils.createAndAddLink(this.network,Id.create("3", Link.class), this.node3, this.node4, 100, 100, 60000, 9 );
 
 			/* build plans */
 			this.plans = scenario.getPopulation();

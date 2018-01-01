@@ -52,10 +52,10 @@ public class CarsharingPersonDriverAgentImpl implements MobsimDriverAgent, Mobsi
 		this.transitAgentDelegate = new TransitAgentImpl( this.basicAgentDelegate ) ;
 		this.driverAgentDelegate = new PlanBasedDriverAgentImpl( this.basicAgentDelegate ) ;
 		this.originalPlan = this.scenario.getPopulation().getPersons().get(this.basicAgentDelegate.getId()).getSelectedPlan();
-
-		if ( scenario.getConfig().qsim().getNumberOfThreads() != 1 ) {
-			throw new RuntimeException("does not work with multiple qsim threads (will use same instance of router)") ; 
-		}
+		//this should work with multiple qsim threads now since different instances of router are used sep '17 mb
+		//if ( scenario.getConfig().qsim().getNumberOfThreads() != 1 ) {
+		//	throw new RuntimeException("does not work with multiple qsim threads (will use same instance of router)") ; 
+		//}
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ public class CarsharingPersonDriverAgentImpl implements MobsimDriverAgent, Mobsi
 				if (pe2 instanceof Leg && carsharingLeg(pe2))
 					countCSLegs++;
 				if (countCSLegs > this.carsharingTrips) {
-					newTrip = carsharingManager.reserveAndrouteCarsharingTrip(this.getCurrentPlan(), legToBerouted.getMode(), 
+					newTrip = carsharingManager.reserveAndrouteCarsharingTrip(this.originalPlan, legToBerouted.getMode(), 
 							(Leg)(pe2), now);
 					carsharingTrips++;
 					break;

@@ -28,7 +28,9 @@ import org.matsim.core.api.internal.MatsimWriter;
 import org.matsim.core.utils.io.MatsimXmlWriter;
 import org.matsim.core.utils.io.UncheckedIOException;
 
-public class ConfigWriter extends MatsimXmlWriter implements MatsimWriter {
+public final class ConfigWriter extends MatsimXmlWriter implements MatsimWriter {
+	
+	public static enum Verbosity {all, minimal } 
 
 	//////////////////////////////////////////////////////////////////////
 	// member variables
@@ -41,12 +43,14 @@ public class ConfigWriter extends MatsimXmlWriter implements MatsimWriter {
 	//////////////////////////////////////////////////////////////////////
 	// constructors
 	//////////////////////////////////////////////////////////////////////
-
-	public ConfigWriter(final Config config) {
+	public ConfigWriter(final Config config, final Verbosity verbosity ) {
 		this.config = config;
 		// always write the latest version, currently v2
 		this.dtd = "http://www.matsim.org/files/dtd/config_v2.dtd";
-		this.handler = new ConfigWriterHandlerImplV2();
+		this.handler = new ConfigWriterHandlerImplV2(verbosity);
+	}
+	public ConfigWriter(final Config config) {
+		this( config, Verbosity.all ) ;
 	}
 
 	//////////////////////////////////////////////////////////////////////
@@ -92,7 +96,7 @@ public class ConfigWriter extends MatsimXmlWriter implements MatsimWriter {
 	
 	public final void writeFileV2(final String filename) {
 		this.dtd = "http://www.matsim.org/files/dtd/config_v2.dtd";
-		this.handler = new ConfigWriterHandlerImplV2();
+		this.handler = new ConfigWriterHandlerImplV2(Verbosity.all);
 		write( filename );
 	}
 

@@ -103,7 +103,7 @@ public class TaxiOptimizerTests {
 	}
 
 	public static void runBenchmark(List<TaxiConfigVariant> variants, Map<String, String> params,
-			PreloadedBenchmark benchmark) {
+			PreloadedBenchmark benchmark, String outputDir) {
 		TaxiConfigGroup taxiCfg = TaxiConfigGroup.get(benchmark.config);
 
 		ConfigGroup optimizerCfg = new ConfigGroup(TaxiConfigGroup.OPTIMIZER_PARAMETER_SET);
@@ -111,9 +111,11 @@ public class TaxiOptimizerTests {
 			optimizerCfg.addParam(e.getKey(), e.getValue());
 		}
 		taxiCfg.setOptimizerConfigGroup(optimizerCfg);
-
+		
+		int i = 0;
 		for (TaxiConfigVariant v : variants) {
 			v.updateTaxiConfig(taxiCfg);
+			benchmark.config.controler().setOutputDirectory(outputDir + "/" + i++);
 			benchmark.controler.run();
 		}
 	}

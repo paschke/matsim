@@ -28,6 +28,7 @@ import org.matsim.api.core.v01.TransportMode;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.network.algorithms.NetworkTurnInfoBuilder;
+import org.matsim.core.network.algorithms.NetworkTurnInfoBuilderI;
 import org.matsim.pt.router.TransitRouterModule;
 
 
@@ -59,11 +60,11 @@ public class TripRouterModule extends AbstractModule {
         
         boolean linkToLinkRouting = getConfig().controler().isLinkToLinkRoutingEnabled();
         if (linkToLinkRouting) {
-            bind(NetworkTurnInfoBuilder.class);
+            bind(NetworkTurnInfoBuilderI.class).to(NetworkTurnInfoBuilder.class) ;
         }
         for (String mode : routeConfigGroup.getNetworkModes()) {
             addRoutingModuleBinding(mode).toProvider(linkToLinkRouting ? //
-                    new LinkToLinkRouting(mode) : new NetworkRouting(mode));
+                    new LinkToLinkRouting(mode) : new NetworkRoutingProvider(mode));
         }
         if (getConfig().transit().isUseTransit()) {
             for (String mode : getConfig().transit().getTransitModes()) {

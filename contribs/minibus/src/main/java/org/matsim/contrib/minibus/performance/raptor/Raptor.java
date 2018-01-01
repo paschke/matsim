@@ -32,7 +32,7 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.population.routes.GenericRouteImpl;
+import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.Facility;
 import org.matsim.pt.router.MultiNodeDijkstra.InitialNode;
@@ -104,13 +104,15 @@ public class Raptor implements TransitRouter {
 		RaptorRoute p = this.raptorWalker.calcLeastCostPath(fromStops, toStops);
 
 		if (p == null) {
-			return null;
+			// return null;
+			// returning at least walk legs if no PT route is found. Amit Aug'17
+			return this.createDirectWalkLegList(null, fromFacility.getCoord(), toFacility.getCoord());
 		}
 
 		double directWalkCost = getWalkDisutility(fromFacility.getCoord(), toFacility.getCoord());
 		double pathCost = p.getTravelCost();
 
-		if (directWalkCost < pathCost) {
+		if (directWalkCost * getConfig().getDirectWalkFactor() < pathCost) {
 			return this.createDirectWalkLegList(null, fromFacility.getCoord(), toFacility.getCoord());
 		}
 		return convertPathToLegList(departureTime, p, fromFacility.getCoord(), toFacility.getCoord(), person);
@@ -121,7 +123,7 @@ public class Raptor implements TransitRouter {
 		Leg leg = PopulationUtils.createLeg(TransportMode.transit_walk);
 		double walkTime = getWalkTime(fromCoord, toCoord);
 		leg.setTravelTime(walkTime);
-		Route walkRoute = new GenericRouteImpl(null, null);
+		Route walkRoute = RouteUtils.createGenericRouteImpl(null, null);
 		walkRoute.setTravelTime(walkTime);
 		leg.setRoute(walkRoute);
 		legs.add(leg);
@@ -194,8 +196,11 @@ public class Raptor implements TransitRouter {
 
 	private Leg createTransferTransitWalkLeg(RouteSegment routeSegement) {
 		Leg leg = this.createTransitWalkLeg(routeSegement.fromStop.getCoord(), routeSegement.toStop.getCoord());
-		Route walkRoute = new GenericRouteImpl(routeSegement.fromStop.getLinkId(), routeSegement.toStop.getLinkId());
-		walkRoute.setTravelTime(leg.getTravelTime());
+		Route walkRoute = RouteUtils.createGenericRouteImpl(routeSegement.fromStop.getLinkId(), routeSegement.toStop.getLinkId());
+//		walkRoute.setTravelTime(leg.getTravelTime() );
+		// transit walk leg should include additional transfer time; Amit, Aug'17
+		leg.setTravelTime( this.raptorDisutility.getTransferTime(routeSegement.fromStop.getCoord(), routeSegement.toStop.getCoord()) );
+		walkRoute.setTravelTime(this.raptorDisutility.getTransferTime(routeSegement.fromStop.getCoord(), routeSegement.toStop.getCoord()) );
 		leg.setRoute(walkRoute);
 
 		return leg;

@@ -22,9 +22,11 @@ package org.matsim.core.utils.io;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -87,7 +89,8 @@ public class OsmNetworkReader implements MatsimSomeReader {
 	private final static String TAG_JUNCTION = "junction";
     private final static String TAG_ONEWAY = "oneway";
     private final static String TAG_ACCESS = "access";
-	private final static String[] ALL_TAGS = new String[] {TAG_LANES, TAG_HIGHWAY, TAG_MAXSPEED, TAG_JUNCTION, TAG_ONEWAY, TAG_ACCESS, TAG_LANES_FORWARD, TAG_LANES_BACKWARD};
+	private static List<String> allTags = new LinkedList<>(Arrays.asList(TAG_LANES, TAG_LANES_FORWARD,
+			TAG_LANES_BACKWARD, TAG_HIGHWAY, TAG_MAXSPEED, TAG_JUNCTION, TAG_ONEWAY, TAG_ACCESS));
 
 	private final Map<Long, OsmNode> nodes = new HashMap<Long, OsmNode>();
 	private final Map<Long, OsmWay> ways = new HashMap<Long, OsmWay>();
@@ -95,7 +98,7 @@ public class OsmNetworkReader implements MatsimSomeReader {
 	private final Set<String> unknownMaxspeedTags = new HashSet<String>();
 	private final Set<String> unknownLanesTags = new HashSet<String>();
 	private long id = 0;
-	/*package*/ final Map<String, OsmHighwayDefaults> highwayDefaults = new HashMap<String, OsmHighwayDefaults>();
+	protected final Map<String, OsmHighwayDefaults> highwayDefaults = new HashMap<String, OsmHighwayDefaults>();
 	private final Network network;
 	private final CoordinateTransformation transform;
 	private boolean keepPaths = false;
@@ -105,6 +108,10 @@ public class OsmNetworkReader implements MatsimSomeReader {
 	
 	/*package*/ final List<OsmFilter> hierarchyLayers = new ArrayList<OsmFilter>();
 
+	// nodes that are definitely to be kept (e.g. for counts later)
+	private Set<Long> nodeIDsToKeep = null;
+	
+	
 	/**
 	 * Creates a new Reader to convert OSM data into a MATSim network.
 	 *
@@ -144,17 +151,19 @@ public class OsmNetworkReader implements MatsimSomeReader {
 
 			// Setting the following to considerably smaller values, since there are often traffic signals/non-prio intersections. 
 			// If someone does a systematic study, please report.  kai, jul'16
+			//
+			// We revised the below street types (removed "minor" and put "living_street", "residential", and "unclassified" into
+			// different hierarchy layers), trying to make this more reasonable based on the
+			// <a href="OMS Wiki">http://wiki.openstreetmap.org/wiki/DE:Key:highway</a>, ts/aa/dz, oct'17
 			this.setHighwayDefaults(4, "secondary",     1,  30.0/3.6, 1.0, 1000);
 			this.setHighwayDefaults(4, "secondary_link",     1,  30.0/3.6, 1.0, 1000);
 			this.setHighwayDefaults(5, "tertiary",      1,  25.0/3.6, 1.0,  600);
 			this.setHighwayDefaults(5, "tertiary_link",      1,  25.0/3.6, 1.0,  600);
-			this.setHighwayDefaults(6, "minor",         1,  20.0/3.6, 1.0,  600);
-			this.setHighwayDefaults(6, "residential",   1,  15.0/3.6, 1.0,  600);
-			this.setHighwayDefaults(6, "living_street", 1,  10.0/3.6, 1.0,  300);
+			this.setHighwayDefaults(6, "unclassified",  1,  15.0/3.6, 1.0,  600);
+			this.setHighwayDefaults(7, "residential",   1,  15.0/3.6, 1.0,  600);
+			this.setHighwayDefaults(8, "living_street", 1,  10.0/3.6, 1.0,  300);
 			// changing the speed values failed the evacuation ScenarioGenerator test because of a different network -- DESPITE
 			// the fact that all the speed values are reset to some other value there.  No idea what happens there. kai, jul'16
-
-			this.setHighwayDefaults(6, "unclassified",  1,  45.0/3.6, 1.0,  600);
 		}
 	}
 
@@ -265,7 +274,6 @@ public class OsmNetworkReader implements MatsimSomeReader {
         this.highwayDefaults.put(highwayType, new OsmHighwayDefaults(hierarchy, lanesPerDirection, freespeed, freespeedFactor, laneCapacity_vehPerHour, oneway));
     }
 
-
 	/**
 	 * Sets whether the detailed geometry of the roads should be retained in the conversion or not.
 	 * Keeping the detailed paths results in a much higher number of nodes and links in the resulting MATSim network.
@@ -311,6 +319,14 @@ public class OsmNetworkReader implements MatsimSomeReader {
 	}
 
 	/**
+	 * Adds a new filter to hierarchy layer.
+	 * @param osmFilter
+	 */
+	public void addOsmFilter(final OsmFilter osmFilter) {
+		this.hierarchyLayers.add(osmFilter);
+	}
+
+	/**
 	 * By default, this converter caches a lot of data internally to speed up the network generation.
 	 * This can lead to OutOfMemoryExceptions when converting huge osm files. By enabling this
 	 * memory optimization, the converter tries to reduce its memory usage, but will run slower.
@@ -321,6 +337,16 @@ public class OsmNetworkReader implements MatsimSomeReader {
 		this.slowButLowMemory = memoryEnabled;
 	}
 	
+	public void setNodeIDsToKeep(Set<Long> nodeIDsToKeep){
+		if(nodeIDsToKeep != null && !nodeIDsToKeep.isEmpty()){
+			this.nodeIDsToKeep = nodeIDsToKeep;
+		}
+	}
+	
+	protected void addWayTags(List<String> wayTagsToAdd) {
+		allTags.addAll(wayTagsToAdd);
+	}
+	
 	private void convert() {
 		if (this.network instanceof Network) {
 			((Network) this.network).setCapacityPeriod(3600);
@@ -329,6 +355,7 @@ public class OsmNetworkReader implements MatsimSomeReader {
 		log.info("Remove ways that have at least one node that was not read previously ...");
 		// yy I _think_ this is what it does.  kai, may'16
 		Iterator<Entry<Long, OsmWay>> it = this.ways.entrySet().iterator();
+		int counter = 0;
 		while (it.hasNext()) {
 			Entry<Long, OsmWay> entry = it.next();
 			for (Long nodeId : entry.getValue().nodes) {
@@ -338,7 +365,7 @@ public class OsmNetworkReader implements MatsimSomeReader {
 				}
 			}
 		}
-		log.info("... done removing ways that have at least one node that was not read previously.");
+		log.info("... done removing " + counter + "ways that have at least one node that was not read previously.");
 
 		log.info("Mark OSM nodes that shoud be kept ...");
 		for (OsmWay way : this.ways.values()) {
@@ -414,10 +441,29 @@ public class OsmNetworkReader implements MatsimSomeReader {
 
 		}
 
+		//check here whether node is needed for counts
+		//tschlenther jun'17
+		if(nodeIDsToKeep != null){
+			int cnt = 0;
+			log.info("...assure that all nodes that are definitely to be kept are marked as used");
+			for(Long nodeToBeKept : this.nodeIDsToKeep){
+				OsmNode node = this.nodes.get(nodeToBeKept);
+				if(node==null){
+					log.warn("cannot find node " + nodeToBeKept + ". maybe it was not read in or got deleted..");
+				}
+				else{
+					node.used = true;
+					cnt ++;
+				}
+			}
+			log.info("..found " + cnt + " out of " + nodeIDsToKeep.size() + " nodes to keep and marked them as used..");
+		}
+		
 		log.info("Create the required nodes ...") ;
 		for (OsmNode node : this.nodes.values()) {
 			if (node.used) {
 				Node nn = this.network.getFactory().createNode(Id.create(node.id, Node.class), node.coord);
+				setOrModifyNodeAttributes(nn, node);
 				this.network.addNode(nn);
 			}
 		}
@@ -452,7 +498,6 @@ public class OsmNetworkReader implements MatsimSomeReader {
 										}
 									}
 								}
-
 								fromNode = toNode;
 								length = 0.0;
 							}
@@ -489,40 +534,14 @@ public class OsmNetworkReader implements MatsimSomeReader {
 		double laneCapacity = defaults.laneCapacity;
 		double freespeed = defaults.freespeed;
 		double freespeedFactor = defaults.freespeedFactor;
-		boolean oneway = defaults.oneway;
-		boolean onewayReverse = false;
-
-		// check if there are tags that overwrite defaults
-		// - check tag "junction"
-		if ("roundabout".equals(way.tags.get(TAG_JUNCTION))) {
-			// if "junction" is not set in tags, get() returns null and equals() evaluates to false
-			oneway = true;
-		}
-
-		// check tag "oneway"
-		String onewayTag = way.tags.get(TAG_ONEWAY);
-		if (onewayTag != null) {
-			if ("yes".equals(onewayTag)) {
-				oneway = true;
-			} else if ("true".equals(onewayTag)) {
-				oneway = true;
-			} else if ("1".equals(onewayTag)) {
-				oneway = true;
-			} else if ("-1".equals(onewayTag)) {
-				onewayReverse = true;
-				oneway = false;
-			} else if ("no".equals(onewayTag)) {
-				oneway = false; // may be used to overwrite defaults
-            }
-			else {
-                log.warn("Could not interpret oneway tag:" + onewayTag + ". Ignoring it.");
-			}
-		}
+		
+		boolean oneway = isOneway(way);
+		boolean onewayReverse = isOnewayReverse(way);
 
         // In case trunks, primary and secondary roads are marked as oneway,
         // the default number of lanes should be two instead of one.
         if(highway.equalsIgnoreCase("trunk") || highway.equalsIgnoreCase("primary") || highway.equalsIgnoreCase("secondary")){
-			if((oneway) && nofLanesForward == 1.0){
+			if (oneway && nofLanesForward == 1.0) {
 				nofLanesForward = 2.0;
 			} else if(onewayReverse && nofLanesBackward == 1.0){
 				nofLanesBackward = 2.0;
@@ -532,7 +551,11 @@ public class OsmNetworkReader implements MatsimSomeReader {
 		String maxspeedTag = way.tags.get(TAG_MAXSPEED);
 		if (maxspeedTag != null) {
 			try {
-				freespeed = Double.parseDouble(maxspeedTag) / 3.6; // convert km/h to m/s
+				if(maxspeedTag.endsWith("mph")) {
+					freespeed = Double.parseDouble(maxspeedTag.replace("mph", "").trim()) * 1.609344 / 3.6; // convert mph to m/s
+				} else {
+					freespeed = Double.parseDouble(maxspeedTag) / 3.6; // convert km/h to m/s
+				}
 			} catch (NumberFormatException e) {
 				if (!this.unknownMaxspeedTags.contains(maxspeedTag)) {
 					this.unknownMaxspeedTags.add(maxspeedTag);
@@ -547,8 +570,8 @@ public class OsmNetworkReader implements MatsimSomeReader {
 			try {
 				double totalNofLanes = Double.parseDouble(lanesTag);
 				if (totalNofLanes > 0) {
-					//If there is a tag "lanes:forward" or "lanes:backward" set, differ the values for both directions
-					//If not, handle lanes as usual.
+					// If the tag "lanes:forward" or "lanes:backward" is set, use them.
+					// If not, give either direction half of the total number of lanes.
 					//fzwick,nkuehnel, apr'17
 					String lanesForwardTag = way.tags.get(TAG_LANES_FORWARD);
 					if (lanesForwardTag != null) {
@@ -588,8 +611,6 @@ public class OsmNetworkReader implements MatsimSomeReader {
 				}
 			}
 		}
-
-		// create the link(s)
 		double capacityForward = nofLanesForward * laneCapacity;
 		double capacityBackward = nofLanesBackward * laneCapacity;
 
@@ -603,43 +624,107 @@ public class OsmNetworkReader implements MatsimSomeReader {
 		if(network.getNodes().get(fromId) != null && network.getNodes().get(toId) != null){
 			String origId = Long.toString(way.id);
 
-			if (!onewayReverse) {
+			// Forward direction (in relation to the direction of the OSM way object)
+			if (forwardDirectionExists(way)) {
 				Link l = network.getFactory().createLink(Id.create(this.id, Link.class), network.getNodes().get(fromId), network.getNodes().get(toId));
 				l.setLength(length);
 				l.setFreespeed(freespeed);
 				l.setCapacity(capacityForward);
 				l.setNumberOfLanes(nofLanesForward);
-				if (l instanceof Link) {
-					final String id1 = origId;
-					NetworkUtils.setOrigId( ((Link) l), id1 ) ;
-					final String type = highway;
-					NetworkUtils.setType( ((Link) l), type);
-				}
+				NetworkUtils.setOrigId(l, origId);
+				NetworkUtils.setType(l, highway);
+				setOrModifyLinkAttributes(l, way, true);
 				network.addLink(l);
 				this.id++;
 			}
-			if (!oneway) {
+			// Backward/reverse direction (in relation to the direction of the OSM way object)
+			if (reverseDirectionExists(way)) {
 				Link l = network.getFactory().createLink(Id.create(this.id, Link.class), network.getNodes().get(toId), network.getNodes().get(fromId));
 				l.setLength(length);
 				l.setFreespeed(freespeed);
 				l.setCapacity(capacityBackward);
 				l.setNumberOfLanes(nofLanesBackward);
-				if (l instanceof Link) {
-					final String id1 = origId;
-					NetworkUtils.setOrigId( ((Link) l), id1 ) ;
-					final String type = highway;
-					NetworkUtils.setType( ((Link) l), type);
-				}
+				NetworkUtils.setOrigId(l, origId);
+				NetworkUtils.setType(l, highway);
+				setOrModifyLinkAttributes(l, way, false);
 				network.addLink(l);
 				this.id++;
 			}
-
 		}
 	}
+	
+	protected boolean isOneway(OsmWay way) {
+		String onewayTag = way.tags.get(TAG_ONEWAY);
+		if (onewayTag != null) {
+			if ("yes".equals(onewayTag) || "true".equals(onewayTag) || "1".equals(onewayTag)) {
+				return true;
+			} else if ("-1".equals(onewayTag) || "reverse".equals(onewayTag)) {
+				return false;
+			} else if ("no".equals(onewayTag) || "false".equals(onewayTag) || "0".equals(onewayTag)) {
+				return false; // may be used to overwrite defaults
+			}
+			else {
+				log.warn("Could not interpret oneway tag:" + onewayTag + ". Ignoring it.");
+			}
+		}
+		// If no oneway tag was found, see if it is a link in a roundabout
+		if ("roundabout".equals(way.tags.get(TAG_JUNCTION))) {
+			// if "junction" is not set in tags, get() returns null and equals() evaluates to false
+			return true;
+		}
+		// If no direction-specific tag was found, use default value
+		OsmHighwayDefaults defaults = this.highwayDefaults.get(way.tags.get(TAG_HIGHWAY));
+		return defaults.oneway;
+	}
 
-	private static interface OsmFilter {
+	protected boolean isOnewayReverse(OsmWay way) {
+		String onewayTag = way.tags.get(TAG_ONEWAY);
+		if (onewayTag != null) {
+			if ("yes".equals(onewayTag) || "true".equals(onewayTag) || "1".equals(onewayTag)) {
+				return false;
+			} else if ("-1".equals(onewayTag) || "reverse".equals(onewayTag)) {
+				return true;
+			} else if ("no".equals(onewayTag) || "false".equals(onewayTag) || "0".equals(onewayTag)) {
+				return false; // may be used to overwrite defaults
+			}
+			else {
+				log.warn("Could not interpret oneway tag:" + onewayTag + ". Ignoring it.");
+			}
+		}
+		// Was set like this before; rather get this from defaults like for (forward) oneway? tt, aug'17
+		return false;
+	}
+	
+	/**
+	 * Override this method if you want to add additional attributes to the node, e.g. elevation (z), or modify parameter values.
+	 */
+	protected void setOrModifyNodeAttributes(Node n, OsmNode node) {
+	}
+	
+	/**
+	 * Override this method if you want to add additional attributes to the link, e.g. modes, or modify parameter values.
+	 */
+	protected void setOrModifyLinkAttributes(Link l, OsmWay way, boolean forwardDirection) {
+	}
+
+	/**
+	 * Override this method if you want to use another way to figure out if one can travel on this link in reverse direction.
+	 */
+	protected boolean reverseDirectionExists(OsmWay way) {
+		return !isOneway(way);
+	}
+	
+	/**
+	 * Override this method if you want to use another way to figure out if one can travel on this link in forward direction.
+	 */
+	protected boolean forwardDirectionExists(OsmWay way) {
+		return !isOnewayReverse(way);
+	}
+
+	public static interface OsmFilter {
 		boolean coordInFilter( final Coord coord, final int hierarchyLevel ) ;
 	}
+	
 	private static class OsmFilterImpl implements OsmFilter {
 		private final Coord coordNW;
 		private final Coord coordSE;
@@ -661,6 +746,7 @@ public class OsmNetworkReader implements MatsimSomeReader {
 				(this.coordNW.getY() > coord.getY() && coord.getY() > this.coordSE.getY()));
 		}
 	}
+	
 	private static class GeographicallyNonrestrictingOsmFilterImpl implements OsmFilter {
 		private final int hierarchy;
 		GeographicallyNonrestrictingOsmFilterImpl(final int hierarchy) {
@@ -676,7 +762,7 @@ public class OsmNetworkReader implements MatsimSomeReader {
 		}
 	}
 
-	private static class OsmNode {
+	protected static class OsmNode {
 		public final long id;
 		public boolean used = false;
 		public int ways = 0;
@@ -688,7 +774,7 @@ public class OsmNetworkReader implements MatsimSomeReader {
 		}
 	}
 
-	private static class OsmWay {
+	protected static class OsmWay {
 		public final long id;
 		public final List<Long> nodes = new ArrayList<Long>(4);
 		public final Map<String, String> tags = new HashMap<String, String>(4);
@@ -699,7 +785,7 @@ public class OsmNetworkReader implements MatsimSomeReader {
 		}
 	}
 
-	private static class OsmHighwayDefaults {
+	protected static class OsmHighwayDefaults {
 
 		public final int hierarchy;
 		public final double lanesPerDirection;
@@ -719,7 +805,6 @@ public class OsmNetworkReader implements MatsimSomeReader {
 	}
 
 	private class OsmXmlParser extends MatsimXmlParser {
-
 		private OsmWay currentWay = null;
 		private final Map<Long, OsmNode> nodes;
 		private final Map<Long, OsmWay> ways;
@@ -781,7 +866,7 @@ public class OsmNetworkReader implements MatsimSomeReader {
 			} else if ("tag".equals(name)) {
 				if (this.currentWay != null) {
 					String key = StringCache.get(atts.getValue("k"));
-					for (String tag : ALL_TAGS) {
+					for (String tag : allTags) {
 						if (tag.equals(key)) {
 							this.currentWay.tags.put(key, StringCache.get(atts.getValue("v")));
 							break;
@@ -838,9 +923,8 @@ public class OsmNetworkReader implements MatsimSomeReader {
 	}
 
 	private static class StringCache {
-
 		private static ConcurrentHashMap<String, String> cache = new ConcurrentHashMap<String, String>(10000);
-
+		
 		/**
 		 * Returns the cached version of the given String. If the strings was
 		 * not yet in the cache, it is added and returned as well.
@@ -856,5 +940,4 @@ public class OsmNetworkReader implements MatsimSomeReader {
 			return s;
 		}
 	}
-
 }

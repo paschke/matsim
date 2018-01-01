@@ -43,8 +43,10 @@ import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PopulationFactory;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.controler.PrepareForSimUtils;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.mobsim.qsim.QSim;
@@ -55,8 +57,8 @@ import org.matsim.core.mobsim.qsim.interfaces.NetsimNetwork;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.testcases.MatsimTestCase;
@@ -149,7 +151,7 @@ public final class QLinkTest extends MatsimTestCase {
 		p.addPlan(plan);
 		plan.addActivity(PopulationUtils.createActivityFromLinkId("home", f.link1.getId()));
 		Leg leg = PopulationUtils.createLeg(TransportMode.car);
-		leg.setRoute(new LinkNetworkRouteImpl(f.link1.getId(), f.link2.getId()));
+		leg.setRoute(RouteUtils.createLinkNetworkRouteImpl(f.link1.getId(), f.link2.getId()));
 		plan.addLeg(leg);
 		plan.addActivity(PopulationUtils.createActivityFromLinkId("work", f.link2.getId()));
 		PersonDriverAgentImpl driver = createAndInsertPersonDriverAgentImpl(p, f.sim);
@@ -250,7 +252,7 @@ public final class QLinkTest extends MatsimTestCase {
 		pers.addPlan(plan);
 		plan.addActivity(PopulationUtils.createActivityFromLinkId("home", f.link1.getId()));
 		Leg leg = PopulationUtils.createLeg(TransportMode.car);
-		LinkNetworkRouteImpl route = new LinkNetworkRouteImpl(f.link1.getId(), f.link2.getId());
+		NetworkRoute route = RouteUtils.createLinkNetworkRouteImpl(f.link1.getId(), f.link2.getId());
 		route.setVehicleId(f.basicVehicle.getId());
 		leg.setRoute(route);
 		plan.addLeg(leg);
@@ -321,7 +323,10 @@ public final class QLinkTest extends MatsimTestCase {
 		final Node fromNode1 = node2;
 		final Node toNode1 = node3;
 		Link link2 = NetworkUtils.createAndAddLink(network,Id.create("2", Link.class), fromNode1, toNode1, 1.0, 1.0, 1.0, 1.0 );
-		QSim qsim = QSimUtils.createDefaultQSim(scenario, (EventsUtils.createEventsManager()));
+
+		EventsManager eventsManager = EventsUtils.createEventsManager();
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
+		QSim qsim = QSimUtils.createDefaultQSim(scenario, eventsManager);
 		NetsimNetwork queueNetwork = qsim.getNetsimNetwork();
 		dummify((QNetwork) queueNetwork);
 		QLinkImpl qlink = (QLinkImpl) queueNetwork.getNetsimLink(Id.create("1", Link.class));
@@ -509,7 +514,7 @@ public final class QLinkTest extends MatsimTestCase {
 		p.addPlan(plan);
 		plan.addActivity(PopulationUtils.createActivityFromLinkId("home", f.link1.getId()));
 		Leg leg = PopulationUtils.createLeg(TransportMode.car);
-		LinkNetworkRouteImpl route = new LinkNetworkRouteImpl(f.link1.getId(), f.link2.getId());
+		NetworkRoute route = RouteUtils.createLinkNetworkRouteImpl(f.link1.getId(), f.link2.getId());
 		route.setVehicleId(f.basicVehicle.getId());
 		leg.setRoute(route);
 		plan.addLeg(leg);
@@ -545,7 +550,7 @@ public final class QLinkTest extends MatsimTestCase {
 			act.setEndTime(7*3600);
 			plan.addActivity(act);
 			Leg leg = PopulationUtils.createLeg("car");
-			NetworkRoute route = new LinkNetworkRouteImpl(link1.getId(), link2.getId());
+			NetworkRoute route = RouteUtils.createLinkNetworkRouteImpl(link1.getId(), link2.getId());
 			List<Id<Link>> links = new ArrayList<Id<Link>>();
 			links.add(link3.getId()); // let the person(s) drive around in circles to generate a traffic jam
 			links.add(link3.getId());
@@ -559,7 +564,9 @@ public final class QLinkTest extends MatsimTestCase {
 			scenario.getPopulation().addPerson(p);
 		}
 
-		QSim sim = QSimUtils.createDefaultQSim(scenario, EventsUtils.createEventsManager());
+		EventsManager eventsManager = EventsUtils.createEventsManager();
+		PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
+		QSim sim = QSimUtils.createDefaultQSim(scenario, eventsManager);
 
 		EventsCollector collector = new EventsCollector();
 		sim.getEventsManager().addHandler(collector);
@@ -609,7 +616,9 @@ public final class QLinkTest extends MatsimTestCase {
 			final Node fromNode1 = node2;
 			final Node toNode1 = node3;
 			this.link2 = NetworkUtils.createAndAddLink(network,Id.create("2", Link.class), fromNode1, toNode1, 10 * 7.5, 2.0 * 7.5, 3600.0, 1.0 );
-			sim = QSimUtils.createDefaultQSim(scenario, (EventsUtils.createEventsManager()));
+			EventsManager eventsManager = EventsUtils.createEventsManager();
+			PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
+			sim = QSimUtils.createDefaultQSim(scenario, eventsManager);
 			this.queueNetwork = (QNetwork) sim.getNetsimNetwork();
 
             this.qlink1 = (QLinkImpl) this.queueNetwork.getNetsimLink(Id.create("1", Link.class));
@@ -623,7 +632,7 @@ public final class QLinkTest extends MatsimTestCase {
     private static void dummify(QNetwork network) {
         NetElementActivationRegistry netElementActivator = new NetElementActivationRegistry() {
             @Override
-            protected void registerNodeAsActive(QNode node) {
+            protected void registerNodeAsActive(QNodeImpl node) {
 
             }
 
@@ -642,11 +651,15 @@ public final class QLinkTest extends MatsimTestCase {
                 return 0;
             }
         };
-        for (QNode node : network.getNetsimNodes().values()) {
-            node.setNetElementActivationRegistry(netElementActivator);
+        for (QNodeI node : network.getNetsimNodes().values()) {
+        	if ( node instanceof QNodeImpl ) {
+        		((QNodeImpl) node).setNetElementActivationRegistry(netElementActivator);
+        	}
         }
         for (QLinkI link : network.getNetsimLinks().values()) {
-            ((QLinkImpl) link).setNetElementActivationRegistry(netElementActivator);
+        	if ( link instanceof QLinkImpl ) {
+        		((QLinkImpl) link).setNetElementActivationRegistry(netElementActivator);
+        	}
         }
     }
 

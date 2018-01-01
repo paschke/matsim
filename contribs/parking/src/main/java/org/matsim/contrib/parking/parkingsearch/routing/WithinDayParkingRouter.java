@@ -25,12 +25,11 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.dvrp.router.TimeAsTravelDisutility;
-import org.matsim.contrib.dvrp.trafficmonitoring.VrpTravelTimeModules;
+import org.matsim.contrib.dvrp.trafficmonitoring.DvrpTravelTimeModule;
 import org.matsim.core.network.NetworkUtils;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.population.routes.RouteUtils;
-import org.matsim.core.router.Dijkstra;
+import org.matsim.core.router.DijkstraFactory;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.LeastCostPathCalculator.Path;
 import org.matsim.core.router.util.TravelDisutility;
@@ -51,11 +50,11 @@ public class WithinDayParkingRouter implements ParkingRouter {
 	private LeastCostPathCalculator pathCalculator;
 
 	@Inject
-	WithinDayParkingRouter(@Named(VrpTravelTimeModules.DVRP_ESTIMATED) TravelTime travelTime, Network network) {
+	WithinDayParkingRouter(@Named(DvrpTravelTimeModule.DVRP_ESTIMATED) TravelTime travelTime, Network network) {
 		this.travelTime = travelTime;
 		travelDisutility = new TimeAsTravelDisutility(this.travelTime);
 		this.network = network;
-		pathCalculator = new Dijkstra(network, travelDisutility, this.travelTime);
+		pathCalculator = new DijkstraFactory().createPathCalculator(network, travelDisutility, this.travelTime);
 	}
 
 	@Override
@@ -68,7 +67,7 @@ public class WithinDayParkingRouter implements ParkingRouter {
 
 		Path path = this.pathCalculator.calcLeastCostPath(startLink.getToNode(), endLink.getFromNode(), departureTime,
 				null, null);
-		NetworkRoute carRoute = new LinkNetworkRouteImpl(startLinkId, endLink.getId());
+		NetworkRoute carRoute = RouteUtils.createLinkNetworkRouteImpl(startLinkId, endLink.getId());
 		carRoute.setLinkIds(startLink.getId(), NetworkUtils.getLinkIds(path.links), endLink.getId());
 		carRoute.setTravelTime(path.travelTime);
 		double distance = RouteUtils.calcDistance(carRoute, 1.0, 1.0, network);

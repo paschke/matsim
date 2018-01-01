@@ -20,6 +20,12 @@
 
 package org.matsim.core.mobsim.qsim.pt;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.matsim.api.core.v01.Coord;
@@ -29,12 +35,12 @@ import org.matsim.api.core.v01.events.*;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.core.api.experimental.events.*;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.ExternalMobimConfigGroup;
+import org.matsim.core.controler.PrepareForSimUtils;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.mobsim.framework.AgentSource;
@@ -46,9 +52,8 @@ import org.matsim.core.mobsim.qsim.agents.TransitAgentFactory;
 import org.matsim.core.mobsim.qsim.pt.TransitQSimEngine.TransitAgentTriesToTeleportException;
 import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngine;
 import org.matsim.core.mobsim.qsim.qnetsimengine.QNetsimEngineModule;
-import org.matsim.core.population.routes.GenericRouteImpl;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scenario.MutableScenario;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.misc.Time;
@@ -59,14 +64,6 @@ import org.matsim.pt.utils.CreateVehiclesForSchedule;
 import org.matsim.testcases.MatsimTestCase;
 import org.matsim.testcases.utils.EventsCollector;
 import org.matsim.vehicles.*;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -140,7 +137,7 @@ public class TransitQueueSimulationTest {
         stop3.setLinkId(link2.getId());
         stop4.setLinkId(link2.getId());
 
-        NetworkRoute route = new LinkNetworkRouteImpl(link1.getId(), link2.getId());
+        NetworkRoute route = RouteUtils.createLinkNetworkRouteImpl(link1.getId(), link2.getId());
         ArrayList<Id<Link>> links = new ArrayList<>(0);
         route.setLinkIds(link1.getId(), links, link2.getId());
 
@@ -186,7 +183,9 @@ public class TransitQueueSimulationTest {
         scenario.getConfig().addModule( new ExternalMobimConfigGroup() );
         scenario.getConfig().qsim().setEndTime(1.0*3600); // prevent running the actual simulation
 
-        QSim sim = QSimUtils.createDefaultQSim(scenario, EventsUtils.createEventsManager());
+        EventsManager eventsManager = EventsUtils.createEventsManager();
+        PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
+        QSim sim = QSimUtils.createDefaultQSim(scenario, eventsManager);
         sim.run();
         List<MobsimAgent> agents = new ArrayList<>(sim.getAgents().values());
         Collections.sort(agents, new Comparator<MobsimAgent>() {
@@ -263,7 +262,7 @@ public class TransitQueueSimulationTest {
 		qSim1.addMobsimEngine(activityEngine);
 		qSim1.addActivityHandler(activityEngine);
         QNetsimEngineModule.configure(qSim1);
-		TeleportationEngine teleportationEngine = new TeleportationEngine(scenario, events);
+		DefaultTeleportationEngine teleportationEngine = new DefaultTeleportationEngine(scenario, events);
 		qSim1.addMobsimEngine(teleportationEngine);
         QSim qSim = qSim1;
         AgentFactory agentFactory = new TransitAgentFactory(qSim);
@@ -277,7 +276,7 @@ public class TransitQueueSimulationTest {
         qSim.run();
 
         // check everything
-        assertEquals(1, transitEngine.getAgentTracker().getAgentsAtStop(stop1.getId()).size());
+        assertEquals(1, transitEngine.getAgentTracker().getAgentsAtFacility(stop1.getId()).size());
     }
 
     /**
@@ -342,6 +341,7 @@ public class TransitQueueSimulationTest {
 
         // run simulation
         EventsManager events = EventsUtils.createEventsManager();
+        PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
         QSim simulation = QSimUtils.createDefaultQSim(scenario, events);
         simulation.run();
     }
@@ -416,7 +416,7 @@ public class TransitQueueSimulationTest {
         stop3.setLinkId(link4.getId());
         stop4.setLinkId(link5.getId()); // one stop on the last link of the network route, as that one may be specially handled
 
-        NetworkRoute route = new LinkNetworkRouteImpl(link1.getId(), link5.getId());
+        NetworkRoute route = RouteUtils.createLinkNetworkRouteImpl(link1.getId(), link5.getId());
         ArrayList<Id<Link>> links = new ArrayList<>();
         Collections.addAll(links, link2.getId(), link3.getId(), link4.getId());
         route.setLinkIds(link1.getId(), links, link5.getId());
@@ -529,7 +529,7 @@ public class TransitQueueSimulationTest {
             QNetsimEngine netsimEngine = new QNetsimEngine(qSim2);
 			qSim2.addMobsimEngine(netsimEngine);
 			qSim2.addDepartureHandler(netsimEngine.getDepartureHandler());
-			TeleportationEngine teleportationEngine = new TeleportationEngine(scenario, events);
+			DefaultTeleportationEngine teleportationEngine = new DefaultTeleportationEngine(scenario, events);
 			qSim2.addMobsimEngine(teleportationEngine);
             QSim qSim1 = qSim2;
             AgentFactory agentFactory = new TransitAgentFactory(qSim1);
@@ -652,7 +652,7 @@ public class TransitQueueSimulationTest {
         stopFacility1.setLinkId(link1.getId());
         stopFacility2.setLinkId(link2.getId());
         TransitLine tLine = sb.createTransitLine(Id.create("1", TransitLine.class));
-        NetworkRoute route = new LinkNetworkRouteImpl(link1.getId(), link2.getId());
+        NetworkRoute route = RouteUtils.createLinkNetworkRouteImpl(link1.getId(), link2.getId());
         TransitRouteStop stop1 = sb.createTransitRouteStop(stopFacility1, Time.UNDEFINED_TIME, 0.0);
         TransitRouteStop stop2 = sb.createTransitRouteStop(stopFacility2, 100.0, 100.0);
         List<TransitRouteStop> stops = new ArrayList<>(2);
@@ -671,6 +671,7 @@ public class TransitQueueSimulationTest {
         events.addHandler(collector);
 
         // first test without special settings
+        PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
         QSim sim = QSimUtils.createDefaultQSim(scenario, events);
         sim.run();
         assertEquals(depTime, collector.firstEvent.getTime(), MatsimTestCase.EPSILON);
@@ -680,6 +681,8 @@ public class TransitQueueSimulationTest {
         // second test with special start/end times
         config.qsim().setStartTime(depTime + 20.0);
         config.qsim().setEndTime(depTime + 90.0);
+
+        PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
         sim = QSimUtils.createDefaultQSim(scenario, events);
         sim.run();
         assertEquals(depTime + 20.0, collector.firstEvent.getTime(), MatsimTestCase.EPSILON);
@@ -742,7 +745,7 @@ public class TransitQueueSimulationTest {
         stopFacility1.setLinkId(link1.getId());
         stopFacility2.setLinkId(link2.getId());
         TransitLine tLine = sb.createTransitLine(Id.create("1", TransitLine.class));
-        NetworkRoute route = new LinkNetworkRouteImpl(link1.getId(), link2.getId());
+        NetworkRoute route = RouteUtils.createLinkNetworkRouteImpl(link1.getId(), link2.getId());
         TransitRouteStop stop1 = sb.createTransitRouteStop(stopFacility1, Time.UNDEFINED_TIME, 0.0);
         TransitRouteStop stop2 = sb.createTransitRouteStop(stopFacility2, 100.0, 100.0);
         List<TransitRouteStop> stops = new ArrayList<>(2);
@@ -763,7 +766,7 @@ public class TransitQueueSimulationTest {
         Activity act1 = pb.createActivityFromLinkId("h", link1.getId());
         act1.setEndTime(depTime - 60.0);
         Leg leg1 = pb.createLeg(TransportMode.walk);
-        Route route1 = new GenericRouteImpl(link1.getId(), link1.getId());
+        Route route1 = RouteUtils.createGenericRouteImpl(link1.getId(), link1.getId());
         route1.setTravelTime(10.0);
         route1.setDistance(10.0);
         leg1.setRoute(route1);
@@ -776,7 +779,7 @@ public class TransitQueueSimulationTest {
         Activity act3 = pb.createActivityFromLinkId(PtConstants.TRANSIT_ACTIVITY_TYPE, link1.getId());
         act3.setEndTime(0.0);
         Leg leg3 = pb.createLeg(TransportMode.walk);
-        Route route3 = new GenericRouteImpl(link2.getId(), link2.getId());
+        Route route3 = RouteUtils.createGenericRouteImpl(link2.getId(), link2.getId());
         route3.setTravelTime(10.0);
         route3.setDistance(10.0);
         leg3.setRoute(route3);
@@ -796,6 +799,7 @@ public class TransitQueueSimulationTest {
         EventsManager events = EventsUtils.createEventsManager();
         EventsCollector collector = new EventsCollector();
         events.addHandler(collector);
+        PrepareForSimUtils.createDefaultPrepareForSim(scenario).run();
         QSimUtils.createDefaultQSim(scenario, events).run();
         List<Event> allEvents = collector.getEvents();
 

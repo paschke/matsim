@@ -270,7 +270,8 @@ public class TravelTimeCalculator implements LinkEnterEventHandler, LinkLeaveEve
 			data.needsConsolidation = true;
 			this.aggregator.addStuckEventTravelTime(data.ttData, e.getTime(), event.getTime());
 			if (this.calculateLinkToLinkTravelTimes 
-					&& event.getTime() < qsimConfig.getEndTime() // we think that this only makes problems when the abort is not just because of mobsim end time. kai&theresa, jan'17 
+					&& event.getTime() < qsimConfig.getEndTime() 
+					// (we think that this only makes problems when the abort is not just because of mobsim end time. kai & theresa, jan'17) 
 					){
 				log.error(ERROR_STUCK_AND_LINKTOLINK);
 				throw new IllegalStateException(ERROR_STUCK_AND_LINKTOLINK);
@@ -290,13 +291,48 @@ public class TravelTimeCalculator implements LinkEnterEventHandler, LinkLeaveEve
 		return data;
 	}
 	
-	public double getLinkTravelTime(final Id<Link> linkId, final double time) {
+	/*
+	 * Use the link as argument here! In case the DataContainer is array-based and the link is from a routing network,
+	 * the DataContainer uses the link's index to access its data structures instead of performing a map lookup, which
+	 * increases the router performance by 20-30%!
+	 * cdobler, aug'17
+	 */
+	public double getLinkTravelTime(final Link link, final double time) {
 		if (this.calculateLinkTravelTimes) {
-			DataContainer data = this.dataContainerProvider.getTravelTimeData(linkId, true);
+			
+			DataContainer data = this.dataContainerProvider.getTravelTimeData(link, true);
 			if (data.needsConsolidation) {
 				consolidateData(data);
 			}
 			return this.aggregator.getTravelTime(data.ttData, time);
+
+			/*
+			 * Workaround for jumps in returned travel times due to time bin approach?
+			 * Should not be necessary when using linear interpolated travel times.
+			 */
+//			DataContainer data = this.dataContainerProvider.getTravelTimeInfo(link, true);
+//			if (data.needsConsolidation) {
+//				consolidateData(data);
+//			}
+//			double travelTime = this.aggregator.getTravelTime(data.ttData, time);
+//
+//			// in case there is no previous time bin
+//			if (time <= this.timeSlice) return travelTime;
+//			
+//			int index = this.aggregator.getTimeSlotIndex(time);
+//			double previousBinEndTime = index * this.timeSlice;
+//			
+//			// calculate travel time when starting at the last second of the previous time slot
+//			double previousTravelTime = this.aggregator.getTravelTime(data.ttData, time - this.timeSlice);
+//			
+//			double prev = previousBinEndTime + previousTravelTime;
+//			double now = time + travelTime;
+//			if (now >= prev) {
+//				return travelTime;
+//			}
+//			else {
+//				return prev - time;	// ensure travel time not shorter than travel time from the previous bin
+//			}
 		}
 		throw new IllegalStateException("No link travel time is available " +
 				"if calculation is switched off by config option!");
@@ -418,7 +454,7 @@ public class TravelTimeCalculator implements LinkEnterEventHandler, LinkLeaveEve
 
 			@Override
 			public double getLinkTravelTime(Link link, double time, Person person, Vehicle vehicle) {
-				return TravelTimeCalculator.this.getLinkTravelTime(link.getId(), time);
+				return TravelTimeCalculator.this.getLinkTravelTime(link, time);
 			}
 
 		};

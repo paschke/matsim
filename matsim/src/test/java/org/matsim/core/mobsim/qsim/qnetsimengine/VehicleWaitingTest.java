@@ -19,6 +19,7 @@
  * *********************************************************************** */
 package org.matsim.core.mobsim.qsim.qnetsimengine;
 
+import java.util.*;
 import org.junit.Assert;
 import org.junit.Test;
 import org.matsim.api.core.v01.Coord;
@@ -35,15 +36,14 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.QSimConfigGroup;
+import org.matsim.core.controler.PrepareForSimUtils;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.mobsim.qsim.QSimUtils;
 import org.matsim.core.mobsim.qsim.interfaces.Netsim;
-import org.matsim.core.population.routes.LinkNetworkRouteImpl;
 import org.matsim.core.population.routes.NetworkRoute;
+import org.matsim.core.population.routes.RouteUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.vehicles.Vehicle;
-
-import java.util.*;
 
 /**
  * Tests the behavior of the qsim with agents waiting for vehicles.
@@ -126,10 +126,7 @@ public class VehicleWaitingTest {
 			for ( int lap=0; lap < nLaps; lap++ ) {
 				final Leg leg = popFact.createLeg( TransportMode.car );
 				final NetworkRoute route =
-					new LinkNetworkRouteImpl(
-							link1.getId(),
-							Collections.singletonList( link2.getId() ),
-							link3.getId());
+					RouteUtils.createLinkNetworkRouteImpl(link1.getId(), Collections.singletonList( link2.getId() ), link3.getId());
 				route.setVehicleId( Id.create(personId1, Vehicle.class) ); // QSim creates a vehicle per person, with the ids of the persons
 				leg.setRoute( route );
 				plan.addLeg( leg );
@@ -142,10 +139,7 @@ public class VehicleWaitingTest {
 
 				final Leg secondLeg = popFact.createLeg( TransportMode.car );
 				final NetworkRoute secondRoute =
-					new LinkNetworkRouteImpl(
-							link3.getId(),
-							Collections.<Id<Link>>emptyList(),
-							link1.getId());
+					RouteUtils.createLinkNetworkRouteImpl(link3.getId(), Collections.<Id<Link>>emptyList(), link1.getId());
 
 				secondRoute.setVehicleId( Id.create(personId1, Vehicle.class) ); // QSim creates a vehicle per person, with the ids of the persons
 				secondLeg.setRoute( secondRoute );
@@ -175,6 +169,7 @@ public class VehicleWaitingTest {
 			}
 		});
 
+		PrepareForSimUtils.createDefaultPrepareForSim(sc).run();
 		final Netsim qsim = QSimUtils.createDefaultQSim(sc, events);
 
 //		try {

@@ -41,30 +41,56 @@ public class CountSimComparisonImpl implements CountSimComparison {
 	 * the Id of the link
 	 */
 	private final Id<Link> id;
-
+	/**
+	 * the Id of the count station
+	 */
+	private final String csId;
+	
 	/**
 	 * @param id
 	 * @param hour
-	 * @param countValue2
+	 * @param countValue
 	 * @param simValue
 	 */
-	public CountSimComparisonImpl(final Id<Link> id, final int hour, final double countValue2, final double simValue) {
+	@Deprecated
+	public CountSimComparisonImpl(final Id<Link> id, final int hour, final double countValue, final double simValue) {
 		this.id = id;
+		this.csId = null;
 		this.hour = hour;
-		this.countValue = countValue2;
+		this.countValue = countValue;
 		this.simulationValue = simValue;
 	}
 
 	/**
-	 * @see org.matsim.counts.CountSimComparison#calculateRelativeError() return
-	 *      signed rel error
+	 * @param id
+	 * @param csId
+	 * @param hour
+	 * @param countValue
+	 * @param simValue
+	 */
+	public CountSimComparisonImpl(final Id<Link> id, final String csId, final int hour, final double countValue, final double simValue) {
+		this.id = id;
+		this.csId = csId;
+		this.hour = hour;
+		this.countValue = countValue;
+		this.simulationValue = simValue;
+	}
+	
+	@Override
+	public String getCsId() {
+		return this.csId;
+	}
+	
+	/**
+	 * @see org.matsim.counts.CountSimComparison#calculateRelativeError() 
+	 * @return signed relative error
 	 */
 	@Override
 	public double calculateRelativeError() {
 		double count = this.getCountValue();
 		double sim = this.getSimulationValue();
 		if (count > 0) {
-			return Math.min(100 * (sim - count) / count, 1000d);
+			return Math.min((sim - count) / count, 1000d);
 		}
 		if (sim > 0) {
 			return 1000d;
@@ -104,4 +130,25 @@ public class CountSimComparisonImpl implements CountSimComparison {
 		return this.simulationValue;
 	}
 
+	/**
+	 * @see org.matsim.counts.CountSimComparison#calculateNormalizedRelativeError()
+	 * @return normalized relative error
+	 */
+	@Override
+	public double calculateNormalizedRelativeError() {
+		final double max = Math.max(this.simulationValue, this.countValue);
+		if (max == 0.0) return 0;
+		return Math.abs(this.simulationValue - this.countValue) / max;
+	}
+
+	/**
+	 * @see org.matsim.counts.CountSimComparison#calculateGEHValue()
+	 */
+	@Override
+	public double calculateGEHValue() {
+		final double diff = this.simulationValue - this.countValue;
+		final double sum = this.simulationValue + this.countValue;
+		final double gehV = Math.sqrt(2 * diff * diff / sum);
+		return gehV;
+	}
 }

@@ -25,7 +25,7 @@ package org.matsim.contrib.parking.parkingsearch.sim;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.dvrp.run.*;
-import org.matsim.contrib.dvrp.trafficmonitoring.VrpTravelTimeModules;
+import org.matsim.contrib.dvrp.trafficmonitoring.DvrpTravelTimeModule;
 import org.matsim.contrib.dynagent.run.DynRoutingModule;
 import org.matsim.contrib.parking.parkingsearch.ParkingUtils;
 import org.matsim.contrib.parking.parkingsearch.evaluation.ParkingListener;
@@ -38,6 +38,7 @@ import org.matsim.contrib.parking.parkingsearch.routing.ParkingRouter;
 import org.matsim.contrib.parking.parkingsearch.routing.WithinDayParkingRouter;
 import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.controler.Controler;
+import org.matsim.core.controler.PrepareForSim;
 import org.matsim.core.router.StageActivityTypes;
 
 import com.google.inject.name.Names;
@@ -54,7 +55,9 @@ public class SetupParking {
 	static public void installParkingModules(Controler controler) {
 		// No need to route car routes in Routing module in advance, as they are
 		// calculated on the fly
+		if (!controler.getConfig().getModules().containsKey(DvrpConfigGroup.GROUP_NAME)){
 		controler.getConfig().addModule(new DvrpConfigGroup());
+		}
 		final DynRoutingModule routingModuleCar = new DynRoutingModule(TransportMode.car);
 		StageActivityTypes stageActivityTypesCar = new StageActivityTypes() {
 			@Override
@@ -64,7 +67,7 @@ public class SetupParking {
 			}
 		};
 		routingModuleCar.setStageActivityTypes(stageActivityTypesCar);
-		controler.addOverridingModule(VrpTravelTimeModules.createTravelTimeEstimatorModule());
+		controler.addOverridingModule(new DvrpTravelTimeModule());
 		controler.addOverridingModule(new AbstractModule() {
 			@Override
 			public void install() {
@@ -72,6 +75,7 @@ public class SetupParking {
 				bind(Network.class).annotatedWith(Names.named(DvrpModule.DVRP_ROUTING)).to(Network.class).asEagerSingleton();
 				bind(ParkingSearchManager.class).to(FacilityBasedParkingManager.class).asEagerSingleton();
 				bind(WalkLegFactory.class).asEagerSingleton();
+				bind(PrepareForSim.class).to(ParkingSearchPrepareForSimImpl.class);
 				this.install(new ParkingSearchQSimModule());
 				addControlerListenerBinding().to(ParkingListener.class);
 				bind(ParkingRouter.class).to(WithinDayParkingRouter.class);
