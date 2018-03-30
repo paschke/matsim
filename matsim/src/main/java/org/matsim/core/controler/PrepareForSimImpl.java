@@ -1,12 +1,6 @@
 package org.matsim.core.controler;
 
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import javax.inject.Inject;
-import javax.inject.Provider;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -17,6 +11,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
+import org.matsim.core.config.groups.FacilitiesConfigGroup;
 import org.matsim.core.config.groups.GlobalConfigGroup;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.gbl.Gbl;
@@ -30,9 +25,17 @@ import org.matsim.core.router.PlanRouter;
 import org.matsim.core.router.TripRouter;
 import org.matsim.core.scenario.Lockable;
 import org.matsim.facilities.ActivityFacilities;
+import org.matsim.facilities.FacilitiesFromPopulation;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleType;
 import org.matsim.vehicles.VehicleUtils;
+
+import javax.inject.Inject;
+import javax.inject.Provider;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 class PrepareForSimImpl implements PrepareForSim {
 
@@ -45,9 +48,10 @@ class PrepareForSimImpl implements PrepareForSim {
 	private final ActivityFacilities activityFacilities;
 	private final Provider<TripRouter> tripRouterProvider;
 	private final QSimConfigGroup qSimConfigGroup;
+	private final FacilitiesConfigGroup facilitiesConfigGroup;
 
 	@Inject
-	PrepareForSimImpl(GlobalConfigGroup globalConfigGroup, Scenario scenario, Network network, Population population, ActivityFacilities activityFacilities, Provider<TripRouter> tripRouterProvider, QSimConfigGroup qSimConfigGroup) {
+	PrepareForSimImpl(GlobalConfigGroup globalConfigGroup, Scenario scenario, Network network, Population population, ActivityFacilities activityFacilities, Provider<TripRouter> tripRouterProvider, QSimConfigGroup qSimConfigGroup, FacilitiesConfigGroup facilitiesConfigGroup) {
 		this.globalConfigGroup = globalConfigGroup;
 		this.scenario = scenario;
 		this.network = network;
@@ -55,8 +59,7 @@ class PrepareForSimImpl implements PrepareForSim {
 		this.activityFacilities = activityFacilities;
 		this.tripRouterProvider = tripRouterProvider;
 		this.qSimConfigGroup = qSimConfigGroup;
-
-
+		this.facilitiesConfigGroup = facilitiesConfigGroup;
 	}
 
 
@@ -79,6 +82,30 @@ class PrepareForSimImpl implements PrepareForSim {
 			net = network;
 		}
 
+		//matsim-724
+		switch(this.facilitiesConfigGroup.getFacilitiesSource()){
+			case none:
+//				Gbl.assertIf( this.activityFacilities.getFacilities().isEmpty() );
+				// I have at least one use case where people use the facilities as some kind
+				// of database for stuff, but don't run the activities off them.  I have thus
+				// disabled the above check.  We need to think about what we want to
+				// do in such cases; might want to auto-generate our facilities as below
+				// and _add_ them to the existing facilities.  kai, feb'18
+				break;
+			case fromFile:
+			case setInScenario:
+				Gbl.assertIf(! this.activityFacilities.getFacilities().isEmpty() );
+				break;
+			case onePerActivityLocationInPlansFile:
+				FacilitiesFromPopulation facilitiesFromPopulation = new FacilitiesFromPopulation(activityFacilities, facilitiesConfigGroup);
+				facilitiesFromPopulation.setAssignLinksToFacilitiesIfMissing(facilitiesConfigGroup.isAssigningLinksToFacilitiesIfMissing(), network);
+				facilitiesFromPopulation.assignOpeningTimes(facilitiesConfigGroup.isAssigningOpeningTime(), scenario.getConfig().planCalcScore());
+				facilitiesFromPopulation.run(population);
+				break;
+			default:
+				throw new RuntimeException("Facilities source '"+this.facilitiesConfigGroup.getFacilitiesSource()+"' is not implemented yet.");
+		}
+
 		// make sure all routes are calculated.
 		ParallelPersonAlgorithmUtils.run(population, globalConfigGroup.getNumberOfThreads(),
 				new ParallelPersonAlgorithmUtils.PersonAlgorithmProvider() {
@@ -90,6 +117,11 @@ class PrepareForSimImpl implements PrepareForSim {
 
 		// though the vehicles should be created before creating a route, however,
 		// as of now, it is not clear how to provide (store) vehicle id to the route afterwards. Amit may'17
+
+		// yyyyyy from a behavioral perspective, the vehicle must be somehow linked to
+		// the person (maybe via the household).  We also have the problem that it
+		// is not possible to switch to a mode that was not in the initial plans ...
+		// since there will be no vehicle for it.  Needs to be fixed somehow.  kai, feb'18
 
 		Map<String, VehicleType> modeVehicleTypes = getMode2VehicleType();
 		for(Person person : scenario.getPopulation().getPersons().values()) {
@@ -115,10 +147,10 @@ class PrepareForSimImpl implements PrepareForSim {
 								}
 
 								// so here we have a vehicle id, now try to find or create a physical vehicle:
-								Vehicle vehicle = createAndAddVehicleIfNotPresent( vehicleId, modeVehicleTypes.get(leg.getMode()));
+								createAndAddVehicleIfNotPresent( vehicleId, modeVehicleTypes.get(leg.getMode()));
 								seenModes.put(leg.getMode(), vehicleId);
 							} else {
-								if (vehicleId == null && route != null) {
+								if (vehicleId == null) {
 									vehicleId = seenModes.get(leg.getMode());
 									route.setVehicleId(vehicleId);
 								}
@@ -157,14 +189,17 @@ class PrepareForSimImpl implements PrepareForSim {
 		if ( network instanceof Lockable ) {
 			((Lockable) network).setLocked();
 		}
-		
-		// (yyyy means that if someone replaces prepareForSim and does not add the above lines, the containers are not locked.  kai, nov'16)
 
+		if (activityFacilities instanceof  Lockable) {
+			((Lockable) activityFacilities).setLocked();
+		}
+
+		// (yyyy means that if someone replaces prepareForSim and does not add the above lines, the containers are not locked.  kai, nov'16)
 	}
 
 	private void createVehiclesForEveyNetworkMode(final Map<String, VehicleType> modeVehicleTypes) {
 		// yyyy maybe better just take the modes from qsim.mainMode???  kai, dec'17
-		
+
 //		boolean isModeChoicePresent = false;
 //		Collection<StrategyConfigGroup.StrategySettings> strategySettings = scenario.getConfig().strategy().getStrategySettings();
 //		for (StrategyConfigGroup.StrategySettings strategySetting : strategySettings) {
